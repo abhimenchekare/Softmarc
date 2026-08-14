@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmarc Learning Portal — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="logo.png">
+
+<style>
+:root{
+  --navy-950:#051B33;
+  --navy-900:#06284A;
+  --navy-800:#0A3D66;
+  --cyan-500:#11C7F4;
+  --cyan-600:#0A9FD1;
+  --cyan-700:#0A73B8;
+  --surface:#FFFFFF;
+  --bg:#F1F6FB;
+  --text-900:#0E2238;
+  --text-600:#55677E;
+  --text-400:#90A0B4;
+  --border:#E1E9F1;
+  --success:#22B37A;
+  --danger:#D9463C;
+  --warn:#F59E0B;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --radius-lg:18px;
+  --radius-md:14px;
+  --radius-sm:10px;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{
+  font-family:var(--font-body);
+  background:#000;
+  min-height:100vh;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  position:relative;
+  display:flex;
+  align-items:center; /* Vertically centers the floating login card */
+  justify-content:flex-start; /* Places the login card on the left side */
+}
+
+/* Fullscreen Background Video (100% Opacity) */
+#bgVideo {
+  position: fixed;
+  inset: 0;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  z-index: -100;
+  object-fit: cover;
+  opacity: 1; /* 👈 Full 100% crystal-clear opacity! */
+  pointer-events: none;
+}
+
+/* ---------- Premium Floating Dark Login Card ---------- */
+.left-login-panel{
+  width: 400px;
+  height: 480px; /* Reduced to 480px for an incredibly tight, compact, and professional layout */
+  background: rgba(5, 27, 51, 0.75); /* Dark semi-transparent matching your image */
+  backdrop-filter: blur(20px); /* Frosted glassmorphism blur */
+  
+  /* Glowing Neon-Cyan Border Light! */
+  border: 1.5px solid rgba(17, 199, 244, 0.65); /* Brighter border edge */
+  border-radius: 20px; /* Sleek rounded corners matching the image */
+  padding: 34px 32px; /* Tighter padding to maximize space and efficiency */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Evens out vertical alignment */
+  
+  /* Multi-Layered Neon Glow Shadows */
+  box-shadow: 
+    0 0 24px rgba(17, 199, 244, 0.25), /* Outer cyan halo light */
+    0 20px 50px rgba(0, 0, 0, 0.6), /* Deep panel base shadow */
+    inset 0 0 14px rgba(17, 199, 244, 0.12); /* Inner subtle neon glow */
+    
+  margin-left: 80px; /* Offset from left screen edge */
+  z-index: 10;
+  color: #fff;
+  position: relative;
+  
+  /* Initial state for the 1.5-second delayed fade-in sliding entrance */
+  opacity: 0;
+  transform: translateY(30px);
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.9s ease-out;
+}
+
+/* Activated state triggered by JS after 1.5 seconds */
+.left-login-panel.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Symmetrically center-align the brand elements */
+  text-align: center;
+}
+
+.divider {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  margin-top: 10px; /* Reduced margin to tighten logo area */
+  margin-bottom: 8px; /* Reduced margin to tighten logo area */
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  justify-content: center;
+}
+
+.field {
+  position: relative;
+  width: 100%;
+}
+.field input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 199, 244, 0.25); /* Subtle neon border */
+  border-radius: 10px;
+  background: rgba(5, 27, 51, 0.4); /* Dark semi-transparent input background */
+  font-size: 13.5px;
+  color: #fff;
+  font-family: var(--font-body);
+  outline: none;
+  transition: 0.15s;
+}
+.field input::placeholder {
+  color: rgba(255, 255, 255, 0.5); /* Soft placeholder text */
+}
+.field input:focus {
+  border-color: var(--cyan-500);
+  background: rgba(5, 27, 51, 0.6);
+  box-shadow: 0 0 0 4px rgba(17, 199, 244, 0.15);
+}
+
+.password-wrap {
+  position: relative;
+  width: 100%;
+}
+.password-wrap input {
+  padding-right: 60px;
+}
+.password-wrap button {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan-500);
+  cursor: pointer;
+  outline: none;
+}
+.password-wrap button:hover {
+  color: #fff;
+}
+
+.error-text {
+  font-size: 11.5px;
+  color: var(--danger);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--cyan-700), var(--cyan-600));
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(17, 199, 244, 0.25);
+  transition: 0.2s;
+  outline: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.login-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(17, 199, 244, 0.4);
+}
+.login-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.forgot-link {
+  text-align: center;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  font-weight: 500;
+  transition: 0.15s;
+}
+.forgot-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.card-footer {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 1px;
+  margin-top: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 560px) {
+  body { justify-content: center; padding: 16px; }
+  .left-login-panel { margin-left: 0; width: 100%; max-width: 400px; height: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .left-login-panel { opacity: 1; transform: none; transition: none; }
+  .login-btn { transition: none; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- Fullscreen Background Video (100% Opacity) -->
+<video id="bgVideo" autoplay muted playsinline>
+  <source src="videos/login_bg.mp4" type="video/mp4">
+  <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4" type="video/mp4">
+</video>
+
+<!-- Floating Dark Glass Login Card -->
+<main class="left-login-panel">
+
+  <!-- Brand Section with Large White Logo Only -->
+  <div class="brand-header">
+    <!-- Compact, prominent White Logo Image (using CSS filter to invert color cleanly to pure white) -->
+    <img src="logo.png" alt="Softmarc Logo" style="height: 150px; width: auto; filter: brightness(0) invert(1); margin-top: 4px;">
+    <div class="divider"></div>
+  </div>
+
+  <!-- Form Section -->
+  <form id="loginForm" novalidate>
+
+    <div class="field">
+      <input type="text" id="employeeId" name="employeeId" placeholder="Employee ID" required autocomplete="username">
+    </div>
+
+    <div class="field">
+      <div class="password-wrap">
+        <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password">
+        <button type="button" id="toggleBtn" aria-pressed="false">Show</button>
+      </div>
+      <div class="error-text" id="errorText" role="alert"></div>
+    </div>
+
+    <button type="submit" class="login-btn" id="loginBtn">Login</button>
+
+  </form>
+
+  <!-- Links & Footer -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <a href="#" class="forgot-link">Forgot Password?</a>
+    <div class="card-footer">Secure • Simple • Smart</div>
+  </div>
+
+</main>
+
+<script>
+// ---------- Delayed Card Entrance Animation ----------
+// Triggers 1.5 seconds after page loads for a smooth cinematic reveal
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.querySelector('.left-login-panel').classList.add('show');
+  }, 1500); // Exact 1.5-second delay!
+});
+
+const _rawSession = localStorage.getItem('softmarc_user');
+if (_rawSession) {
+  window.location.href = 'soft_dashboard.html';
+}
+
+const form = document.getElementById('loginForm');
+const passwordInput = document.getElementById('password');
+const toggleBtn = document.getElementById('toggleBtn');
+const loginBtn = document.getElementById('loginBtn');
+const errorText = document.getElementById('errorText');
+
+// Password visibility toggle
+toggleBtn.addEventListener('click', () => {
+  const isPass = passwordInput.type === 'password';
+  passwordInput.type = isPass ? 'text' : 'password';
+  toggleBtn.textContent = isPass ? 'Hide' : 'Show';
+  toggleBtn.setAttribute('aria-pressed', String(isPass));
+});
+
+// Set source to our fallback mixkit driving loop so it plays flawlessly right away if local is missing!
+const bgVideo = document.getElementById('bgVideo');
+if (bgVideo) {
+  bgVideo.addEventListener('error', () => {
+    console.log("Local video not found yet, playing high-speed streaming backup loop.");
+    bgVideo.src = "https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4";
+    bgVideo.load();
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorText.textContent = '';
+
+  const email = document.getElementById('employeeId').value.trim();
+  const pass = passwordInput.value;
+
+  if (!email || !pass) {
+    errorText.textContent = 'Please enter both your Employee ID and password.';
+    return;
+  }
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Signing in…';
+
+  try {
+    const API_HOST = (window.location.port === '4000') ? '' : 'http://localhost:4000';
+    const res = await fetch(`${API_HOST}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorText.textContent = data.error || 'Invalid email or password.';
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Login';
+      return;
+    }
+
+    localStorage.setItem('softmarc_user', JSON.stringify(data));
+    window.location.href = 'soft_dashboard.html';
+
+  } catch (err) {
+    errorText.textContent = 'Cannot reach the server — is the API running?';
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Login';
+  }
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmarc Learning Portal — Admin</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+
+:root{
+  --navy-950:#051B33;
+  --navy-900:#06284A;
+  --navy-800:#0A3D66;
+  --cyan-500:#11C7F4;
+  --cyan-600:#0A9FD1;
+  --cyan-700:#0A73B8;
+  --surface:#FFFFFF;
+  --bg:#F1F6FB;
+  --text-900:#0E2238;
+  --text-600:#55677E;
+  --text-400:#90A0B4;
+  --border:#E1E9F1;
+  --success:#22B37A;
+  --danger:#D9463C;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --radius-lg:18px;
+  --radius-md:14px;
+  --radius-sm:10px;
+  --sidebar-w:252px;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--text-900);
+  display:flex;
+  min-height:100vh;
+}
+
+a{ color:inherit; }
+
+/* ---------- Sidebar ---------- */
+
+.sidebar{
+  width:var(--sidebar-w);
+  flex-shrink:0;
+  background:linear-gradient(180deg,var(--navy-950),var(--navy-900));
+  color:#fff;
+  padding:26px 18px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+.brand{ display:flex; align-items:center; gap:12px; padding:6px 10px 26px; }
+
+.brand-mark{
+  width:38px; height:38px; flex-shrink:0;
+  object-fit:contain;
+  background:rgba(255,255,255,.94);
+  border-radius:9px;
+  padding:5px;
+}
+
+.brand-name{ font-family:var(--font-display); font-weight:700; font-size:17px; }
+.brand-sub{ font-size:10.5px; letter-spacing:1.4px; text-transform:uppercase; color:rgba(255,255,255,.55); margin-top:1px; }
+
+.nav{ display:flex; flex-direction:column; gap:3px; }
+
+.nav a{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 14px; border-radius:var(--radius-sm);
+  text-decoration:none; color:rgba(255,255,255,.82);
+  font-size:14.5px; font-weight:500;
+  transition:background .15s, color .15s;
+}
+
+.nav a .icon{ width:19px; text-align:center; flex-shrink:0; }
+.nav a:hover{ background:rgba(255,255,255,.08); color:#fff; }
+.nav a.active{
+  background:linear-gradient(90deg,rgba(0,191,206,.22),rgba(0,191,206,.06));
+  color:#fff;
+  box-shadow:inset 3px 0 0 var(--cyan-500);
+}
+.nav a:focus-visible{ outline:2px solid var(--cyan-500); outline-offset:2px; }
+
+.nav-group-label{
+  font-size:11px; letter-spacing:1.2px; text-transform:uppercase;
+  color:rgba(255,255,255,.4); margin:20px 14px 8px;
+}
+
+.sidebar-footer{
+  margin-top:auto; padding:14px; border-radius:var(--radius-sm);
+  background:rgba(255,255,255,.06); font-size:12.5px;
+  color:rgba(255,255,255,.7); line-height:1.5;
+}
+
+/* ---------- Main ---------- */
+
+.main{ flex:1; padding:28px 34px 40px; min-width:0; }
+
+.topbar{
+  background:var(--surface); padding:18px 24px; border-radius:var(--radius-md);
+  display:flex; justify-content:space-between; align-items:center; gap:20px;
+  box-shadow:0 4px 18px rgba(10,40,80,.06);
+}
+
+.greeting h1{ font-family:var(--font-display); font-size:21px; font-weight:600; }
+.greeting .sub{ font-size:13px; color:var(--text-600); margin-top:2px; }
+
+.add-btn{
+  padding:12px 20px; border:none; border-radius:var(--radius-sm);
+  background:linear-gradient(90deg,var(--navy-800),var(--cyan-600));
+  color:#fff; font-weight:600; font-size:14.5px; cursor:pointer;
+  display:inline-flex; align-items:center; gap:8px;
+  transition:transform .15s, box-shadow .15s;
+}
+.add-btn:hover{ transform:translateY(-2px); box-shadow:0 12px 24px rgba(0,191,206,.28); }
+.add-btn:focus-visible{ outline:2px solid var(--navy-800); outline-offset:3px; }
+
+/* ---------- Panel / table ---------- */
+
+.panel{
+  background:var(--surface); border-radius:var(--radius-md);
+  box-shadow:0 4px 18px rgba(10,40,80,.06);
+  margin-top:24px; overflow:hidden;
+}
+
+.panel-head{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:20px 24px; border-bottom:1px solid var(--border);
+}
+
+.panel-head h2{ font-family:var(--font-display); font-size:17px; font-weight:600; }
+.count-badge{
+  font-family:var(--font-mono); font-size:12.5px; color:var(--text-600);
+  background:var(--bg); padding:4px 10px; border-radius:20px;
+}
+
+table{ width:100%; border-collapse:collapse; }
+
+thead th{
+  text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+  color:var(--text-600); padding:12px 24px; background:var(--bg);
+  border-bottom:1px solid var(--border);
+}
+
+tbody td{
+  padding:14px 24px; font-size:14px; border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr:hover{ background:var(--bg); }
+
+.role-badge{
+  font-size:11.5px; font-weight:600; padding:4px 10px; border-radius:20px;
+  text-transform:capitalize;
+}
+.role-badge.student{ background:rgba(0,191,206,.14); color:var(--cyan-700); }
+.role-badge.admin{ background:rgba(0,90,130,.12); color:var(--navy-800); }
+
+.icon-btn{
+  border:none; background:none; cursor:pointer; padding:7px 9px;
+  border-radius:8px; color:var(--danger); font-size:13px; font-weight:600;
+  transition:background .15s;
+}
+.icon-btn:hover{ background:rgba(217,70,60,.1); }
+.icon-btn:focus-visible{ outline:2px solid var(--danger); outline-offset:2px; }
+
+.empty-state, .loading-state, .error-state{
+  padding:40px 24px; text-align:center; color:var(--text-600); font-size:14px;
+}
+.error-state{ color:var(--danger); }
+
+/* ---------- Modal ---------- */
+
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(6,32,60,.45);
+  display:none; align-items:center; justify-content:center; z-index:50;
+  padding:20px;
+}
+.modal-overlay.open{ display:flex; }
+
+.modal{
+  background:var(--surface); border-radius:var(--radius-lg);
+  width:420px; max-width:100%; padding:30px;
+  box-shadow:0 30px 70px rgba(2,12,26,.35);
+}
+
+.modal h2{ font-family:var(--font-display); font-size:19px; font-weight:600; margin-bottom:6px; }
+.modal .sub{ font-size:13.5px; color:var(--text-600); margin-bottom:22px; }
+
+.field{ margin-bottom:16px; }
+.field label{
+  display:block; font-size:13px; font-weight:600; color:var(--text-600); margin-bottom:6px;
+}
+.field input, .field select{
+  width:100%; padding:12px 13px; border:1.5px solid var(--border);
+  outline:none; border-radius:var(--radius-sm); background:var(--bg);
+  font-size:14px; font-family:var(--font-body); color:var(--text-900);
+  transition:border-color .15s, box-shadow .15s;
+}
+.field input:focus, .field select:focus{
+  border-color:var(--cyan-600); box-shadow:0 0 0 4px rgba(0,191,206,.14); background:#fff;
+}
+
+.form-error{
+  font-size:12.5px; color:var(--danger); min-height:16px; margin-top:-8px; margin-bottom:12px;
+}
+
+.modal-actions{ display:flex; gap:10px; margin-top:20px; }
+
+.btn-secondary{
+  flex:1; padding:12px; border-radius:var(--radius-sm); border:1.5px solid var(--border);
+  background:#fff; color:var(--text-600); font-weight:600; font-size:14px; cursor:pointer;
+}
+.btn-secondary:hover{ background:var(--bg); }
+
+.btn-primary{
+  flex:1; padding:12px; border-radius:var(--radius-sm); border:none;
+  background:linear-gradient(90deg,var(--navy-800),var(--cyan-600));
+  color:#fff; font-weight:600; font-size:14px; cursor:pointer;
+}
+.btn-primary:hover{ box-shadow:0 10px 22px rgba(0,191,206,.3); }
+.btn-primary[disabled]{ opacity:.65; cursor:progress; box-shadow:none; }
+
+.toast{
+  position:fixed; bottom:26px; right:26px; padding:14px 20px; border-radius:var(--radius-sm);
+  background:var(--navy-900); color:#fff; font-size:14px; font-weight:500;
+  box-shadow:0 14px 30px rgba(2,12,26,.3); display:none; z-index:60;
+}
+.toast.show{ display:block; }
+.toast.error{ background:var(--danger); }
+
+/* Unified Tabs & Admin Quiz Styles */
+.tabs{ display:flex; gap:10px; border-bottom:1.5px solid var(--border); padding-bottom:1px; margin-bottom: 20px; }
+.tab{ padding:10px 18px; border:none; background:none; font-family:var(--font-display); font-size:13.5px; font-weight:600; color:var(--text-600); cursor:pointer; position:relative; transition:.15s; outline:none; }
+.tab:hover{ color:var(--text-900); }
+.tab.on{ color:var(--cyan-700); }
+.tab.on::after{ content:''; position:absolute; left:0; right:0; bottom:-2px; height:3px; background:var(--cyan-500); border-radius:3px 3px 0 0; }
+
+.section-wrapper { display: none; }
+.section-wrapper.active { display: block; }
+
+.quiz-manager-layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; margin-top: 15px; }
+.quiz-list-panel { background: var(--surface); border-radius: var(--radius-md); box-shadow: 0 4px 18px rgba(10,40,80,.06); padding: 20px; height: fit-content; }
+.quiz-list-panel h3 { font-family: var(--font-display); font-size: 14.5px; font-weight: 700; margin-bottom: 12px; color: var(--navy-950); }
+.quiz-item-btn { width: 100%; text-align: left; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); font-size: 13px; font-weight: 600; color: var(--text-900); cursor: pointer; transition: 0.15s; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+.quiz-item-btn:hover { background: var(--border); }
+.quiz-item-btn.active { background: var(--cyan-600); color: #fff; border-color: var(--cyan-700); }
+
+.questions-panel { background: var(--surface); border-radius: var(--radius-md); box-shadow: 0 4px 18px rgba(10,40,80,.06); padding: 24px; }
+.question-admin-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; margin-bottom: 16px; background: var(--bg); position: relative; }
+.question-admin-card .actions { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; }
+.q-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; color: var(--text-900); padding-right: 80px; }
+.opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; color: var(--text-600); }
+.opt-val { padding: 6px 10px; background: #fff; border-radius: 4px; border: 1px solid var(--border); }
+.opt-val.correct { border-color: var(--success); background: rgba(34,179,122,0.06); color: var(--success); font-weight: 600; }
+
+.small-btn { padding: 6px 10px; font-size: 11.5px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border); font-weight: 600; background: #fff; color: var(--text-600); }
+.small-btn.primary { background: var(--cyan-600); color: #fff; border-color: var(--cyan-700); }
+.small-btn.danger { border-color: var(--danger); color: var(--danger); background: none; }
+.small-btn.danger:hover { background: rgba(217,70,60,0.06); }
+
+@media (max-width:900px){
+  .sidebar{ display:none; }
+  .main{ padding:20px; }
+  thead th:nth-child(3), tbody td:nth-child(3){ display:none; }
+  .quiz-manager-layout { grid-template-columns: 1fr; }
+}
+
+</style>
+</head>
+
+<body>
+
+<aside class="sidebar">
+
+  <div class="brand">
+    <img class="brand-mark" src="data:image/png;base64,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" alt="Softmarc logo">
+    <div>
+      <div class="brand-name">Softmarc</div>
+      <div class="brand-sub">Learning Portal</div>
+    </div>
+  </div>
+
+  <nav class="nav" aria-label="Primary">
+    <a href="soft_dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+    <a href="courses.html"><span class="icon">📚</span>My Courses</a>
+    <a href="assessments.html"><span class="icon">📝</span>Assessments</a>
+    <a href="certificates.html"><span class="icon">🏆</span>Certificates</a>
+  </nav>
+
+  <div class="nav-group-label">Admin</div>
+  <nav class="nav" aria-label="Admin">
+    <a href="#" class="active"><span class="icon">👥</span>Manage Users</a>
+    <a href="settings.html"><span class="icon">⚙</span>Settings</a>
+    <a href="Softmarc_Login.html"><span class="icon">🚪</span>Logout</a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <strong>Admin access</strong><br>
+    Changes here affect real student accounts.
+  </div>
+
+</aside>
+
+<main class="main">
+
+  <!-- Top bar with tabs -->
+  <div class="topbar">
+    <div class="greeting">
+      <h1 id="adminHeaderTitle">Manage Users</h1>
+      <div class="sub" id="adminHeaderSub">Add or remove student and admin accounts</div>
+    </div>
+    <div id="topbarActionContainer">
+      <button class="add-btn" id="openAddModal" style="display:block;">+ Add user</button>
+    </div>
+  </div>
+
+  <!-- Dynamic Tabs Navigation -->
+  <div class="tabs">
+    <button class="tab on" id="tabBtnUsers" onclick="switchAdminTab('users')">👥 Users List</button>
+    <button class="tab" id="tabBtnSubmissions" onclick="switchAdminTab('submissions')">📝 Student Scores</button>
+    <button class="tab" id="tabBtnQuizzes" onclick="switchAdminTab('quizzes')">⚙️ Manage Quizzes</button>
+  </div>
+
+  <!-- SECTION 1: USERS LIST -->
+  <div class="section-wrapper active" id="secUsers">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>All users</h2>
+        <span class="count-badge" id="userCount">0 users</span>
+      </div>
+
+      <div id="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Joined</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+        <div class="loading-state" id="loadingState">Loading users…</div>
+        <div class="empty-state" id="emptyState" style="display:none;">No users yet — add the first one above.</div>
+        <div class="error-state" id="errorState" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: STUDENT SUBMISSIONS (REVIEW ANSWERS) -->
+  <div class="section-wrapper" id="secSubmissions">
+    <div class="panel">
+      <div class="panel-head">
+        <h2>Student Exam Submissions</h2>
+        <span class="count-badge" id="submissionsCount">0 submissions</span>
+      </div>
+      <div id="submissionsWrap" style="padding: 16px; overflow-x: auto;">
+        <table style="width:100%; text-align:left; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1.5px solid var(--border); padding-bottom: 8px;">
+              <th style="padding: 12px 8px;">Student Name</th>
+              <th style="padding: 12px 8px;">Quiz Title</th>
+              <th style="padding: 12px 8px;">Score</th>
+              <th style="padding: 12px 8px;">Submitted At</th>
+            </tr>
+          </thead>
+          <tbody id="submissionsTableBody"></tbody>
+        </table>
+        <div class="loading-state" id="subLoadingState" style="display:none;">Loading student submissions…</div>
+        <div class="empty-state" id="subEmptyState" style="display:none; padding: 40px 0; text-align:center; color: var(--text-600);">No quiz submissions recorded yet.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: MANAGE QUIZZES & QUESTIONS (ADD/EDIT/DELETE) -->
+  <div class="section-wrapper" id="secQuizzes">
+    <div class="quiz-manager-layout">
+      <!-- Left List of Quizzes -->
+      <div class="quiz-list-panel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3>All Quizzes</h3>
+          <button class="small-btn primary" onclick="adminAddQuiz()">+ New Quiz</button>
+        </div>
+        <div id="adminQuizList">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Right List of Questions inside Selected Quiz -->
+      <div class="questions-panel" id="questionsPanel">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <h2 id="activeQuizManageTitle" style="font-size:14.5px; font-family:var(--font-display); font-weight:700;">Select a Quiz to Manage Questions</h2>
+          <button class="small-btn primary" id="addQuestionBtn" style="display:none;" onclick="adminAddQuestion()">+ Add Question</button>
+        </div>
+        <div id="adminQuestionsList">
+          <p style="color:var(--text-600); text-align:center; padding: 40px 0;">Please select a quiz from the left panel to edit its questions and correct answers.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- Add user modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>Add new user</h2>
+    <div class="sub">Create a student or admin account.</div>
+
+    <form id="addUserForm" novalidate>
+
+      <div class="field">
+        <label for="fullName">Full name</label>
+        <input type="text" id="fullName" required autocomplete="name">
+      </div>
+
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="email">
+      </div>
+
+      <div class="field">
+        <label for="password">Temporary password</label>
+        <input type="password" id="password" required autocomplete="new-password" minlength="8">
+      </div>
+
+      <div class="field">
+        <label for="role">Role</label>
+        <select id="role">
+          <option value="student" selected>Student</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+
+      <div class="form-error" id="formError"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelAdd">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitAdd">Add user</button>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+const API_HOST = (window.location.port === '4000') ? '' : 'http://localhost:4000';
+const API_BASE = `${API_HOST}/api/users`;
+
+const tableBody   = document.getElementById('userTableBody');
+const loadingEl   = document.getElementById('loadingState');
+const emptyEl     = document.getElementById('emptyState');
+const errorEl     = document.getElementById('errorState');
+const userCountEl = document.getElementById('userCount');
+
+function showToast(message, isError = false){
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.toggle('error', isError);
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function formatDate(iso){
+  return new Date(iso).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+}
+
+async function loadUsers(){
+  loadingEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+  errorEl.style.display = 'none';
+  tableBody.innerHTML = '';
+
+  try {
+    const res = await fetch(API_BASE);
+    if (!res.ok) throw new Error('Request failed');
+    const users = await res.json();
+
+    loadingEl.style.display = 'none';
+    userCountEl.textContent = users.length + (users.length === 1 ? ' user' : ' users');
+
+    if (users.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+
+    tableBody.innerHTML = users.map(u => `
+      <tr data-id="${u.id}">
+        <td>${escapeHtml(u.full_name)}</td>
+        <td>${escapeHtml(u.email)}</td>
+        <td><span class="role-badge ${u.role}">${escapeHtml(u.role)}</span></td>
+        <td>${formatDate(u.created_at)}</td>
+        <td style="text-align:right;">
+          <button class="icon-btn" data-delete="${u.id}">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+
+  } catch (err) {
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'block';
+    errorEl.textContent = 'Could not load users. Is the API server running on ' + API_BASE + '?';
+  }
+}
+
+tableBody.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-delete]');
+  if (!btn) return;
+
+  const id = btn.getAttribute('data-delete');
+  const row = btn.closest('tr');
+  const name = row.querySelector('td').textContent;
+
+  if (!confirm(`Remove ${name}? This cannot be undone.`)) return;
+
+  btn.disabled = true;
+  btn.textContent = 'Removing…';
+
+  try {
+    const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Delete failed');
+    row.remove();
+    showToast(`${name} was removed.`);
+    loadUsers();
+  } catch (err) {
+    showToast('Could not delete user.', true);
+    btn.disabled = false;
+    btn.textContent = 'Delete';
+  }
+});
+
+// ---------- Add user modal ----------
+
+const modalOverlay = document.getElementById('modalOverlay');
+const addUserForm  = document.getElementById('addUserForm');
+const formError    = document.getElementById('formError');
+const submitBtn    = document.getElementById('submitAdd');
+
+document.getElementById('openAddModal').addEventListener('click', () => {
+  modalOverlay.classList.add('open');
+  document.getElementById('fullName').focus();
+});
+
+function closeModal(){
+  modalOverlay.classList.remove('open');
+  addUserForm.reset();
+  formError.textContent = '';
+}
+
+document.getElementById('cancelAdd').addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+
+addUserForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  formError.textContent = '';
+
+  const full_name = document.getElementById('fullName').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const role = document.getElementById('role').value;
+
+  if (!full_name || !email || !password) {
+    formError.textContent = 'Please fill in all fields.';
+    return;
+  }
+  if (password.length < 8) {
+    formError.textContent = 'Password must be at least 8 characters.';
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Adding…';
+
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name, email, password, role }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      formError.textContent = data.error || 'Could not add user.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Add user';
+      return;
+    }
+
+    closeModal();
+    showToast(`${full_name} was added.`);
+    loadUsers();
+
+  } catch (err) {
+    formError.textContent = 'Network error — is the API server running?';
+  }
+
+  submitBtn.disabled = false;
+  submitBtn.textContent = 'Add user';
+});
+
+// ---------- Auth guard — admin only ----------
+const rawSession = localStorage.getItem('softmarc_user');
+if (!rawSession) {
+  window.location.href = 'Softmarc_Login.html';
+} else {
+  const sessionUser = JSON.parse(rawSession);
+  if (sessionUser.role !== 'admin') {
+    // Logged in but not an admin — redirect to dashboard
+    window.location.href = 'soft_dashboard.html';
+  }
+}
+
+// ---------- Logout ----------
+document.querySelectorAll('[href="Softmarc_Login.html"]').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    localStorage.removeItem('softmarc_user');
+    window.location.href = 'Softmarc_Login.html';
+  });
+});
+
+// ---------- Dynamic Tabs Switching ----------
+let activeManageQuizId = null;
+let activeManageQuizTitle = '';
+
+function switchAdminTab(tabName) {
+  // Hide all sections
+  document.querySelectorAll('.section-wrapper').forEach(sec => sec.classList.remove('active'));
+  document.querySelectorAll('.tabs .tab').forEach(t => t.classList.remove('on'));
+
+  const headerTitle = document.getElementById('adminHeaderTitle');
+  const headerSub = document.getElementById('adminHeaderSub');
+  const openAddModalBtn = document.getElementById('openAddModal');
+
+  if (tabName === 'users') {
+    document.getElementById('secUsers').classList.add('active');
+    document.getElementById('tabBtnUsers').classList.add('on');
+    headerTitle.textContent = 'Manage Users';
+    headerSub.textContent = 'Add or remove student and admin accounts';
+    openAddModalBtn.style.display = 'block';
+    loadUsers();
+  } else if (tabName === 'submissions') {
+    document.getElementById('secSubmissions').classList.add('active');
+    document.getElementById('tabBtnSubmissions').classList.add('on');
+    headerTitle.textContent = 'Student Submissions';
+    headerSub.textContent = 'Review actual completed test scores and grades';
+    openAddModalBtn.style.display = 'none';
+    loadStudentSubmissions();
+  } else if (tabName === 'quizzes') {
+    document.getElementById('secQuizzes').classList.add('active');
+    document.getElementById('tabBtnQuizzes').classList.add('on');
+    headerTitle.textContent = 'Manage Quizzes';
+    headerSub.textContent = 'Add, edit, or delete questions and correct answers';
+    openAddModalBtn.style.display = 'none';
+    loadAdminQuizzes();
+  }
+}
+
+// ---------- Review Student Scores ----------
+async function loadStudentSubmissions() {
+  const tableBody = document.getElementById('submissionsTableBody');
+  const countBadge = document.getElementById('submissionsCount');
+  const loading = document.getElementById('subLoadingState');
+  const empty = document.getElementById('subEmptyState');
+
+  loading.style.display = 'block';
+  empty.style.display = 'none';
+  tableBody.innerHTML = '';
+
+  try {
+    const res = await fetch(`${API_HOST}/api/submissions`);
+    const submissions = await res.json();
+    loading.style.display = 'none';
+    countBadge.textContent = `${submissions.length} submissions`;
+
+    if (submissions.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    tableBody.innerHTML = submissions.map(sub => `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:12px 8px; font-weight:600; color:var(--text-900);">${escapeHtml(sub.student_name)}</td>
+        <td style="padding:12px 8px; color:var(--text-600);">${escapeHtml(sub.quiz_title)}</td>
+        <td style="padding:12px 8px;">
+          <span class="role-badge ${sub.score >= 70 ? 'admin' : 'student'}" style="font-weight:600; font-size:12px; border-radius: 4px; padding: 4px 8px;">
+            ${sub.score}%
+          </span>
+        </td>
+        <td style="padding:12px 8px; color:var(--text-600);">${formatDate(sub.submitted_at)}</td>
+      </tr>
+    `).join('');
+
+  } catch (err) {
+    console.error(err);
+    loading.style.display = 'none';
+    showToast('Failed to load submissions.', true);
+  }
+}
+
+// ---------- Manage Quizzes ----------
+async function loadAdminQuizzes() {
+  try {
+    const res = await fetch(`${API_HOST}/api/quizzes`);
+    const quizzes = await res.json();
+    const container = document.getElementById('adminQuizList');
+    container.innerHTML = '';
+
+    if (quizzes.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-600); font-size:13px; text-align:center;">No quizzes found.</p>';
+      return;
+    }
+
+    quizzes.forEach(quiz => {
+      const activeClass = quiz.id === activeManageQuizId ? 'active' : '';
+      const btnHtml = `
+        <button class="quiz-item-btn ${activeClass}" onclick="selectQuizToManage('${quiz.id}', '${quiz.title}')">
+          <span>${escapeHtml(quiz.title)}</span>
+          <span style="font-size:11px; opacity:0.85;">➔</span>
+        </button>`;
+      container.insertAdjacentHTML('beforeend', btnHtml);
+    });
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load quizzes.', true);
+  }
+}
+
+async function selectQuizToManage(id, title) {
+  activeManageQuizId = Number(id);
+  activeManageQuizTitle = title;
+
+  // Refresh active states
+  loadAdminQuizzes();
+
+  document.getElementById('activeQuizManageTitle').textContent = `Questions in "${title}"`;
+  document.getElementById('addQuestionBtn').style.display = 'block';
+
+  try {
+    const res = await fetch(`${API_HOST}/api/quizzes/${id}/questions`);
+    const questions = await res.json();
+    const list = document.getElementById('adminQuestionsList');
+    list.innerHTML = '';
+
+    if (questions.length === 0) {
+      list.innerHTML = `
+        <p style="color:var(--text-600); text-align:center; padding: 40px 0;">
+          This quiz has no questions in the database yet. Click "+ Add Question" above to write one!
+        </p>`;
+      return;
+    }
+
+    questions.forEach((q, idx) => {
+      const qCard = `
+        <div class="question-admin-card" id="qCard_${q.id}">
+          <div class="actions">
+            <button class="small-btn primary" onclick="adminEditQuestion('${q.id}', '${escapeHtml(q.question_text)}', '${escapeHtml(q.option_a)}', '${escapeHtml(q.option_b)}', '${escapeHtml(q.option_c)}', '${escapeHtml(q.option_d)}', '${q.correct_option}')">Edit</button>
+            <button class="small-btn danger" onclick="adminDeleteQuestion('${q.id}')">Delete</button>
+          </div>
+          <div class="q-title">Q${idx + 1}. ${escapeHtml(q.question_text)}</div>
+          <div class="opt-grid">
+            <div class="opt-val ${q.correct_option === 'A' ? 'correct' : ''}">A) ${escapeHtml(q.option_a)}</div>
+            <div class="opt-val ${q.correct_option === 'B' ? 'correct' : ''}">B) ${escapeHtml(q.option_b)}</div>
+            <div class="opt-val ${q.correct_option === 'C' ? 'correct' : ''}">C) ${escapeHtml(q.option_c)}</div>
+            <div class="opt-val ${q.correct_option === 'D' ? 'correct' : ''}">D) ${escapeHtml(q.option_d)}</div>
+          </div>
+        </div>`;
+      list.insertAdjacentHTML('beforeend', qCard);
+    });
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to load questions.', true);
+  }
+}
+
+// 4. Admin operations (Create Quiz)
+async function adminAddQuiz() {
+  const course_name = prompt('Enter the exact course name (e.g., "CATIA V5 Part Design"):');
+  if (!course_name) return;
+  const title = prompt('Enter a short title for this quiz (e.g., "CATIA V5 Part Design Quiz"):');
+  if (!title) return;
+
+  try {
+    const res = await fetch(`${API_HOST}/api/quizzes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ course_name, title })
+    });
+    if (!res.ok) throw new Error();
+    showToast('Quiz created successfully!');
+    loadAdminQuizzes();
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to create quiz.', true);
+  }
+}
+
+// 5. Admin operations (Add Question)
+async function adminAddQuestion() {
+  if (!activeManageQuizId) return;
+
+  const question_text = prompt('Enter the Question Text:');
+  if (!question_text) return;
+  const option_a = prompt('Enter Option A:');
+  if (!option_a) return;
+  const option_b = prompt('Enter Option B:');
+  if (!option_b) return;
+  const option_c = prompt('Enter Option C:');
+  if (!option_c) return;
+  const option_d = prompt('Enter Option D:');
+  if (!option_d) return;
+  const correct_option = prompt('Enter correct option letter (A, B, C, or D):').toUpperCase();
+  if (!['A', 'B', 'C', 'D'].includes(correct_option)) {
+    alert('Invalid option! Must be A, B, C, or D.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_HOST}/api/quizzes/${activeManageQuizId}/questions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_text, option_a, option_b, option_c, option_d, correct_option })
+    });
+    if (!res.ok) throw new Error();
+    showToast('Question added successfully!');
+    selectQuizToManage(activeManageQuizId, activeManageQuizTitle);
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to add question.', true);
+  }
+}
+
+// 6. Admin operations (Edit Question)
+async function adminEditQuestion(id, oldText, oA, oB, oC, oD, oldCorrect) {
+  const question_text = prompt('Edit Question Text:', oldText);
+  if (!question_text) return;
+  const option_a = prompt('Edit Option A:', oA);
+  if (!option_a) return;
+  const option_b = prompt('Edit Option B:', oB);
+  if (!option_b) return;
+  const option_c = prompt('Edit Option C:', oC);
+  if (!option_c) return;
+  const option_d = prompt('Edit Option D:', oD);
+  if (!option_d) return;
+  const correct_option = prompt('Edit correct option letter (A, B, C, or D):', oldCorrect).toUpperCase();
+  if (!['A', 'B', 'C', 'D'].includes(correct_option)) {
+    alert('Invalid option! Must be A, B, C, or D.');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_HOST}/api/questions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question_text, option_a, option_b, option_c, option_d, correct_option })
+    });
+    if (!res.ok) throw new Error();
+    showToast('Question updated successfully!');
+    selectQuizToManage(activeManageQuizId, activeManageQuizTitle);
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to update question.', true);
+  }
+}
+
+// 7. Admin operations (Delete Question)
+async function adminDeleteQuestion(id) {
+  if (!confirm('Are you sure you want to delete this question? This cannot be undone.')) return;
+
+  try {
+    const res = await fetch(`${API_HOST}/api/questions/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error();
+    showToast('Question deleted.');
+    selectQuizToManage(activeManageQuizId, activeManageQuizTitle);
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to delete question.', true);
+  }
+}
+
+loadUsers();
+
+</script>
+
+</body>
+</html>

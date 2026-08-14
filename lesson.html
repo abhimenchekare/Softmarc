@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Softmarc Learning Portal — Lesson Player</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+
+:root{
+  --navy-950:#051B33; --navy-900:#06284A; --navy-800:#0A3D66;
+  --cyan-500:#11C7F4; --cyan-600:#0A9FD1; --cyan-700:#0A73B8;
+  --surface:#fff; --bg:#F1F6FB;
+  --text-900:#0E2238; --text-600:#55677E; --text-400:#90A0B4;
+  --border:#E1E9F1; --success:#22B37A; --danger:#D9463C;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --radius-lg:18px; --radius-md:14px; --radius-sm:10px;
+  --sidebar-w:240px;
+}
+
+*{ margin:0; padding:0; box-sizing:border-box; }
+body{ font-family:var(--font-body); background:var(--bg); color:var(--text-900); display:flex; min-height:100vh; }
+a{ color:inherit; text-decoration:none; }
+
+/* Sidebar */
+.sidebar{ width:var(--sidebar-w); flex-shrink:0; background:linear-gradient(180deg,var(--navy-950),var(--navy-900)); color:#fff; padding:22px 16px; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; overflow-y:auto; }
+.brand{ display:flex; align-items:center; gap:10px; padding:4px 8px 22px; }
+.brand-mark{ width:34px; height:34px; object-fit:contain; background:rgba(255,255,255,.92); border-radius:8px; padding:4px; flex-shrink:0; }
+.brand-name{ font-family:var(--font-display); font-weight:700; font-size:15px; }
+.brand-sub{ font-size:9.5px; letter-spacing:1.3px; text-transform:uppercase; color:rgba(255,255,255,.5); margin-top:1px; }
+.nav{ display:flex; flex-direction:column; gap:2px; }
+.nav a{ display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:var(--radius-sm); color:rgba(255,255,255,.78); font-size:13.5px; font-weight:500; transition:.15s; }
+.nav a .icon{ width:18px; text-align:center; flex-shrink:0; }
+.nav a:hover{ background:rgba(255,255,255,.08); color:#fff; }
+.nav a.active{ background:linear-gradient(90deg,rgba(0,191,206,.24),rgba(0,191,206,.06)); color:#fff; box-shadow:inset 3px 0 0 var(--cyan-500); }
+.nav-group-label{ font-size:10px; letter-spacing:1.2px; text-transform:uppercase; color:rgba(255,255,255,.38); margin:18px 12px 6px; }
+.sidebar-footer{ margin-top:auto; padding:12px; border-radius:var(--radius-sm); background:rgba(255,255,255,.06); font-size:12px; color:rgba(255,255,255,.65); }
+.scrim{ display:none; position:fixed; inset:0; background:rgba(2,12,26,.4); z-index:15; }
+
+/* Main */
+.main{ flex:1; display:flex; flex-direction:column; min-width:0; padding:12px 18px; gap:10px; }
+
+/* Breadcrumb */
+.breadcrumb{ font-size:12px; color:var(--text-400); display:flex; align-items:center; gap:6px; }
+.breadcrumb a{ color:var(--cyan-700); }
+.breadcrumb a:hover{ text-decoration:underline; }
+
+/* Player layout */
+.player-layout{ display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; flex:1; min-height:0; max-width: 1200px; }
+
+/* Video area */
+.video-section{ display:flex; flex-direction:column; gap:10px; }
+
+.video-wrap{
+  background:linear-gradient(135deg,var(--navy-950) 0%,var(--navy-900) 60%,#003d5c 100%);
+  border-radius:var(--radius-md);
+  width: 100%;
+  aspect-ratio: 16/9;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,20,40,.35);
+}
+
+.video-wrap::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse at 30% 50%, rgba(0,191,206,.12), transparent 60%);
+  pointer-events: none;
+}
+
+.video-grid-pattern{
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(0,191,206,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,191,206,.06) 1px, transparent 1px);
+  background-size:40px 40px;
+}
+
+.video-center{
+  position:relative;
+  z-index:1;
+  text-align:center;
+  color:#fff;
+  padding:20px;
+}
+
+.play-btn{
+  width:68px; height:68px; border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan-600),var(--navy-800));
+  border:3px solid rgba(255,255,255,.25);
+  display:flex; align-items:center; justify-content:center;
+  margin:0 auto 16px;
+  cursor:pointer;
+  font-size:24px; color:#fff;
+  box-shadow:0 8px 24px rgba(0,191,206,.4), 0 0 0 8px rgba(0,191,206,.1);
+  transition:.2s;
+}
+
+.play-btn:hover{ transform:scale(1.1); box-shadow:0 12px 32px rgba(0,191,206,.55), 0 0 0 12px rgba(0,191,206,.12); }
+
+.video-course-name{ font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--cyan-500); margin-bottom:6px; }
+.video-module-title{ font-family:var(--font-display); font-size:17px; font-weight:600; margin-bottom:4px; }
+.video-duration{ font-size:12.5px; color:rgba(255,255,255,.55); font-family:var(--font-mono); }
+
+.video-controls{
+  position:absolute; bottom:14px; left:16px; right:16px;
+  display:flex; align-items:center; gap:10px;
+}
+
+.seek-bar{ flex:1; height:4px; background:rgba(255,255,255,.2); border-radius:2px; cursor:pointer; position:relative; }
+.seek-fill{ height:100%; width:0%; background:var(--cyan-500); border-radius:2px; transition:width .1s; }
+.seek-dot{ width:12px; height:12px; border-radius:50%; background:#fff; position:absolute; top:-4px; right:-6px; box-shadow:0 2px 6px rgba(0,0,0,.3); }
+.ctrl-time{ font-size:11px; color:rgba(255,255,255,.65); font-family:var(--font-mono); white-space:nowrap; }
+
+/* Info panel under video */
+.lesson-info{
+  background:var(--surface);
+  border-radius:var(--radius-md);
+  padding:18px;
+  box-shadow:0 4px 18px rgba(10,40,80,.06);
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.lesson-info-left h2{ font-family:var(--font-display); font-size:17px; font-weight:600; margin-bottom:4px; }
+.lesson-info-left .meta{ font-size:12.5px; color:var(--text-600); font-family:var(--font-mono); }
+
+.lesson-actions{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
+.btn{ padding:9px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; font-family:var(--font-body); cursor:pointer; border:none; transition:.15s; display:inline-flex; align-items:center; gap:6px; }
+.btn-primary{ background:linear-gradient(90deg,var(--navy-800),var(--cyan-600)); color:#fff; }
+.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,191,206,.3); }
+.btn-outline{ background:var(--surface); color:var(--cyan-700); border:1.5px solid var(--cyan-600); }
+.btn-outline:hover{ background:rgba(0,191,206,.08); }
+.btn-ghost{ background:none; color:var(--text-600); border:1.5px solid var(--border); }
+.btn-ghost:hover{ background:var(--bg); }
+.btn[disabled]{ opacity:.5; cursor:not-allowed; transform:none !important; box-shadow:none !important; }
+
+/* Progress bar */
+.progress-row{ display:flex; align-items:center; gap:10px; padding:0 2px; }
+.progress-track{ flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.progress-fill{ height:100%; background:linear-gradient(90deg,var(--navy-800),var(--cyan-500)); border-radius:3px; transition:width .4s; }
+.progress-label{ font-size:11.5px; color:var(--text-600); font-family:var(--font-mono); white-space:nowrap; }
+
+/* Module list */
+.module-panel{
+  background:var(--surface);
+  border-radius:var(--radius-md);
+  box-shadow:0 4px 18px rgba(10,40,80,.06);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+  height: 100%;
+}
+
+.module-panel-head{
+  padding:14px 18px;
+  border-bottom:1px solid var(--border);
+  display:flex; justify-content:space-between; align-items:center;
+}
+
+.module-panel-head h3{ font-family:var(--font-display); font-size:14.5px; font-weight:600; }
+.module-count{ font-size:12px; font-family:var(--font-mono); color:var(--text-600); }
+
+.module-scroll{ overflow-y:auto; flex:1; }
+.module-scroll::-webkit-scrollbar{ width:4px; }
+.module-scroll::-webkit-scrollbar-track{ background:transparent; }
+.module-scroll::-webkit-scrollbar-thumb{ background:var(--border); border-radius:2px; }
+
+.module-item{
+  display:flex; align-items:center; gap:10px;
+  padding:11px 16px; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:.15s; font-size:13.5px;
+}
+
+.module-item:last-child{ border-bottom:none; }
+.module-item:hover{ background:var(--bg); }
+
+.module-item.active{
+  background:linear-gradient(90deg,rgba(0,191,206,.1),rgba(0,191,206,.03));
+  color:var(--cyan-700); font-weight:600;
+  box-shadow:inset 3px 0 0 var(--cyan-500);
+}
+
+.module-num{
+  width:24px; height:24px; border-radius:50%;
+  background:var(--border); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10.5px; font-weight:700; font-family:var(--font-mono);
+  transition:.2s;
+}
+
+.module-item.active .module-num{ background:var(--cyan-600); color:#fff; }
+.module-item.done .module-num{ background:var(--success); color:#fff; }
+.module-item.done .module-num::after{ content:'✓'; }
+.module-item.done .num-text{ display:none; }
+
+.module-dur{ margin-left:auto; font-size:11.5px; color:var(--text-400); font-family:var(--font-mono); flex-shrink:0; }
+.module-title{ flex:1; line-height:1.3; }
+
+/* Toast */
+.toast{ position:fixed; bottom:22px; right:22px; padding:12px 18px; border-radius:var(--radius-sm); background:var(--navy-900); color:#fff; font-size:13.5px; font-weight:500; box-shadow:0 12px 28px rgba(2,12,26,.28); opacity:0; pointer-events:none; transition:opacity .25s,transform .25s; transform:translateY(8px); z-index:100; max-width:300px; }
+.toast.show{ opacity:1; transform:translateY(0); pointer-events:auto; }
+.toast.success{ background:var(--success); }
+.toast.error{ background:var(--danger); }
+
+/* Premium Hero Summary Banner styles */
+.hero-summary-banner{
+  background: linear-gradient(135deg, var(--navy-950) 0%, var(--navy-900) 100%);
+  border-radius: var(--radius-md);
+  padding: 14px 22px;
+  margin-bottom: 12px;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(10,40,80,0.15);
+  position: relative;
+  overflow: hidden;
+}
+.hero-summary-banner::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 90% 50%, rgba(0,191,206,0.12), transparent 70%);
+  pointer-events: none;
+}
+.hero-label{
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--cyan-500);
+  margin-bottom: 4px;
+}
+.hero-summary-banner h1{
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 0;
+  margin-bottom: 6px;
+  color: #fff;
+}
+.hero-summary-banner p{
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.5;
+  max-width: 950px;
+  margin: 0;
+}
+
+@media(max-width:900px){
+  .player-layout{ grid-template-columns:1fr; }
+  .module-panel{ max-height:360px; }
+}
+
+@media(max-width:700px){
+  .sidebar{ display:none; }
+  .main{ padding:14px; }
+}
+
+</style>
+</head>
+<body>
+
+<div class="scrim" id="scrim"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <img class="brand-mark" src="data:image/png;base64,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" alt="Softmarc">
+    <div><div class="brand-name">Softmarc</div><div class="brand-sub">Learning Portal</div></div>
+  </div>
+  <nav class="nav">
+    <a href="soft_dashboard.html"><span class="icon">🏠</span>Dashboard</a>
+    <a href="courses.html" class="active"><span class="icon">📚</span>My Courses</a>
+    <a href="assessments.html"><span class="icon">📝</span>Assessments</a>
+    <a href="certificates.html"><span class="icon">🏆</span>Certificates</a>
+  </nav>
+  <div class="nav-group-label">Account</div>
+  <nav class="nav">
+    <a href="profile.html"><span class="icon">👤</span>Profile</a>
+    <a href="settings.html"><span class="icon">⚙</span>Settings</a>
+    <a href="admin.html" id="adminLink" style="display:none"><span class="icon">🛡</span>Admin Panel</a>
+    <a href="#" id="logoutBtn"><span class="icon">🚪</span>Logout</a>
+  </nav>
+  <div class="sidebar-footer"><strong>CATIA streak:</strong> 12 days 🔥</div>
+</aside>
+
+<main class="main">
+
+  <div class="breadcrumb">
+    <a href="soft_dashboard.html">Dashboard</a> ›
+    <a href="courses.html">My Courses</a> ›
+    <span id="breadCourse">CATIA V5 Part Design</span>
+  </div>
+
+  <!-- Premium Hero Summary Banner -->
+  <div class="hero-summary-banner">
+    <div class="hero-label">Today's Topic Outline</div>
+    <h1 id="heroTopicTitle">Sketcher Workbench & Constraints</h1>
+    <p id="heroTopicSummary">In this module of CATIA V5 Part Design, you will master the 2D Sketcher environment...</p>
+  </div>
+
+  <div class="player-layout">
+
+    <!-- Left: video + info -->
+    <div class="video-section">
+
+      <div class="video-wrap">
+        <!-- Real HTML5 Video Player -->
+        <video id="realVideoPlayer" style="display:none; width:100%; height:100%; object-fit: contain; border-radius: inherit; background: #000;" controls></video>
+
+        <!-- Simulated Mockup Player -->
+        <div id="mockPlayerContent" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; position: absolute; inset: 0;">
+          <div class="video-grid-pattern"></div>
+          <div class="video-center">
+            <button class="play-btn" id="playBtn">▶</button>
+            <div class="video-course-name" id="vcName">CATIA V5 Part Design</div>
+            <div class="video-module-title" id="vmTitle">Introduction to Part Design Workbench</div>
+            <div class="video-duration" id="vmDur">18 min</div>
+          </div>
+          <div class="video-controls">
+            <div class="seek-bar"><div class="seek-fill" id="seekFill"><div class="seek-dot"></div></div></div>
+            <div class="ctrl-time" id="ctrlTime">0:00 / 18:00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="lesson-info">
+        <div class="lesson-info-left">
+          <h2 id="lessonTitle">Introduction to Part Design Workbench</h2>
+          <div class="meta" id="lessonMeta">Module 1 of 12 · 18 min · CATIA V5 Part Design</div>
+          <div class="progress-row" style="margin-top:10px; max-width:340px;">
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:8%"></div></div>
+            <div class="progress-label" id="progressLabel">1 / 12 done</div>
+          </div>
+        </div>
+        <div class="lesson-actions">
+          <button class="btn btn-ghost" id="prevBtn">← Prev</button>
+          <button class="btn btn-outline" id="markDoneBtn">✓ Mark done</button>
+          <button class="btn btn-primary" id="nextBtn">Next →</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: module list -->
+    <div class="module-panel">
+      <div class="module-panel-head">
+        <h3>Course modules</h3>
+        <span class="module-count" id="moduleCount">0 / 12</span>
+      </div>
+      <div class="module-scroll" id="moduleScroll"></div>
+    </div>
+
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+const _raw = localStorage.getItem('softmarc_user');
+if (!_raw) window.location.href = 'Softmarc_Login.html';
+const _user = JSON.parse(_raw || '{}');
+const _al = document.getElementById('adminLink');
+if (_al && _user.role === 'admin') { _al.style.display = 'flex'; }
+document.getElementById('logoutBtn').addEventListener('click', e => {
+  e.preventDefault(); localStorage.removeItem('softmarc_user');
+  window.location.href = 'Softmarc_Login.html';
+});
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = 'toast', 3200);
+}
+
+// ── Course data ───────────────────────────────────────────────────────────────
+const COURSES = {
+  'CATIA V5 Part Design': [
+    {title:'Sketcher Workbench & Constraints', dur:'20 min', videoUrl:'https://www.w3schools.com/html/mov_bbb.mp4'},
+    {title:'Pad & Pocket Features', dur:'25 min'},
+    {title:'Shaft & Groove Operations', dur:'22 min'},
+    {title:'Holes & Thread Specifications', dur:'18 min'},
+    {title:'Fillets, Chamfers & Dress-up Features', dur:'15 min'},
+    {title:'Edge Fillet & Variable Fillet', dur:'20 min'},
+    {title:'Patterns & Mirror Operations', dur:'18 min'},
+    {title:'Draft Angle & Shell Features', dur:'22 min'},
+    {title:'Boolean Operations in Body Design', dur:'25 min'},
+    {title:'Surface-Based Features (Split, Thick Surface)', dur:'24 min'},
+    {title:'Design Tables & Parametric Parts', dur:'26 min'},
+    {title:'Part Design Final Capstone Project', dur:'30 min'},
+  ],
+  'CATIA Assembly Design': [
+    {title:'Assembly Workbench Overview', dur:'15 min'},
+    {title:'Inserting & Positioning Components', dur:'20 min'},
+    {title:'Coincidence & Contact Constraints', dur:'18 min'},
+    {title:'Offset, Angle & Fixing Constraints', dur:'22 min'},
+    {title:'Creating Product Structure & Sub-Assemblies', dur:'24 min'},
+    {title:'Analyzing Interference & Clashes', dur:'20 min'},
+    {title:'Assembly Bill of Materials (BOM) Generation', dur:'18 min'},
+    {title:'Exploded Views & Scene Creation', dur:'16 min'},
+    {title:'Flexible Sub-Assemblies & Overloading', dur:'21 min'},
+    {title:'Final CATIA Assembly Design Project', dur:'30 min'},
+  ],
+  'CATIA Sheet Metal Design': [
+    {title:'Sheet Metal Parameters Setup', dur:'15 min'},
+    {title:'Creating Walls & Wall On Edge', dur:'20 min'},
+    {title:'Bending & Fold/Unfold Operations', dur:'18 min'},
+    {title:'Flanges, Hems & Teardrop Features', dur:'22 min'},
+    {title:'Corner Reliefs & Sheet Metal Cutouts', dur:'19 min'},
+    {title:'Stamping Features (Louvers, Bridges, Beads)', dur:'21 min'},
+    {title:'Hopper & Rolled Wall Configurations', dur:'25 min'},
+    {title:'Flat Pattern View Generation', dur:'16 min'},
+    {title:'Final Sheet Metal Enclosure Project', dur:'30 min'},
+  ],
+  'CATIA Generative Shape Design': [
+    {title:'Wireframe Construction (Points, Lines, Planes)', dur:'15 min'},
+    {title:'Basic Curves (Splines, Helixes, Spirals)', dur:'20 min'},
+    {title:'Creating Extruded & Revolved Surfaces', dur:'18 min'},
+    {title:'Swept Surfaces & Guide Curves', dur:'25 min'},
+    {title:'Lofted & Blend Surfaces', dur:'24 min'},
+    {title:'Surface Operations (Join, Split, Trim)', dur:'20 min'},
+    {title:'Filleting Surfaces & Boundary Extractions', dur:'22 min'},
+    {title:'Surface to Solid Conversion (Thick Surface)', dur:'30 min'},
+  ],
+  'CATIA DMU Kinematics': [
+    {title:'DMU Kinematics Workbench Intro', dur:'12 min'},
+    {title:'Creating Revolute & Prismatic Joints', dur:'15 min'},
+    {title:'Cylindrical, Screw & Spherical Joints', dur:'20 min'},
+    {title:'Defining Commands & Constraints', dur:'18 min'},
+    {title:'Simulating Mechanisms & Time-Tracking', dur:'16 min'},
+    {title:'Exporting Simulation Replays & Clash Checks', dur:'25 min'},
+  ],
+  'CATIA Drafting & Annotations': [
+    {title:'Drafting Sheet Setup & Scaling', dur:'15 min'},
+    {title:'Generating Primary Views (Front, Top, Side)', dur:'18 min'},
+    {title:'Section Cuts, Section Views & Detail Views', dur:'22 min'},
+    {title:'Adding Dimensions & Geometrical Tolerances', dur:'20 min'},
+    {title:'Bills of Materials & Balloon Annotations', dur:'24 min'},
+    {title:'Title Block Customization & Automation', dur:'25 min'},
+    {title:'Final Drawing Export & PLM Release', dur:'30 min'},
+  ],
+  'default': [
+    {title:'Module 1 — Introduction', dur:'20 min'},
+    {title:'Module 2 — Core Concepts', dur:'22 min'},
+    {title:'Module 3 — Practical Exercises', dur:'25 min'},
+    {title:'Module 4 — Advanced Topics', dur:'28 min'},
+    {title:'Module 5 — Case Studies', dur:'24 min'},
+    {title:'Module 6 — Review & Assessment', dur:'20 min'},
+    {title:'Module 7 — Final Project', dur:'30 min'},
+    {title:'Module 8 — Certification Prep', dur:'18 min'},
+  ]
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const params = new URLSearchParams(location.search);
+const courseName = decodeURIComponent(params.get('course') || 'CATIA V5 Part Design');
+const modules = COURSES[courseName] || COURSES['default'];
+let currentIdx = Math.min(parseInt(params.get('module') || '0'), modules.length - 1);
+const doneKey = 'done_' + courseName;
+const done = new Set(JSON.parse(localStorage.getItem(doneKey) || '[]'));
+
+document.getElementById('breadCourse').textContent = courseName;
+
+// ── Summary Generator Helper ──────────────────────────────────────────────────
+function getSummaryText(title, course) {
+  const lower = title.toLowerCase();
+  
+  if (lower.includes('sketcher') || lower.includes('sketch')) {
+    return "Master the 2D Sketcher environment. Today, you will learn to construct geometric profiles, apply constraints, and ensure your 2D profiles are fully constrained for robust 3D modeling.";
+  }
+  if (lower.includes('pad') || lower.includes('pocket')) {
+    return "Transform 2D sketches into solid 3D components. Master the Pad (extrusion) and Pocket (pocketing) tools, define thickness limits, and create clean prismatic shapes.";
+  }
+  if (lower.includes('shaft') || lower.includes('groove')) {
+    return "Learn revolutionary sketch geometry! Master circular feature design using the Shaft tool to rotate 2D sketches around axis systems and use Groove to perform rotational material removal.";
+  }
+  if (lower.includes('hole') || lower.includes('thread')) {
+    return "In this module, you will learn to specify accurate industrial holes (Simple, Tapered, Counterbored) and apply standard metric threading/tapping specifications directly to 3D parts.";
+  }
+  if (lower.includes('fillet') || lower.includes('chamfer') || lower.includes('dress-up')) {
+    return "Add smooth edges and safety chamfers to your solid parts. Learn the difference between constant radius fillets, variable fillets, and face-to-face fillets in professional designs.";
+  }
+  if (lower.includes('pattern') || lower.includes('mirror')) {
+    return "Boost your design efficiency! Master the replication of repetitive features using Linear Patterns, Circular Patterns, and Mirror tools to scale up complex parts in seconds.";
+  }
+  if (lower.includes('boolean')) {
+    return "Unlock the power of Boolean logic in mechanical design. Learn how to combine (Add, Subtract, Intersect) different solid bodies to create highly complex mechanical manifolds.";
+  }
+  if (lower.includes('surface')) {
+    return "Master the boundary where solid modeling meets surfacing. Learn to split solid components using reference surfaces, extract skin shapes, and thicken surfaces into solid parts.";
+  }
+  if (lower.includes('table') || lower.includes('parameter')) {
+    return "Explore standard industrial design tables. Today, you will learn how to create parametric part catalogs, bind dimensional variables, and automate standard part sizing.";
+  }
+  if (lower.includes('capstone') || lower.includes('project')) {
+    return "It's time to build! Put all your learning to the test in this comprehensive final design project. You will construct a complex CATIA design from scratch following standard technical specifications.";
+  }
+  if (lower.includes('assembly') || lower.includes('workbench')) {
+    return "Explore the product assembly workbench. Today, you will learn standard layout structures, insert components, and manage product trees in large-scale CATIA designs.";
+  }
+  if (lower.includes('constraint') || lower.includes('position')) {
+    return "Learn to lock assemblies in space! Today, you will apply coincidence, contact, offset, angle, and fixation constraints to secure relative part movements.";
+  }
+  if (lower.includes('interference') || lower.includes('clash')) {
+    return "Perform digital mockup (DMU) checks. Master clash and clearance analysis, measure gaps between mating components, and troubleshoot interferences inside your assembly.";
+  }
+  if (lower.includes('bom') || lower.includes('bill of materials')) {
+    return "Generate assembly parts lists. Learn how to extract Bill of Materials (BOM), customize structural templates, and output detailed tables for procurement.";
+  }
+  if (lower.includes('explode') || lower.includes('scene')) {
+    return "Learn how to present your mechanics! Today, you will create custom scenes, configure exploded views, and manipulate relative offsets to present assembly steps clearly.";
+  }
+  if (lower.includes('bend') || lower.includes('wall') || lower.includes('flange')) {
+    return "Dive into Sheet Metal parameters. Master creating flat walls, walls on edges, dynamic flanges, and understand bend radii factors for sheet metal fabrication.";
+  }
+  if (lower.includes('stamp') || lower.includes('louver')) {
+    return "Apply deformation shapes! Learn how to design industrial stamping shapes (louvers, card guides, circular stamps, and beads) to reinforce folded sheets.";
+  }
+  if (lower.includes('flat pattern')) {
+    return "Generate standard fabrication drawings. Learn to unfold sheet metal designs into precise 2D flat patterns ready for laser cutting or punching.";
+  }
+  if (lower.includes('wireframe') || lower.includes('curve') || lower.includes('point')) {
+    return "Start surfacing design with solid reference frameworks. Today, you will learn to construct guide points, reference lines, coordinate planes, and curves (Splines, Helixes).";
+  }
+  if (lower.includes('sweep') || lower.includes('loft') || lower.includes('blend')) {
+    return "Learn the core of surface lofting. Today, you will extrude complex curves, create swept shapes using single or multi-guide paths, and blend boundaries smoothly.";
+  }
+  if (lower.includes('join') || lower.includes('split') || lower.includes('trim')) {
+    return "Master surface operations. Learn how to join separate skins, split surfaces using cutting tools, trim intersecting surfaces, and manage boundary orientations.";
+  }
+  if (lower.includes('joint') || lower.includes('kinematic')) {
+    return "Unlock physical motion simulation! Learn to define revolute, prismatic, and spherical joints inside the Digital Mockup (DMU) Kinematics workbench.";
+  }
+  if (lower.includes('simulation') || lower.includes('command')) {
+    return "Simulate mechanics with active commands. Today, you will bind rotational commands, specify motion velocities, and play active mechanical simulations.";
+  }
+  if (lower.includes('drafting') || lower.includes('view') || lower.includes('sheet')) {
+    return "Master standard technical drafting. Learn to set up title blocks, project orthographic views, section cuts, sectional details, and add balloon views.";
+  }
+  if (lower.includes('dimension') || lower.includes('tolerance') || lower.includes('gd&t')) {
+    return "Apply geometric dimensioning and tolerancing (GD&T). Today, you will add production dimension lines, tolerance standards, and feature control frames.";
+  }
+
+  return `In this module of ${course}, you will explore advanced CATIA design methods. Master professional modeling commands, optimize reference geometries, and implement standard CAD methodologies.`;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const m = modules[currentIdx];
+
+  const realPlayer = document.getElementById('realVideoPlayer');
+  const mockPlayer = document.getElementById('mockPlayerContent');
+
+  if (m.videoUrl) {
+    // Show real HTML5 video player, hide mockup player
+    realPlayer.style.display = 'block';
+    mockPlayer.style.display = 'none';
+    
+    if (realPlayer.getAttribute('src') !== m.videoUrl) {
+      realPlayer.src = m.videoUrl;
+      realPlayer.load();
+    }
+
+    // Attach completed listener to auto-progress lesson status!
+    realPlayer.onended = () => {
+      done.add(currentIdx);
+      localStorage.setItem(doneKey, JSON.stringify([...done]));
+      showToast('🎉 Module completed! Progress saved.', 'success');
+      setTimeout(() => {
+        if (currentIdx < modules.length - 1) {
+          currentIdx++;
+          render();
+        } else {
+          window.location.href = 'certificates.html';
+        }
+      }, 1500);
+    };
+  } else {
+    // Fallback to mockup player
+    realPlayer.style.display = 'none';
+    mockPlayer.style.display = 'flex';
+    realPlayer.pause();
+    realPlayer.removeAttribute('src');
+
+    // Video area
+    document.getElementById('vcName').textContent = courseName;
+    document.getElementById('vmTitle').textContent = m.title;
+    document.getElementById('vmDur').textContent = m.dur;
+    document.getElementById('ctrlTime').textContent = '0:00 / ' + m.dur.replace(' min', ':00');
+    document.getElementById('seekFill').style.width = '0%';
+  }
+
+  // Lesson info
+  document.getElementById('lessonTitle').textContent = m.title;
+  document.getElementById('lessonMeta').textContent =
+    'Module ' + (currentIdx + 1) + ' of ' + modules.length + ' · ' + m.dur + ' · ' + courseName;
+  
+  // Populate the Premium Top Hero Summary Banner
+  document.getElementById('heroTopicTitle').textContent = m.title;
+  document.getElementById('heroTopicSummary').textContent = getSummaryText(m.title, courseName);
+
+  // Progress
+  const pct = Math.round((done.size / modules.length) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = done.size + ' / ' + modules.length + ' done';
+  document.getElementById('moduleCount').textContent = done.size + ' / ' + modules.length;
+
+  // Buttons
+  document.getElementById('prevBtn').disabled = currentIdx === 0;
+  document.getElementById('markDoneBtn').textContent = done.has(currentIdx) ? '✓ Completed' : '✓ Mark done';
+  document.getElementById('nextBtn').textContent = currentIdx === modules.length - 1 ? '🎉 Finish' : 'Next →';
+
+  // Module list
+  const scroll = document.getElementById('moduleScroll');
+  scroll.innerHTML = modules.map((mod, i) => {
+    const cls = i === currentIdx ? 'active' : (done.has(i) ? 'done' : '');
+    const numContent = done.has(i) && i !== currentIdx ? '' : '<span class="num-text">' + (i + 1) + '</span>';
+    return `<div class="module-item ${cls}" data-idx="${i}">
+      <div class="module-num">${numContent}</div>
+      <div class="module-title">${mod.title}</div>
+      <div class="module-dur">${mod.dur}</div>
+    </div>`;
+  }).join('');
+
+  // Re-attach click events
+  document.querySelectorAll('.module-item').forEach(el => {
+    el.addEventListener('click', () => { currentIdx = parseInt(el.dataset.idx); render(); });
+  });
+
+  // Scroll active into view
+  const active = scroll.querySelector('.active');
+  if (active) active.scrollIntoView({ block: 'nearest' });
+}
+
+// ── Button events ─────────────────────────────────────────────────────────────
+document.getElementById('playBtn').addEventListener('click', () => {
+  const btn = document.getElementById('playBtn');
+  btn.textContent = '⏸';
+  showToast('▶ Playing: ' + modules[currentIdx].title);
+  // Simulate seek bar filling
+  let pct = 0;
+  const fill = document.getElementById('seekFill');
+  clearInterval(window._seekTimer);
+  window._seekTimer = setInterval(() => {
+    pct = Math.min(pct + 0.5, 100);
+    fill.style.width = pct + '%';
+    if (pct >= 100) {
+      clearInterval(window._seekTimer);
+      btn.textContent = '▶';
+      showToast('Module complete! Click Next → to continue.', 'success');
+    }
+  }, 80);
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  done.add(currentIdx);
+  localStorage.setItem(doneKey, JSON.stringify([...done]));
+  if (currentIdx < modules.length - 1) {
+    currentIdx++;
+    render();
+    showToast('Moving to next module...', '');
+  } else {
+    showToast('🎉 Course complete! Your certificate is ready.', 'success');
+    setTimeout(() => window.location.href = 'certificates.html', 2000);
+  }
+});
+
+document.getElementById('prevBtn').addEventListener('click', () => {
+  if (currentIdx > 0) { currentIdx--; render(); }
+});
+
+document.getElementById('markDoneBtn').addEventListener('click', () => {
+  done.add(currentIdx);
+  localStorage.setItem(doneKey, JSON.stringify([...done]));
+  showToast('Module marked as complete! ✓', 'success');
+  render();
+});
+
+render();
+
+</script>
+</body>
+</html>
