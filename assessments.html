@@ -298,7 +298,7 @@ const _mt = document.getElementById('menuToggle');
 if(_mt){ _mt.addEventListener('click', ()=>{ _sb.classList.toggle('open'); _sc.classList.toggle('show'); }); }
 if(_sc){ _sc.addEventListener('click', ()=>{ _sb.classList.remove('open'); _sc.classList.remove('show'); }); }
 
-const API_HOST = (window.location.port === '4000') ? '' : 'http://localhost:4000';
+const API_HOST = 'https://softmarc-backend.onrender.com';
 
 let activeQuizId = null;
 let activeQuizTitle = '';
