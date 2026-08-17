@@ -292,7 +292,7 @@ form {
 window.addEventListener('load', () => {
   setTimeout(() => {
     document.querySelector('.left-login-panel').classList.add('show');
-  }, 1600); // Exact 1.5-second delay!
+  }, 1500); // Exact 1.5-second delay!
 });
 
 const _rawSession = localStorage.getItem('softmarc_user');
@@ -340,7 +340,6 @@ form.addEventListener('submit', async (e) => {
   loginBtn.textContent = 'Signing in…';
 
   try {
-    // Points directly to your live, running database server on Render!
     const API_HOST = 'https://softmarc-backend.onrender.com';
     const res = await fetch(`${API_HOST}/api/login`, {
       method: 'POST',
