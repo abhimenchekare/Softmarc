@@ -340,7 +340,8 @@ form.addEventListener('submit', async (e) => {
   loginBtn.textContent = 'Signing in…';
 
   try {
-    const API_HOST = (window.location.port === '4000') ? '' : 'http://localhost:4000';
+    // Points directly to your live, running database server on Render!
+    const API_HOST = 'https://softmarc-backend.onrender.com';
     const res = await fetch(`${API_HOST}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
