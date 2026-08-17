@@ -245,7 +245,7 @@ form {
 
 <!-- Fullscreen Background Video (100% Opacity) -->
 <video id="bgVideo" autoplay muted playsinline>
-  <source src="login_bg.mp4" type="video/mp4">
+  <source src="videos/login_bg.mp4" type="video/mp4">
   <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4" type="video/mp4">
 </video>
 
@@ -340,7 +340,7 @@ form.addEventListener('submit', async (e) => {
   loginBtn.textContent = 'Signing in…';
 
   try {
-    const API_HOST = 'https://softmarc-backend.onrender.com';
+    const API_HOST = '';
     const res = await fetch(`${API_HOST}/api/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -367,5 +367,5 @@ form.addEventListener('submit', async (e) => {
 });
 </script>
 
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ca9458ad4e4461',t:'MTc4Njk4OTYzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
