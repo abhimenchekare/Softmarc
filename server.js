@@ -14,9 +14,9 @@ app.use(express.json());
 // Serve static files from the current directory
 app.use(express.static(__dirname));
 
-// Redirect root to Softmarc_Login.html
+// Redirect root to the login page.
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'Softmarc_Login.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const pool = new Pool({

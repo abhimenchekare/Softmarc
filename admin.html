@@ -307,7 +307,7 @@ tbody tr:hover{ background:var(--bg); }
   <nav class="nav" aria-label="Admin">
     <a href="#" class="active"><span class="icon">👥</span>Manage Users</a>
     <a href="settings.html"><span class="icon">⚙</span>Settings</a>
-    <a href="Softmarc_Login.html"><span class="icon">🚪</span>Logout</a>
+    <a href="index.html"><span class="icon">🚪</span>Logout</a>
   </nav>
 
   <div class="sidebar-footer">
@@ -632,7 +632,7 @@ addUserForm.addEventListener('submit', async (e) => {
 // ---------- Auth guard — admin only ----------
 const rawSession = localStorage.getItem('softmarc_user');
 if (!rawSession) {
-  window.location.href = 'Softmarc_Login.html';
+  window.location.href = 'index.html';
 } else {
   const sessionUser = JSON.parse(rawSession);
   if (sessionUser.role !== 'admin') {
@@ -642,11 +642,11 @@ if (!rawSession) {
 }
 
 // ---------- Logout ----------
-document.querySelectorAll('[href="Softmarc_Login.html"]').forEach(el => {
+document.querySelectorAll('[href="index.html"]').forEach(el => {
   el.addEventListener('click', (e) => {
     e.preventDefault();
     localStorage.removeItem('softmarc_user');
-    window.location.href = 'Softmarc_Login.html';
+    window.location.href = 'index.html';
   });
 });
 

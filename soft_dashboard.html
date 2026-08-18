@@ -504,7 +504,7 @@ a{ color:inherit; }
 const raw = localStorage.getItem('softmarc_user');
 if (!raw) {
   // Not logged in — send back to login
-  window.location.href = 'Softmarc_Login.html';
+  window.location.href = 'index.html';
 }
 
 const user = JSON.parse(raw);
@@ -529,7 +529,7 @@ if (user.role === 'admin') {
 document.getElementById('logoutBtn').addEventListener('click', (e) => {
   e.preventDefault();
   localStorage.removeItem('softmarc_user');
-  window.location.href = 'Softmarc_Login.html';
+  window.location.href = 'index.html';
 });
 
 // ---------- Sidebar toggle (mobile) ----------

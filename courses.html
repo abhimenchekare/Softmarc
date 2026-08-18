@@ -172,7 +172,7 @@ a{ color:inherit; text-decoration:none; }
 </main>
 <script>
 const _raw = localStorage.getItem('softmarc_user');
-if (!_raw) { window.location.href = 'Softmarc_Login.html'; }
+if (!_raw) { window.location.href = 'index.html'; }
 const _user = JSON.parse(_raw || '{}');
 document.getElementById('topbarName').textContent = _user.full_name || '';
 const _ini = (_user.full_name||'AB').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
@@ -184,7 +184,7 @@ if (_user.role === 'admin') {
 document.getElementById('logoutBtn').addEventListener('click', e => {
   e.preventDefault();
   localStorage.removeItem('softmarc_user');
-  window.location.href = 'Softmarc_Login.html';
+  window.location.href = 'index.html';
 });
 const _sb = document.getElementById('sidebar');
 const _sc = document.getElementById('scrim');
