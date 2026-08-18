@@ -471,7 +471,7 @@ const COURSES = {
 const params = new URLSearchParams(location.search);
 const courseName = decodeURIComponent(params.get('course') || 'CATIA V5 Part Design');
 const modules = COURSES[courseName] || COURSES['default'];
-let currentIdx = Math.min(parseInt(params.get('module') || '0'), modules.length - 1);
+let currentIdx = 0; // Always start on the 1st video (index 0) when opening any course!
 const doneKey = 'done_' + courseName;
 const done = new Set(JSON.parse(localStorage.getItem(doneKey) || '[]'));
 
