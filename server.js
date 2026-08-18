@@ -25,6 +25,11 @@ const pool = new Pool({
   database: process.env.PGDATABASE,
   user: process.env.PGUSER,
   password: process.env.PGPASSWORD,
+  // Most hosted Postgres providers require TLS. Keep local development
+  // compatible with a standard local Postgres installation.
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: false }
+    : false,
 });
 
 const SALT_ROUNDS = 12;
@@ -307,7 +312,13 @@ app.delete('/api/questions/:id', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Softmarc admin API running on http://localhost:${PORT}`);
-});
+// Vercel imports this Express app from api/[...path].js. Only open a port
+// when the file is started directly for local development.
+if (require.main === module) {
+  const PORT = process.env.PORT || 4000;
+  app.listen(PORT, () => {
+    console.log(`Softmarc admin API running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
