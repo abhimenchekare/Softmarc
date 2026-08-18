@@ -408,7 +408,10 @@ tbody tr:hover{ background:var(--bg); }
       <div class="questions-panel" id="questionsPanel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
           <h2 id="activeQuizManageTitle" style="font-size:14.5px; font-family:var(--font-display); font-weight:700;">Select a Quiz to Manage Questions</h2>
-          <button class="small-btn primary" id="addQuestionBtn" style="display:none;" onclick="adminAddQuestion()">+ Add Question</button>
+          <div style="display:flex; gap:8px;">
+            <button class="small-btn danger" id="deleteQuizBtn" style="display:none;" onclick="adminDeleteQuiz()">Delete Quiz</button>
+            <button class="small-btn primary" id="addQuestionBtn" style="display:none;" onclick="adminAddQuestion()">+ Add Question</button>
+          </div>
         </div>
         <div id="adminQuestionsList">
           <p style="color:var(--text-600); text-align:center; padding: 40px 0;">Please select a quiz from the left panel to edit its questions and correct answers.</p>
@@ -763,6 +766,7 @@ async function selectQuizToManage(id, title) {
 
   document.getElementById('activeQuizManageTitle').textContent = `Questions in "${title}"`;
   document.getElementById('addQuestionBtn').style.display = 'block';
+  document.getElementById('deleteQuizBtn').style.display = 'block';
 
   try {
     const res = await fetch(`${API_HOST}/api/quizzes/${id}/questions`);
@@ -820,6 +824,34 @@ async function adminAddQuiz() {
   } catch (err) {
     console.error(err);
     showToast('Failed to create quiz.', true);
+  }
+}
+
+async function adminDeleteQuiz() {
+  if (!activeManageQuizId) return;
+
+  const confirmed = confirm(
+    `Delete "${activeManageQuizTitle}"? This permanently deletes its questions and student submissions.`
+  );
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch(`${API_HOST}/api/quizzes/${activeManageQuizId}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not delete quiz.');
+
+    activeManageQuizId = null;
+    activeManageQuizTitle = '';
+    document.getElementById('activeQuizManageTitle').textContent = 'Select a Quiz to Manage Questions';
+    document.getElementById('addQuestionBtn').style.display = 'none';
+    document.getElementById('deleteQuizBtn').style.display = 'none';
+    document.getElementById('adminQuestionsList').innerHTML =
+      '<p style="color:var(--text-600); text-align:center; padding: 40px 0;">Please select a quiz from the left panel to edit its questions and correct answers.</p>';
+    showToast('Quiz deleted.');
+    loadAdminQuizzes();
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || 'Failed to delete quiz.', true);
   }
 }
 

@@ -255,6 +255,32 @@ app.post('/api/quizzes', async (req, res) => {
 });
 
 // ---------- POST /api/quizzes/:id/questions — add a question to a quiz (admin) ----------
+app.delete('/api/quizzes/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (!/^\d+$/.test(id)) {
+    return res.status(400).json({ error: 'Invalid quiz id.' });
+  }
+
+  console.log(`\n[Backend API] DELETE /api/quizzes/${id} - Deleting quiz and dependent data.`);
+  try {
+    const result = await pool.query(
+      'DELETE FROM quizzes WHERE id = $1 RETURNING id, title',
+      [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Quiz not found.' });
+    }
+
+    console.log(`[Backend Success] Deleted quiz ID: ${id}.`);
+    res.json({ deleted: true, quiz: result.rows[0] });
+  } catch (err) {
+    console.error('[Backend Error]', err);
+    res.status(500).json({ error: 'Failed to delete quiz.' });
+  }
+});
+
 app.post('/api/quizzes/:id/questions', async (req, res) => {
   const { id } = req.params;
   const { question_text, option_a, option_b, option_c, option_d, correct_option } = req.body;
