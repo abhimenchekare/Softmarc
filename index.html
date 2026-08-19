@@ -64,20 +64,21 @@ body{
 
 /* ---------- Premium Login Card ---------- */
 .left-login-panel{
-  width: min(100%, 430px);
-  min-height: 540px;
+  /* Stable desktop sizing: compact on laptops, comfortably sized on large screens. */
+  width: clamp(380px, 27vw, 450px);
+  min-height: clamp(520px, 62vh, 580px);
   background: linear-gradient(145deg, rgba(7, 37, 68, .92), rgba(3, 19, 38, .88));
   backdrop-filter: blur(22px);
   border: 1px solid rgba(126, 222, 247, .42);
   border-radius: 24px;
-  padding: 32px;
+  padding: clamp(28px, 2.2vw, 36px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   box-shadow: 
     0 20px 60px rgba(0, 0, 0, .48),
     0 0 0 1px rgba(255,255,255,.04) inset;
-  margin-left: clamp(24px, 7vw, 108px);
+  margin-left: clamp(32px, 7vw, 112px);
   z-index: 10;
   color: #fff;
   position: relative;
@@ -243,6 +244,13 @@ form {
 @media (max-width: 560px) {
   body { justify-content: center; padding: 16px; }
   .left-login-panel { margin-left: 0; width: 100%; min-height: 520px; padding:28px 24px; }
+}
+
+@media (min-width: 561px) and (max-width: 1024px) {
+  .left-login-panel {
+    width: min(420px, 46vw);
+    margin-left: clamp(28px, 5vw, 64px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
