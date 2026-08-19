@@ -371,13 +371,13 @@ a{ color:inherit; text-decoration:none; }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 const _raw = localStorage.getItem('softmarc_user');
-if (!_raw) window.location.href = 'Softmarc_Login.html';
+if (!_raw) window.location.href = 'index.html';
 const _user = JSON.parse(_raw || '{}');
 const _al = document.getElementById('adminLink');
 if (_al && _user.role === 'admin') { _al.style.display = 'flex'; }
 document.getElementById('logoutBtn').addEventListener('click', e => {
   e.preventDefault(); localStorage.removeItem('softmarc_user');
-  window.location.href = 'Softmarc_Login.html';
+  window.location.href = 'index.html';
 });
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -392,68 +392,68 @@ function showToast(msg, type='') {
 // ── Course data ───────────────────────────────────────────────────────────────
 const COURSES = {
   'CATIA V5 Part Design': [
-    {title:'Sketcher Workbench & Constraints', dur:'20 min', videoUrl:'https://www.w3schools.com/html/mov_bbb.mp4'},
-    {title:'Pad & Pocket Features', dur:'25 min'},
-    {title:'Shaft & Groove Operations', dur:'22 min'},
-    {title:'Holes & Thread Specifications', dur:'18 min'},
-    {title:'Fillets, Chamfers & Dress-up Features', dur:'15 min'},
-    {title:'Edge Fillet & Variable Fillet', dur:'20 min'},
-    {title:'Patterns & Mirror Operations', dur:'18 min'},
-    {title:'Draft Angle & Shell Features', dur:'22 min'},
-    {title:'Boolean Operations in Body Design', dur:'25 min'},
-    {title:'Surface-Based Features (Split, Thick Surface)', dur:'24 min'},
-    {title:'Design Tables & Parametric Parts', dur:'26 min'},
-    {title:'Part Design Final Capstone Project', dur:'30 min'},
+    {title:'Sketcher Workbench & Constraints', dur:'20 min', videoUrl:'videos/Your_First_Design_Project (1) 1.mp4'},
+    {title:'Pad & Pocket Features', dur:'25 min',videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4'},
+    {title:'Shaft & Groove Operations', dur:'22 min',videoUrl:'videos/Auto_Engineering_Zones 1.mp4'},
+    {title:'Holes & Thread Specifications', dur:'18 min',videoUrl:'videos/Automotive_CATIA_Designer 3.mp4'},
+    {title:'Fillets, Chamfers & Dress-up Features', dur:'15 min',videoUrl:'videos/Automotive_Engineering.mp4'},
+    {title:'Edge Fillet & Variable Fillet', dur:'20 min',videoUrl:'videos/Automotive_Interior_Design 1.mp4'},
+    {title:'Patterns & Mirror Operations', dur:'18 min',videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4'},
+    {title:'Draft Angle & Shell Features', dur:'22 min',videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4'},
+    {title:'Boolean Operations in Body Design', dur:'25 min',videoUrl:'videos/Introduction to Design World.mp4'},
+    {title:'Surface-Based Features (Split, Thick Surface)', dur:'24 min',videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4'},
+    {title:'Design Tables & Parametric Parts', dur:'26 min',videoUrl:'videos/The_Idea_of_a_Car 1.mp4'},
+    {title:'Part Design Final Capstone Project', dur:'30 min',videoUrl:'videos/Your_First_Design_Project (1) 1.mp4'},
   ],
   'CATIA Assembly Design': [
-    {title:'Assembly Workbench Overview', dur:'15 min'},
-    {title:'Inserting & Positioning Components', dur:'20 min'},
-    {title:'Coincidence & Contact Constraints', dur:'18 min'},
-    {title:'Offset, Angle & Fixing Constraints', dur:'22 min'},
-    {title:'Creating Product Structure & Sub-Assemblies', dur:'24 min'},
-    {title:'Analyzing Interference & Clashes', dur:'20 min'},
-    {title:'Assembly Bill of Materials (BOM) Generation', dur:'18 min'},
-    {title:'Exploded Views & Scene Creation', dur:'16 min'},
-    {title:'Flexible Sub-Assemblies & Overloading', dur:'21 min'},
-    {title:'Final CATIA Assembly Design Project', dur:'30 min'},
+    {title:'Assembly Workbench Overview', dur:'15 min',videoUrl:'videos/Your_First_Design_Project (1) 1.mp4'},
+    {title:'Inserting & Positioning Components', dur:'20 min',videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4'},
+    {title:'Coincidence & Contact Constraints', dur:'18 min',videoUrl:'videos/Auto_Engineering_Zones 1.mp4'},
+    {title:'Offset, Angle & Fixing Constraints', dur:'22 min',videoUrl:'videos/Automotive_CATIA_Designer 3.mp4'},
+    {title:'Creating Product Structure & Sub-Assemblies', dur:'24 min',videoUrl:'videos/Automotive_Engineering.mp4'},
+    {title:'Analyzing Interference & Clashes', dur:'20 min',videoUrl:'videos/Automotive_Interior_Design 1.mp4'},
+    {title:'Assembly Bill of Materials (BOM) Generation', dur:'18 min',videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4'},
+    {title:'Exploded Views & Scene Creation', dur:'16 min',videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4'},
+    {title:'Flexible Sub-Assemblies & Overloading', dur:'21 min',videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4'},
+    {title:'Final CATIA Assembly Design Project', dur:'30 min',videoUrl:'videos/The_Idea_of_a_Car 1.mp4'},
   ],
   'CATIA Sheet Metal Design': [
-    {title:'Sheet Metal Parameters Setup', dur:'15 min'},
-    {title:'Creating Walls & Wall On Edge', dur:'20 min'},
-    {title:'Bending & Fold/Unfold Operations', dur:'18 min'},
-    {title:'Flanges, Hems & Teardrop Features', dur:'22 min'},
-    {title:'Corner Reliefs & Sheet Metal Cutouts', dur:'19 min'},
-    {title:'Stamping Features (Louvers, Bridges, Beads)', dur:'21 min'},
-    {title:'Hopper & Rolled Wall Configurations', dur:'25 min'},
-    {title:'Flat Pattern View Generation', dur:'16 min'},
-    {title:'Final Sheet Metal Enclosure Project', dur:'30 min'},
+    {title:'Sheet Metal Parameters Setup', dur:'15 min',videoUrl:'videos/The_Idea_of_a_Car 1.mp4'},
+    {title:'Creating Walls & Wall On Edge', dur:'20 min',videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4'},
+    {title:'Bending & Fold/Unfold Operations', dur:'18 min',videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4'},
+    {title:'Flanges, Hems & Teardrop Features', dur:'22 min',videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4'},
+    {title:'Corner Reliefs & Sheet Metal Cutouts', dur:'19 min',videoUrl:'videos/Automotive_Interior_Design 1.mp4'},
+    {title:'Stamping Features (Louvers, Bridges, Beads)', dur:'21 min',videoUrl:'videos/Automotive_Engineering.mp4'},
+    {title:'Hopper & Rolled Wall Configurations', dur:'25 min',videoUrl:'videos/Automotive_CATIA_Designer 3.mp4'},
+    {title:'Flat Pattern View Generation', dur:'16 min',videoUrl:'videos/Auto_Engineering_Zones 1.mp4'},
+    {title:'Final Sheet Metal Enclosure Project', dur:'30 min',videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4'},
   ],
   'CATIA Generative Shape Design': [
-    {title:'Wireframe Construction (Points, Lines, Planes)', dur:'15 min'},
-    {title:'Basic Curves (Splines, Helixes, Spirals)', dur:'20 min'},
-    {title:'Creating Extruded & Revolved Surfaces', dur:'18 min'},
-    {title:'Swept Surfaces & Guide Curves', dur:'25 min'},
-    {title:'Lofted & Blend Surfaces', dur:'24 min'},
-    {title:'Surface Operations (Join, Split, Trim)', dur:'20 min'},
-    {title:'Filleting Surfaces & Boundary Extractions', dur:'22 min'},
-    {title:'Surface to Solid Conversion (Thick Surface)', dur:'30 min'},
+    {title:'Wireframe Construction (Points, Lines, Planes)', dur:'15 min',videoUrl:'videos/Auto_Engineering_Zones 1.mp4'},
+    {title:'Basic Curves (Splines, Helixes, Spirals)', dur:'20 min',videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4'},
+    {title:'Creating Extruded & Revolved Surfaces', dur:'18 min',videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4'},
+    {title:'Swept Surfaces & Guide Curves', dur:'25 min',videoUrl:'videos/The_Idea_of_a_Car 1.mp4'},
+    {title:'Lofted & Blend Surfaces', dur:'24 min',videoUrl:'videos/Automotive_CATIA_Designer 3.mp4'},
+    {title:'Surface Operations (Join, Split, Trim)', dur:'20 min',videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4'},
+    {title:'Filleting Surfaces & Boundary Extractions', dur:'22 min',videoUrl:'videos/Automotive_Engineering.mp4'},
+    {title:'Surface to Solid Conversion (Thick Surface)', dur:'30 min',videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4'},
   ],
   'CATIA DMU Kinematics': [
-    {title:'DMU Kinematics Workbench Intro', dur:'12 min'},
-    {title:'Creating Revolute & Prismatic Joints', dur:'15 min'},
-    {title:'Cylindrical, Screw & Spherical Joints', dur:'20 min'},
-    {title:'Defining Commands & Constraints', dur:'18 min'},
-    {title:'Simulating Mechanisms & Time-Tracking', dur:'16 min'},
-    {title:'Exporting Simulation Replays & Clash Checks', dur:'25 min'},
+    {title:'DMU Kinematics Workbench Intro', dur:'12 min',videoUrl:'videos/The_Idea_of_a_Car 1.mp4'},
+    {title:'Creating Revolute & Prismatic Joints', dur:'15 min',videoUrl:'videos/Automotive_CATIA_Designer 3.mp4'},
+    {title:'Cylindrical, Screw & Spherical Joints', dur:'20 min',videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4'},
+    {title:'Defining Commands & Constraints', dur:'18 min',videoUrl:'videos/Automotive_Engineering.mp4'},
+    {title:'Simulating Mechanisms & Time-Tracking', dur:'16 min',videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4'},
+    {title:'Exporting Simulation Replays & Clash Checks', dur:'25 min',videoUrl:'videos/Automotive_Engineering.mp4'},
   ],
   'CATIA Drafting & Annotations': [
-    {title:'Drafting Sheet Setup & Scaling', dur:'15 min'},
-    {title:'Generating Primary Views (Front, Top, Side)', dur:'18 min'},
-    {title:'Section Cuts, Section Views & Detail Views', dur:'22 min'},
-    {title:'Adding Dimensions & Geometrical Tolerances', dur:'20 min'},
-    {title:'Bills of Materials & Balloon Annotations', dur:'24 min'},
-    {title:'Title Block Customization & Automation', dur:'25 min'},
-    {title:'Final Drawing Export & PLM Release', dur:'30 min'},
+    {title:'Drafting Sheet Setup & Scaling', dur:'15 min',videoUrl:'videos/Automotive_Engineering.mp4'},
+    {title:'Generating Primary Views (Front, Top, Side)', dur:'18 min',videoUrl:'videos/The_Idea_of_a_Car 1.mp4'},
+    {title:'Section Cuts, Section Views & Detail Views', dur:'22 min',videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4'},
+    {title:'Adding Dimensions & Geometrical Tolerances', dur:'20 min',videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4'},
+    {title:'Bills of Materials & Balloon Annotations', dur:'24 min',videoUrl:'videos/The_Idea_of_a_Car 1.mp4'},
+    {title:'Title Block Customization & Automation', dur:'25 min',videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4'},
+    {title:'Final Drawing Export & PLM Release', dur:'30 min',videoUrl:'videos/Introduction to Design World.mp4'},
   ],
   'default': [
     {title:'Module 1 — Introduction', dur:'20 min'},
@@ -471,7 +471,7 @@ const COURSES = {
 const params = new URLSearchParams(location.search);
 const courseName = decodeURIComponent(params.get('course') || 'CATIA V5 Part Design');
 const modules = COURSES[courseName] || COURSES['default'];
-let currentIdx = Math.min(parseInt(params.get('module') || '0'), modules.length - 1);
+let currentIdx = 0; // Always start on the 1st video (index 0) when opening any course!
 const doneKey = 'done_' + courseName;
 const done = new Set(JSON.parse(localStorage.getItem(doneKey) || '[]'));
 
