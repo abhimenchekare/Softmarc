@@ -161,7 +161,7 @@ a{ color:inherit; text-decoration:none; }
 </main>
 <script>
 const _raw = localStorage.getItem('softmarc_user');
-if (!_raw) { window.location.href = 'index.html'; }
+if (!_raw) { window.location.href = 'Softmarc_Login.html'; }
 const _user = JSON.parse(_raw || '{}');
 document.getElementById('topbarName').textContent = _user.full_name || '';
 const _ini = (_user.full_name||'AB').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
@@ -173,7 +173,7 @@ if (_user.role === 'admin') {
 document.getElementById('logoutBtn').addEventListener('click', e => {
   e.preventDefault();
   localStorage.removeItem('softmarc_user');
-  window.location.href = 'index.html';
+  window.location.href = 'Softmarc_Login.html';
 });
 const _sb = document.getElementById('sidebar');
 const _sc = document.getElementById('scrim');
@@ -281,7 +281,7 @@ function renderCertificates() {
           <h3>${course.name}</h3>
           <div class="meta">Issued 10 Aug 2026</div>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn-primary" style="flex:1" onclick="alert('Downloading SM-2026-${course.code}-0041.pdf...')">Download</button>
+            <button class="btn btn-primary" style="flex:1" onclick="window.location.href='view_certificate.html?course=' + encodeURIComponent('${course.name}') + '&id=SM-2026-${course.code}-0041'">View / Print</button>
             <button class="btn btn-outline" style="flex:1" onclick="alert('Share link copied to clipboard!')">Share</button>
           </div>
           <div class="cert-id">ID: SM-2026-${course.code}-0041</div>
@@ -295,5 +295,5 @@ function renderCertificates() {
 
 renderCertificates();
 </script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ae64ce79e8002c',t:'MTc4NjY5NDA4OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2d898ea7de4cc07',t:'MTc4NzEzNjYyNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

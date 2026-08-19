@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmarc Learning Portal — Certificate of Completion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Cinzel:wght@600;700;800&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --navy-950:#051B33;
+  --navy-900:#06284A;
+  --navy-800:#0A3D66;
+  --cyan-500:#11C7F4;
+  --cyan-600:#0A9FD1;
+  --cyan-700:#0A73B8;
+  --gold:#D4AF37;
+  --gold-light:#F9F6E0;
+  --surface:#FFFFFF;
+  --text-900:#0E2238;
+  --text-600:#55677E;
+  --border:#E1E9F1;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+body{
+  font-family:'Inter', sans-serif;
+  background: var(--navy-950);
+  color: var(--text-900);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+/* Print-optimized, elegant certificate frame */
+.certificate-container {
+  width: 840px;
+  height: 594px; /* Exact landscape ratio */
+  background: var(--surface);
+  border: 18px solid var(--navy-900);
+  padding: 40px;
+  position: relative;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  text-align: center;
+}
+
+/* Inner gold decorative border */
+.certificate-inner {
+  border: 2px solid var(--gold);
+  width: 100%;
+  height: 100%;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+
+/* Corner decorations */
+.corner {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--gold);
+}
+.top-left { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+.top-right { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+.bottom-left { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+.bottom-right { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+/* Brand and Sub-brand */
+.logo-icon {
+  height: 74px;
+  width: auto;
+  filter: brightness(0.1) contrast(1.5);
+  margin-bottom: 1px;
+}
+.brand-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--navy-950);
+}
+
+/* Main Certificate Texts */
+.cert-title {
+  font-family: 'Cinzel', serif;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--navy-900);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.cert-subtitle {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  color: var(--text-600);
+  font-weight: 600;
+}
+
+.presented-to {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-600);
+  margin: 14px 0 4px;
+}
+
+.student-name {
+  font-family: 'Cinzel', serif;
+  font-size: 38px;
+  font-weight: 700;
+  color: var(--gold);
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 8px;
+  display: inline-block;
+  min-width: 380px;
+  margin-bottom: 12px;
+}
+
+.completion-text {
+  font-size: 13.5px;
+  color: var(--text-600);
+  max-width: 580px;
+  line-height: 1.6;
+}
+
+.completion-text strong {
+  color: var(--navy-950);
+}
+
+/* Footer elements: Dates, Signatures, Seals */
+.cert-footer {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 14px;
+}
+
+.footer-col {
+  width: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.signature-line {
+  width: 100%;
+  border-top: 1.5px solid var(--border);
+  padding-top: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-600);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.date-val {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy-950);
+  margin-bottom: 4px;
+}
+
+/* Glowing circular gold seal */
+.gold-seal {
+  width: 70px;
+  height: 70px;
+  background: radial-gradient(circle, #f9f6e0 0%, var(--gold) 100%);
+  border: 2px dashed #fff;
+  border-radius: 50%;
+  box-shadow: 0 4px 15px rgba(212,175,55,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  position: relative;
+}
+.gold-seal::before {
+  content: '★';
+  font-size: 10px;
+  color: #fff;
+  position: absolute;
+  top: 6px;
+}
+
+.verification-id {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-400);
+  letter-spacing: 0.5px;
+}
+
+/* Print and Action Controls */
+.controls-container {
+  display: flex;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.15s;
+  outline: none;
+}
+
+.btn-primary {
+  background: var(--cyan-600);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(17,199,244,0.25);
+}
+.btn-primary:hover {
+  background: var(--cyan-700);
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: none;
+  border: 1.5px solid var(--border);
+  color: #fff;
+}
+.btn-outline:hover {
+  background: rgba(255,255,255,0.06);
+}
+
+/* High-fidelity print styles */
+@media print {
+  body {
+    background: #fff;
+    padding: 0;
+    margin: 0;
+  }
+  .controls-container {
+    display: none; /* Hide buttons when printing */
+  }
+  .certificate-container {
+    box-shadow: none;
+    border: 18px solid var(--navy-900);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+}
+</style>
+</head>
+
+<body>
+
+  <!-- Printable Certificate Container -->
+  <div class="certificate-container">
+    <div class="certificate-inner">
+      <!-- Decorative corners -->
+      <div class="corner top-left"></div>
+      <div class="corner top-right"></div>
+      <div class="corner bottom-left"></div>
+      <div class="corner bottom-right"></div>
+
+      <!-- Top Header -->
+      <div style="display:flex; flex-direction:column; align-items:center;">
+        <img class="logo-icon" src="logo.png" alt="Softmarc Logo">
+        <div class="brand-name">Softmarc Learning Portal</div>
+      </div>
+
+      <!-- Main Title -->
+      <div>
+        <h1 class="cert-title">Certificate of Completion</h1>
+        <div class="cert-subtitle">This credential certifies the successful mastery of</div>
+      </div>
+
+      <!-- Student Name and Course -->
+      <div>
+        <div class="presented-to">This is proudly presented to</div>
+        <div class="student-name" id="certStudentName">Abhishek Menchekare</div>
+        <div class="completion-text">
+          for successfully finishing 100% of all lectures, modules, and interactive assessments in the advanced engineering course **<strong id="certCourseName">CATIA V5 Part Design</strong>** compiled by Softmarc Technologies.
+        </div>
+      </div>
+
+      <!-- Footer elements -->
+      <div class="cert-footer">
+        <!-- Issue Date -->
+        <div class="footer-col">
+          <div class="date-val" id="certIssueDate">18 Aug 2026</div>
+          <div class="signature-line">Date of Issuance</div>
+        </div>
+
+        <!-- Gold Seal -->
+        <div class="gold-seal">🏆</div>
+
+        <!-- Instructor Signature -->
+        <div class="footer-col">
+          <div style="font-family:'Cinzel', serif; font-size:15px; font-weight:700; color:var(--navy-950); margin-bottom:2px; font-style:italic;">S. Technologies</div>
+          <div class="signature-line">Authorized Signatory</div>
+        </div>
+      </div>
+
+      <!-- Verification Serial ID -->
+      <div class="verification-id" id="certSerialID">Verification ID: SM-2026-CPD-9472</div>
+
+    </div>
+  </div>
+
+  <!-- Print Action Controls -->
+  <div class="controls-container">
+    <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <button class="btn btn-outline" onclick="window.location.href='certificates.html'">← Back to Credentials</button>
+  </div>
+
+<script>
+// ---------- Auth Guard & Dynamic Profile Syncing ----------
+const raw = localStorage.getItem('softmarc_user');
+if (!raw) {
+  window.location.href = 'Softmarc_Login.html';
+}
+const user = JSON.parse(raw);
+
+// Read details from URL parameters
+const params = new URLSearchParams(location.search);
+const rawCourse = params.get('course') || 'CATIA V5 Part Design';
+const rawID = params.get('id') || 'SM-2026-CPD-0041';
+
+// Sync student name and course details dynamically
+document.getElementById('certStudentName').textContent = user.full_name || 'Abhishek Menchekare';
+document.getElementById('certCourseName').textContent = rawCourse;
+document.getElementById('certSerialID').textContent = `Verification ID: ${rawID}`;
+
+// Set current date nicely
+const currentDate = new Date().toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+document.getElementById('certIssueDate').textContent = currentDate;
+</script>
+
+</body>
+</html>
