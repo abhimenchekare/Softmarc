@@ -195,7 +195,9 @@ a{ color:inherit; text-decoration:none; }
       <div class="profile-avatar" id="profileAvatar">AB</div>
       <h2 id="profileName">Abhishek</h2>
       <div class="role" id="profileRole">Student</div>
-      <button class="btn btn-outline" style="width:100%">Change Photo</button>
+      <button class="btn btn-outline" id="changePhotoBtn" style="width:100%; margin-bottom: 6px;">Change Photo</button>
+      <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
+      <a href="#" id="removePhotoBtn" style="font-size:12.5px; color:var(--danger); text-decoration:none; font-weight:600; display:none; margin: 4px auto 0;">Remove Photo</a>
       <div class="stat-row">
         <div class="stat-item"><div class="val">18</div><div class="lbl">Courses</div></div>
         <div class="stat-item"><div class="val">5</div><div class="lbl">Certs</div></div>
@@ -211,12 +213,12 @@ a{ color:inherit; text-decoration:none; }
         <div class="field"><label>Email</label><input type="email" id="pEmail" placeholder="your@email.com"></div>
       </div>
       <div class="form-row">
-        <div class="field"><label>Phone</label><input type="text" placeholder="+91 00000 00000"></div>
-        <div class="field"><label>Department</label><input type="text" placeholder="Mechanical Engineering"></div>
+        <div class="field"><label>Phone</label><input type="text" id="pPhone" placeholder="+91 00000 00000"></div>
+        <div class="field"><label>Department</label><input type="text" id="pDept" placeholder="Mechanical Engineering"></div>
       </div>
       <div class="form-row">
-        <div class="field"><label>Institution</label><input type="text" placeholder="Your college / company"></div>
-        <div class="field"><label>City</label><input type="text" placeholder="City"></div>
+        <div class="field"><label>Institution</label><input type="text" id="pInst" placeholder="Your college / company"></div>
+        <div class="field"><label>City</label><input type="text" id="pCity" placeholder="City"></div>
       </div>
       <button class="btn btn-primary" style="margin-top:6px">Save Changes</button>
     </div>
@@ -241,12 +243,74 @@ function showToast(msg, type = '') {
 }
 
 const _pu = JSON.parse(localStorage.getItem('softmarc_user')||'{}');
-const _pai = (_pu.full_name||'AB').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-document.getElementById('profileAvatar').textContent = _pai;
 document.getElementById('profileName').textContent = _pu.full_name || '';
 document.getElementById('profileRole').textContent = _pu.role ? _pu.role.charAt(0).toUpperCase()+_pu.role.slice(1) : '';
+
+// Function to dynamically update both avatar icons and the remove link
+function updateProfileAvatarUI() {
+  const avatarEl = document.getElementById('profileAvatar');
+  const topbarAvatarEl = document.getElementById('avatarInitials');
+  const removeBtn = document.getElementById('removePhotoBtn');
+  
+  if (_pu.avatar_image) {
+    const imgHtml = `<img src="${_pu.avatar_image}" style="width:100%; height:100%; object-fit:cover; border-radius:50%; display:block;">`;
+    avatarEl.innerHTML = imgHtml;
+    topbarAvatarEl.innerHTML = imgHtml;
+    if (removeBtn) removeBtn.style.display = 'block'; // Show "Remove Photo" if an image exists!
+  } else {
+    const initials = (_pu.full_name || 'AB').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    avatarEl.innerHTML = initials;
+    topbarAvatarEl.innerHTML = initials;
+    if (removeBtn) removeBtn.style.display = 'none'; // Hide "Remove Photo" if using initials!
+  }
+}
+
+// Load all six form values dynamically
 document.getElementById('pName').value = _pu.full_name || '';
 document.getElementById('pEmail').value = _pu.email || '';
+document.getElementById('pPhone').value = _pu.phone || '';
+document.getElementById('pDept').value = _pu.department || '';
+document.getElementById('pInst').value = _pu.institution || '';
+document.getElementById('pCity').value = _pu.city || '';
+
+updateProfileAvatarUI();
+
+// Trigger file input when "Change Photo" is clicked
+document.getElementById('changePhotoBtn').addEventListener('click', () => {
+  document.getElementById('avatarFileInput').click();
+});
+
+// Process image file selection and convert to Base64
+document.getElementById('avatarFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const base64String = evt.target.result;
+    
+    // Save image base64 directly to local session
+    _pu.avatar_image = base64String;
+    localStorage.setItem('softmarc_user', JSON.stringify(_pu));
+    
+    // Update UI elements instantly
+    updateProfileAvatarUI();
+    showToast('Profile photo updated successfully!', 'success');
+  };
+  reader.readAsDataURL(file);
+});
+
+// Remove profile photo and fall back to initials
+document.getElementById('removePhotoBtn').addEventListener('click', (e) => {
+  e.preventDefault();
+  if (confirm('Are you sure you want to remove your profile photo?')) {
+    delete _pu.avatar_image; // Safely delete the image property
+    localStorage.setItem('softmarc_user', JSON.stringify(_pu));
+    
+    updateProfileAvatarUI();
+    showToast('Profile photo removed.', 'success');
+  }
+});
 
 // Add event listener to Save Changes button
 document.querySelector('.btn-primary').addEventListener('click', () => {
@@ -258,18 +322,21 @@ document.querySelector('.btn-primary').addEventListener('click', () => {
     return;
   }
 
-  // Update session and save to localStorage
+  // Update session and save all six form values dynamically
   _pu.full_name = newName;
   _pu.email = newEmail;
+  _pu.phone = document.getElementById('pPhone').value.trim();
+  _pu.department = document.getElementById('pDept').value.trim();
+  _pu.institution = document.getElementById('pInst').value.trim();
+  _pu.city = document.getElementById('pCity').value.trim();
+  
   localStorage.setItem('softmarc_user', JSON.stringify(_pu));
 
   // Update navbar/avatar structures dynamically
   document.getElementById('profileName').textContent = newName;
   document.getElementById('topbarName').textContent = newName;
 
-  const initials = newName.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  document.getElementById('profileAvatar').textContent = initials;
-  document.getElementById('avatarInitials').textContent = initials;
+  updateProfileAvatarUI();
 
   showToast('Profile updated successfully!', 'success');
 });
@@ -277,7 +344,7 @@ document.querySelector('.btn-primary').addEventListener('click', () => {
 </main>
 <script>
 const _raw = localStorage.getItem('softmarc_user');
-if (!_raw) { window.location.href = 'index.html'; }
+if (!_raw) { window.location.href = 'Softmarc_Login.html'; }
 const _user = JSON.parse(_raw || '{}');
 document.getElementById('topbarName').textContent = _user.full_name || '';
 const _ini = (_user.full_name||'AB').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
@@ -289,12 +356,12 @@ if (_user.role === 'admin') {
 document.getElementById('logoutBtn').addEventListener('click', e => {
   e.preventDefault();
   localStorage.removeItem('softmarc_user');
-  window.location.href = 'index.html';
+  window.location.href = 'Softmarc_Login.html';
 });
 const _sb = document.getElementById('sidebar');
 const _sc = document.getElementById('scrim');
 const _mt = document.getElementById('menuToggle');
 if(_mt){ _mt.addEventListener('click', ()=>{ _sb.classList.toggle('open'); _sc.classList.toggle('show'); }); }
 if(_sc){ _sc.addEventListener('click', ()=>{ _sb.classList.remove('open'); _sc.classList.remove('show'); }); }</script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ae64e71ad6002c',t:'MTc4NjY5NDA5Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
