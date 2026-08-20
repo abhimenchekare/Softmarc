@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmarc Learning Portal — Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="logo.png">
+
+<style>
+:root{
+  --navy-950:#051B33;
+  --navy-900:#06284A;
+  --navy-800:#0A3D66;
+  --cyan-500:#11C7F4;
+  --cyan-600:#0A9FD1;
+  --cyan-700:#0A73B8;
+  --surface:#FFFFFF;
+  --bg:#F1F6FB;
+  --text-900:#0E2238;
+  --text-600:#55677E;
+  --text-400:#90A0B4;
+  --border:#E1E9F1;
+  --success:#22B37A;
+  --danger:#D9463C;
+  --warn:#F59E0B;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --radius-lg:18px;
+  --radius-md:14px;
+  --radius-sm:10px;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{
+  font-family:var(--font-body);
+  background:#000;
+  min-height:100vh;
+  margin:0;
+  padding:32px;
+  overflow:hidden;
+  position:relative;
+  display:flex;
+  align-items:center; /* Vertically centers the floating login card */
+  justify-content:flex-start; /* Places the login card on the left side */
+}
+
+/* Fullscreen Background Video (100% Opacity) */
+#bgVideo {
+  position: fixed;
+  inset: 0;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  z-index: -100;
+  object-fit: cover;
+  opacity: 1; /* 👈 Full 100% crystal-clear opacity! */
+  pointer-events: none;
+}
+
+/* ---------- Premium Login Card ---------- */
+.left-login-panel{
+  /* Stable desktop sizing: compact on laptops, comfortably sized on large screens. */
+  width: clamp(380px, 27vw, 450px);
+  min-height: clamp(520px, 62vh, 580px);
+  background: linear-gradient(145deg, rgba(7, 37, 68, .92), rgba(3, 19, 38, .88));
+  backdrop-filter: blur(22px);
+  border: 1px solid rgba(126, 222, 247, .42);
+  border-radius: 24px;
+  padding: clamp(28px, 2.2vw, 36px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, .48),
+    0 0 0 1px rgba(255,255,255,.04) inset;
+  margin-left: clamp(32px, 7vw, 112px);
+  z-index: 10;
+  color: #fff;
+  position: relative;
+  
+  /* Initial state for the 1.5-second delayed fade-in sliding entrance */
+  opacity: 0;
+  transform: translateY(30px);
+  transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.9s ease-out;
+}
+
+/* Activated state triggered by JS after 1.5 seconds */
+.left-login-panel.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.brand-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.brand-logo-wrap{
+  width: 220px;
+  height: 96px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.brand-logo{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
+  filter:brightness(0) invert(1);
+}
+
+.divider {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  margin-top: 23px;
+  margin-bottom: 8px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  flex: 1;
+  justify-content: center;
+}
+
+.field {
+  position: relative;
+  width: 100%;
+}
+.field input {
+  width: 100%;
+  padding: 15px 16px;
+  border: 1px solid rgba(165, 221, 238, .24);
+  border-radius: 11px;
+  background: rgba(1, 16, 33, .38);
+  font-size: 14px;
+  color: #fff;
+  font-family: var(--font-body);
+  outline: none;
+  transition: 0.15s;
+}
+.field input::placeholder {
+  color: rgba(255, 255, 255, 0.5); /* Soft placeholder text */
+}
+.field input:focus {
+  border-color: var(--cyan-500);
+  background: rgba(5, 27, 51, 0.6);
+  box-shadow: 0 0 0 4px rgba(17, 199, 244, 0.15);
+}
+.field label{
+  display:block;
+  margin:0 0 7px 2px;
+  color:rgba(255,255,255,.84);
+  font-size:12px;
+  font-weight:600;
+}
+
+.password-wrap {
+  position: relative;
+  width: 100%;
+}
+.password-wrap input {
+  padding-right: 60px;
+}
+.password-wrap button {
+  position: absolute;
+  right: 16px;
+  top: calc(50% + 9px);
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan-500);
+  cursor: pointer;
+  outline: none;
+}
+.password-wrap button:hover {
+  color: #fff;
+}
+
+.error-text {
+  font-size: 11.5px;
+  color: var(--danger);
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.login-btn {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(100deg, #087eb4, #10c7ef);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(17, 199, 244, .28);
+  transition: 0.2s;
+  outline: none;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.login-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(17, 199, 244, 0.4);
+}
+.login-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.help-text {
+  text-align: center;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.card-footer {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 1px;
+  margin-top: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 560px) {
+  body { justify-content: center; padding: 16px; }
+  .left-login-panel { margin-left: 0; width: 100%; min-height: 520px; padding:28px 24px; }
+}
+
+@media (min-width: 561px) and (max-width: 1024px) {
+  .left-login-panel {
+    width: min(420px, 46vw);
+    margin-left: clamp(28px, 5vw, 64px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .left-login-panel { opacity: 1; transform: none; transition: none; }
+  .login-btn { transition: none; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- Fullscreen Background Video (100% Opacity) -->
+<video id="bgVideo" autoplay muted playsinline>
+  <source src="login_bg.mp4" type="video/mp4">
+  <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4" type="video/mp4">
+</video>
+
+<!-- Floating Dark Glass Login Card -->
+<main class="left-login-panel">
+
+  <!-- Brand Section -->
+  <div class="brand-header">
+    <div class="brand-logo-wrap">
+      <img class="brand-logo" src="logo.png" alt="Softmarc">
+    </div>
+    <div class="divider"></div>
+  </div>
+
+  <!-- Form Section -->
+  <form id="loginForm" novalidate>
+
+    <div class="field">
+      <label for="employeeId">Email address</label>
+      <input type="email" id="employeeId" name="employeeId" placeholder="you@example.com" required autocomplete="username">
+    </div>
+
+    <div class="field">
+      <div class="password-wrap">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password">
+        <button type="button" id="toggleBtn" aria-pressed="false">Show</button>
+      </div>
+      <div class="error-text" id="errorText" role="alert"></div>
+    </div>
+
+    <button type="submit" class="login-btn" id="loginBtn">Login</button>
+
+  </form>
+
+  <!-- Links & Footer -->
+  <div style="display:flex; flex-direction:column; gap:16px;">
+    <p class="help-text">Need help signing in? Contact your administrator.</p>
+    <div class="card-footer">Secure • Simple • Smart</div>
+  </div>
+
+</main>
+
+<script>
+// ---------- Delayed Card Entrance Animation ----------
+// Triggers 1.5 seconds after page loads for a smooth cinematic reveal
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.querySelector('.left-login-panel').classList.add('show');
+  }, 1900); // Exact 1.5-second delay!
+});
+
+const _rawSession = localStorage.getItem('softmarc_user');
+if (_rawSession) {
+  window.location.href = 'soft_dashboard.html';
+}
+
+const form = document.getElementById('loginForm');
+const passwordInput = document.getElementById('password');
+const toggleBtn = document.getElementById('toggleBtn');
+const loginBtn = document.getElementById('loginBtn');
+const errorText = document.getElementById('errorText');
+
+// Password visibility toggle
+toggleBtn.addEventListener('click', () => {
+  const isPass = passwordInput.type === 'password';
+  passwordInput.type = isPass ? 'text' : 'password';
+  toggleBtn.textContent = isPass ? 'Hide' : 'Show';
+  toggleBtn.setAttribute('aria-pressed', String(isPass));
+});
+
+// Set source to our fallback mixkit driving loop so it plays flawlessly right away if local is missing!
+const bgVideo = document.getElementById('bgVideo');
+if (bgVideo) {
+  bgVideo.addEventListener('error', () => {
+    console.log("Local video not found yet, playing high-speed streaming backup loop.");
+    bgVideo.src = "https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4";
+    bgVideo.load();
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorText.textContent = '';
+
+  const email = document.getElementById('employeeId').value.trim();
+  const pass = passwordInput.value;
+
+  if (!email || !pass) {
+    errorText.textContent = 'Please enter both your Employee ID and password.';
+    return;
+  }
+
+  loginBtn.disabled = true;
+  loginBtn.textContent = 'Signing in…';
+
+  try {
+    const API_HOST = '';
+    const res = await fetch(`${API_HOST}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorText.textContent = data.error || 'Invalid email or password.';
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Login';
+      return;
+    }
+
+    localStorage.setItem('softmarc_user', JSON.stringify(data));
+    window.location.href = 'soft_dashboard.html';
+
+  } catch (err) {
+    errorText.textContent = 'Cannot reach the server — is the API running?';
+    loginBtn.disabled = false;
+    loginBtn.textContent = 'Login';
+  }
+});
+</script>
+
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ca9458ad4e4461',t:'MTc4Njk4OTYzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
