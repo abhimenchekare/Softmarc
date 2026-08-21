@@ -253,9 +253,85 @@ form {
   }
 }
 
+/* ---------- Beautiful Welcome Popup ---------- */
+.welcome-overlay{
+  position:fixed; inset:0;
+  background:rgba(2,12,26,0.78);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  display:flex; align-items:center; justify-content:center;
+  z-index:10000;
+  opacity:0; pointer-events:none;
+  transition:opacity .4s ease;
+  padding:20px;
+}
+.welcome-overlay.show{ opacity:1; pointer-events:auto; }
+.welcome-card{
+  width:100%; max-width:420px;
+  background:linear-gradient(145deg, rgba(10,61,102,0.96), rgba(5,27,51,0.94));
+  border:1px solid rgba(17,199,244,0.35);
+  border-radius:24px;
+  padding:32px 28px 22px;
+  box-shadow:0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06) inset, 0 0 40px rgba(17,199,244,0.18);
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+  transform:scale(0.88) translateY(20px);
+  transition:transform .55s cubic-bezier(.34,1.56,.64,1);
+}
+.welcome-overlay.show .welcome-card{ transform:scale(1) translateY(0); }
+.welcome-card::before{
+  content:''; position:absolute; inset:0;
+  background:radial-gradient(600px circle at 50% -20%, rgba(17,199,244,0.18), transparent 60%),
+             radial-gradient(400px circle at 90% 90%, rgba(34,179,122,0.14), transparent 60%);
+  pointer-events:none;
+}
+.welcome-avatar{
+  width:84px; height:84px; border-radius:50%;
+  background:linear-gradient(135deg,#0A3D66,#11C7F4);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:700; font-size:28px;
+  margin:0 auto 16px;
+  box-shadow:0 10px 24px rgba(17,199,244,0.35), 0 0 0 3px rgba(255,255,255,0.12);
+  position:relative; z-index:1; overflow:hidden;
+  animation:avatarPop .6s cubic-bezier(.34,1.56,.64,1) .2s both;
+}
+.welcome-greet{
+  font-family:var(--font-display); font-size:13px; font-weight:700;
+  letter-spacing:1.2px; text-transform:uppercase; color:var(--cyan-500);
+  margin-bottom:6px; position:relative; z-index:1;
+}
+.welcome-name{
+  font-family:var(--font-display); font-size:26px; font-weight:700;
+  color:#fff; line-height:1.2; margin-bottom:6px; position:relative; z-index:1;
+}
+.welcome-role{
+  display:inline-flex; padding:4px 10px; border-radius:20px;
+  background:rgba(17,199,244,0.14); border:1px solid rgba(17,199,244,0.25);
+  color:#7EDEFF; font-size:11.5px; font-weight:700; letter-spacing:.6px; text-transform:uppercase;
+  margin-bottom:12px; position:relative; z-index:1;
+}
+.welcome-email{ font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:18px; position:relative; z-index:1; }
+.welcome-msg{
+  font-size:13.5px; color:rgba(255,255,255,0.75); line-height:1.5;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.08);
+  border-radius:12px; padding:12px 14px; margin-bottom:20px; position:relative; z-index:1;
+}
+.welcome-progress-track{ height:4px; background:rgba(255,255,255,0.12); border-radius:4px; overflow:hidden; position:relative; z-index:1; }
+.welcome-progress-fill{ height:100%; width:0%; background:linear-gradient(90deg,#11C7F4,#22B37A); border-radius:4px; transition:width 2.4s cubic-bezier(.4,0,.2,1); }
+.welcome-continue{ margin-top:16px; font-size:12px; color:rgba(255,255,255,0.5); position:relative; z-index:1; display:flex; align-items:center; justify-content:center; gap:8px; }
+.welcome-continue .dot{ width:6px; height:6px; background:var(--success); border-radius:50%; animation:pulseDot 1.2s infinite; }
+@keyframes pulseDot{0%{box-shadow:0 0 0 0 rgba(34,179,122,.7)}70%{box-shadow:0 0 0 6px rgba(34,179,122,0)}100%{box-shadow:0 0 0 0 rgba(34,179,122,0)}}
+@keyframes avatarPop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+.welcome-confetti{ position:absolute; inset:0; pointer-events:none; overflow:hidden; border-radius:24px; z-index:0; }
+.confetti-piece{ position:absolute; width:8px; height:8px; top:-10px; animation:confettiFall 2.8s linear forwards; }
+@keyframes confettiFall{0%{transform:translateY(-10px) rotate(0deg) translateX(0); opacity:1;}100%{transform:translateY(500px) rotate(720deg) translateX(var(--drift)); opacity:0;}}
+.welcome-card .brand-logo-mini{ width:100px; opacity:0.7; filter:brightness(0) invert(1); margin:16px auto 0; display:block; position:relative; z-index:1; }
+
 @media (prefers-reduced-motion: reduce) {
   .left-login-panel { opacity: 1; transform: none; transition: none; }
   .login-btn { transition: none; }
+  .welcome-card{ transform:none; }
 }
 </style>
 </head>
@@ -267,6 +343,25 @@ form {
   <source src="login_bg.mp4" type="video/mp4">
   <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4" type="video/mp4">
 </video>
+
+<!-- Beautiful Welcome Popup (shows after login) -->
+<div class="welcome-overlay" id="welcomeOverlay">
+  <div class="welcome-card">
+    <div class="welcome-confetti" id="welcomeConfetti"></div>
+    <div class="welcome-avatar" id="welcomeAvatar">AB</div>
+    <div class="welcome-greet" id="welcomeGreet">Good Morning 👋</div>
+    <div class="welcome-name" id="welcomeName">Abhishek Menchikare</div>
+    <div class="welcome-role" id="welcomeRole">Student</div>
+    <div class="welcome-email" id="welcomeEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7213101a1b32011d14061f1300115c111d1f">[email&#160;protected]</a></div>
+    <div class="welcome-msg">
+      Welcome back to <strong style="color:#fff;">Softmarc Learning Portal</strong>!<br>
+      Your CATIA mastery journey continues. Let's keep the streak alive 🚀
+    </div>
+    <div class="welcome-progress-track"><div class="welcome-progress-fill" id="welcomeProgress"></div></div>
+    <div class="welcome-continue"><span class="dot"></span> Taking you to dashboard...</div>
+    <img class="brand-logo-mini" src="logo.png" alt="Softmarc" style="filter:brightness(0) invert(1);">
+  </div>
+</div>
 
 <!-- Floating Dark Glass Login Card -->
 <main class="left-login-panel">
@@ -308,7 +403,7 @@ form {
 
 </main>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ---------- Delayed Card Entrance Animation ----------
 // Triggers 1.5 seconds after page loads for a smooth cinematic reveal
 window.addEventListener('load', () => {
@@ -346,6 +441,68 @@ if (bgVideo) {
   });
 }
 
+// ---------- Beautiful Welcome Modal Logic ----------
+function getGreeting(){
+  const h = new Date().getHours();
+  if(h < 12) return 'Good Morning';
+  if(h < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+function getInitials(name){ return (name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+
+function showWelcome(user){
+  const overlay = document.getElementById('welcomeOverlay');
+  const nameEl = document.getElementById('welcomeName');
+  const roleEl = document.getElementById('welcomeRole');
+  const greetEl = document.getElementById('welcomeGreet');
+  const avatarEl = document.getElementById('welcomeAvatar');
+  const emailEl = document.getElementById('welcomeEmail');
+  const progressEl = document.getElementById('welcomeProgress');
+
+  greetEl.textContent = getGreeting() + ' 👋';
+  nameEl.textContent = user.full_name || 'Welcome!';
+  roleEl.textContent = user.role ? user.role.charAt(0).toUpperCase()+user.role.slice(1) : 'Student';
+  emailEl.textContent = user.email || '';
+
+  if(user.avatar_image){
+    avatarEl.innerHTML = `<img src="${user.avatar_image}" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+  } else {
+    avatarEl.textContent = getInitials(user.full_name);
+  }
+
+  overlay.classList.add('show');
+  // confetti burst
+  spawnWelcomeConfetti();
+  // animate progress bar
+  progressEl.style.width = '0%';
+  setTimeout(()=>{ progressEl.style.width = '100%'; }, 100);
+
+  // auto redirect after 2.6s
+  setTimeout(()=>{
+    window.location.href = 'soft_dashboard.html';
+  }, 2600);
+}
+
+function spawnWelcomeConfetti(){
+  const container = document.getElementById('welcomeConfetti');
+  if(!container) return;
+  container.innerHTML='';
+  const colors = ['#11C7F4','#22B37A','#F59E0B','#D4AF37','#FFFFFF'];
+  for(let i=0;i<60;i++){
+    const div=document.createElement('div');
+    div.className='confetti-piece';
+    div.style.left = Math.random()*100+'%';
+    div.style.background = colors[Math.floor(Math.random()*colors.length)];
+    div.style.animationDelay = (Math.random()*0.5)+'s';
+    div.style.animationDuration = (2+Math.random()*1.2)+'s';
+    div.style.setProperty('--drift', (Math.random()*200-100)+'px');
+    div.style.width = (6+Math.random()*6)+'px';
+    div.style.height = (6+Math.random()*6)+'px';
+    div.style.borderRadius = Math.random()>0.5?'50%':'2px';
+    container.appendChild(div);
+  }
+}
+
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   errorText.textContent = '';
@@ -379,7 +536,9 @@ form.addEventListener('submit', async (e) => {
     }
 
     localStorage.setItem('softmarc_user', JSON.stringify(data));
-    window.location.href = 'soft_dashboard.html';
+    loginBtn.textContent = 'Welcome! ✨';
+    // Show beautiful welcome window, then go to dashboard
+    showWelcome(data);
 
   } catch (err) {
     errorText.textContent = 'Cannot reach the server — is the API running?';
@@ -389,5 +548,5 @@ form.addEventListener('submit', async (e) => {
 });
 </script>
 
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ca9458ad4e4461',t:'MTc4Njk4OTYzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ca9458ad4e4461',t:'MTc4Njk4OTYzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2e9226cdaa546ec',t:'MTc4NzMxMDAzMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
