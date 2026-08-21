@@ -76,9 +76,17 @@ const USER_PUBLIC_COLS = `
 app.get('/api/users', async (req, res) => {
   console.log(`\n[Backend API] GET /api/users`);
   try {
-    const result = await pool.query(
-      `SELECT ${USER_PUBLIC_COLS} FROM users ORDER BY created_at DESC`
-    );
+    let result;
+    try {
+      result = await pool.query(
+        `SELECT ${USER_PUBLIC_COLS} FROM users ORDER BY created_at DESC`
+      );
+    } catch (colErr) {
+      console.warn('[GET /api/users] Falling back to old cols:', colErr.message);
+      result = await pool.query(
+        `SELECT id, full_name, email, role, created_at FROM users ORDER BY created_at DESC`
+      );
+    }
     console.log(`[OK] Returned ${result.rowCount} users`);
     res.json(result.rows);
   } catch (err) {
@@ -93,10 +101,19 @@ app.get('/api/users/:id', async (req, res) => {
   if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid user id' });
   console.log(`\n[Backend API] GET /api/users/${id}`);
   try {
-    const result = await pool.query(
-      `SELECT ${USER_PUBLIC_COLS} FROM users WHERE id = $1`,
-      [id]
-    );
+    let result;
+    try {
+      result = await pool.query(
+        `SELECT ${USER_PUBLIC_COLS} FROM users WHERE id = $1`,
+        [id]
+      );
+    } catch (colErr) {
+      console.warn('[GET /api/users/:id] Fallback:', colErr.message);
+      result = await pool.query(
+        `SELECT id, full_name, email, role, created_at FROM users WHERE id = $1`,
+        [id]
+      );
+    }
     if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
     res.json(result.rows[0]);
   } catch (err) {
@@ -105,16 +122,27 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
-// ---------- POST /api/login ----------
+// ---------- POST /api/login - RESILIENT VERSION (works even if profile columns missing) ----------
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   console.log(`\n[Backend API] POST /api/login - ${email}`);
   if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
   try {
-    const result = await pool.query(
-      `SELECT id, full_name, email, password_hash, role, phone, department, institution, city, avatar_image FROM users WHERE email = $1`,
-      [email]
-    );
+    // Try new schema first, fallback to old schema if columns missing
+    let result;
+    try {
+      result = await pool.query(
+        `SELECT id, full_name, email, password_hash, role, phone, department, institution, city, avatar_image FROM users WHERE email = $1`,
+        [email]
+      );
+    } catch (colErr) {
+      console.warn('[Login] New columns missing, falling back to old schema:', colErr.message);
+      result = await pool.query(
+        `SELECT id, full_name, email, password_hash, role FROM users WHERE email = $1`,
+        [email]
+      );
+    }
+
     if (result.rowCount === 0) return res.status(401).json({ error: 'Invalid email or password.' });
     const user = result.rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
@@ -126,15 +154,15 @@ app.post('/api/login', async (req, res) => {
       full_name: user.full_name,
       email: user.email,
       role: user.role,
-      phone: user.phone,
-      department: user.department,
-      institution: user.institution,
-      city: user.city,
-      avatar_image: user.avatar_image,
+      phone: user.phone || null,
+      department: user.department || null,
+      institution: user.institution || null,
+      city: user.city || null,
+      avatar_image: user.avatar_image || null,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Login failed.', detail: err.message });
+    console.error('[Login Error]', err);
+    res.status(500).json({ error: 'Login failed. Check /api/health', detail: err.message });
   }
 });
 
@@ -145,12 +173,23 @@ app.post('/api/users', async (req, res) => {
   if (role && !['student', 'admin'].includes(role)) return res.status(400).json({ error: 'role must be student or admin' });
   try {
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
-    const result = await pool.query(
-      `INSERT INTO users (full_name, email, password_hash, role, phone, department, institution, city)
-       VALUES ($1, $2, $3, COALESCE($4, 'student'), $5, $6, $7, $8)
-       RETURNING ${USER_PUBLIC_COLS}`,
-      [full_name, email, password_hash, role, phone || null, department || null, institution || null, city || null]
-    );
+    let result;
+    try {
+      result = await pool.query(
+        `INSERT INTO users (full_name, email, password_hash, role, phone, department, institution, city)
+         VALUES ($1, $2, $3, COALESCE($4, 'student'), $5, $6, $7, $8)
+         RETURNING ${USER_PUBLIC_COLS}`,
+        [full_name, email, password_hash, role, phone || null, department || null, institution || null, city || null]
+      );
+    } catch (colErr) {
+      console.warn('Fallback to old schema for create user:', colErr.message);
+      result = await pool.query(
+        `INSERT INTO users (full_name, email, password_hash, role)
+         VALUES ($1, $2, $3, COALESCE($4, 'student'))
+         RETURNING id, full_name, email, role, created_at`,
+        [full_name, email, password_hash, role]
+      );
+    }
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'A user with that email already exists.' });
@@ -167,47 +206,51 @@ app.put('/api/users/:id/profile', async (req, res) => {
   const { full_name, email, phone, department, institution, city, avatar_image } = req.body;
   console.log(`\n[Backend API] PUT /api/users/${id}/profile`, { full_name, email, phone, department, institution, city, hasAvatar: !!avatar_image });
 
-  // Basic validation
   if (full_name !== undefined && full_name.trim() === '') return res.status(400).json({ error: 'full_name cannot be empty' });
   if (email !== undefined && email.trim() === '') return res.status(400).json({ error: 'email cannot be empty' });
-
-  // Avatar size guard: base64 ~ 1.33x raw. Limit 3MB string ~ 2.2MB image
   if (avatar_image && avatar_image.length > 4_000_000) {
-    return res.status(400).json({ error: 'Avatar image too large. Please use < 2MB image or compress it.' });
+    return res.status(400).json({ error: 'Avatar image too large. Please use < 2MB image.' });
   }
 
   try {
-    // Dynamic update - keep existing if undefined
-    const result = await pool.query(
-      `UPDATE users SET
-         full_name = COALESCE($1, full_name),
-         email = COALESCE($2, email),
-         phone = $3,
-         department = $4,
-         institution = $5,
-         city = $6,
-         avatar_image = COALESCE($7, avatar_image)
-       WHERE id = $8
-       RETURNING ${USER_PUBLIC_COLS}`,
-      [
-        full_name || null,
-        email || null,
-        phone || null,
-        department || null,
-        institution || null,
-        city || null,
-        avatar_image || null,
-        id
-      ]
-    );
+    let result;
+    try {
+      result = await pool.query(
+        `UPDATE users SET
+           full_name = COALESCE($1, full_name),
+           email = COALESCE($2, email),
+           phone = $3,
+           department = $4,
+           institution = $5,
+           city = $6,
+           avatar_image = COALESCE($7, avatar_image)
+         WHERE id = $8
+         RETURNING ${USER_PUBLIC_COLS}`,
+        [full_name || null, email || null, phone || null, department || null, institution || null, city || null, avatar_image || null, id]
+      );
+    } catch (colErr) {
+      // If profile columns don't exist yet, fallback to only name+email and tell user to run migration
+      if (colErr.message.includes('column') && colErr.message.includes('does not exist')) {
+        console.warn('[Profile Update] Columns missing, running fallback. Error:', colErr.message);
+        const fallback = await pool.query(
+          `UPDATE users SET full_name = COALESCE($1, full_name), email = COALESCE($2, email) WHERE id = $3 RETURNING id, full_name, email, role, created_at`,
+          [full_name || null, email || null, id]
+        );
+        if (fallback.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+        return res.status(200).json({
+          ...fallback.rows[0],
+          warning: 'Profile columns (phone, department, institution, city, avatar_image) do not exist in Supabase yet. Please run ALTER TABLE migration from final_supabase_schema.sql',
+        });
+      }
+      throw colErr;
+    }
     if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
-
     console.log(`[OK] Profile updated for user ${id}`);
     res.json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'Email already in use by another account' });
+    if (err.code === '23505') return res.status(409).json({ error: 'Email already in use' });
     console.error(err);
-    res.status(500).json({ error: 'Failed to update profile', detail: err.message });
+    res.status(500).json({ error: 'Failed to update profile', detail: err.message, hint: 'Did you run ALTER TABLE to add phone/department/institution/city/avatar_image columns?' });
   }
 });
 
