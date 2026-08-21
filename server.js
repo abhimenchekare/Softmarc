@@ -4,244 +4,324 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
-
 const path = require('path');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// Increase limit to allow base64 avatar (Supabase TEXT field). 10mb safe for Vercel
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the current directory
 app.use(express.static(__dirname));
 
-// Redirect root to the login page.
+// Root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const pool = new Pool({
-  host: process.env.PGHOST,
-  port: process.env.PGPORT,
-  database: process.env.PGDATABASE,
-  user: process.env.PGUSER,
-  password: process.env.PGPASSWORD,
-  // Most hosted Postgres providers require TLS. Keep local development
-  // compatible with a standard local Postgres installation.
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: false }
-    : false,
+// -------------------- DB CONNECTION (Supabase + Local compatible) --------------------
+/**
+ * Supabase gives you a DATABASE_URL like:
+ * postgres://postgres.xxx:password@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+ * For Vercel, set DATABASE_URL in Environment Variables.
+ * For local dev, you can still use PGHOST / PGUSER etc from .env
+ */
+let poolConfig;
+if (process.env.DATABASE_URL) {
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+  };
+  console.log('[DB] Using DATABASE_URL (Supabase) connection string');
+} else {
+  poolConfig = {
+    host: process.env.PGHOST || 'localhost',
+    port: process.env.PGPORT ? parseInt(process.env.PGPORT) : 5432,
+    database: process.env.PGDATABASE || 'postgres',
+    user: process.env.PGUSER || 'postgres',
+    password: process.env.PGPASSWORD || '',
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  };
+  console.log('[DB] Using individual PG* env vars');
+}
+
+const pool = new Pool(poolConfig);
+
+pool.on('error', (err) => {
+  console.error('[DB Pool Error]', err);
+});
+
+// Quick health check - helps debug Vercel <-> Supabase linking
+app.get('/api/health', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT NOW() as time, COUNT(*) as user_count FROM users');
+    res.json({ status: 'ok', time: r.rows[0].time, user_count: r.rows[0].user_count, using_url: !!process.env.DATABASE_URL });
+  } catch (e) {
+    console.error('[Health Check Failed]', e);
+    res.status(500).json({ status: 'error', error: e.message, hint: 'Check DATABASE_URL or PGHOST env vars in Vercel' });
+  }
 });
 
 const SALT_ROUNDS = 12;
 
-// ---------- GET /api/users — list all users (no password hashes) ----------
+// Columns we expose (never expose password_hash)
+const USER_PUBLIC_COLS = `
+  id, full_name, email, role,
+  phone, department, institution, city, avatar_image,
+  created_at
+`;
+
+// ---------- GET /api/users — list all users ----------
 app.get('/api/users', async (req, res) => {
-  console.log(`\n[Backend API] GET /api/users - Fetching user list.`);
-  console.log(`[SQL Query] SELECT id, full_name, email, role, created_at FROM users ORDER BY created_at DESC;`);
+  console.log(`\n[Backend API] GET /api/users`);
   try {
     const result = await pool.query(
-      'SELECT id, full_name, email, role, created_at FROM users ORDER BY created_at DESC'
+      `SELECT ${USER_PUBLIC_COLS} FROM users ORDER BY created_at DESC`
     );
-    console.log(`[Backend Success] Returned ${result.rowCount} user records from PostgreSQL.`);
+    console.log(`[OK] Returned ${result.rowCount} users`);
     res.json(result.rows);
   } catch (err) {
     console.error(`[Backend Error]`, err);
-    res.status(500).json({ error: 'Failed to fetch users.' });
+    res.status(500).json({ error: 'Failed to fetch users.', detail: err.message });
   }
 });
 
-// ---------- POST /api/login — verify email/password, return user info ----------
-app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body;
-  console.log(`\n[Backend API] POST /api/login - Login attempt for email: "${email}"`);
-
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required.' });
-  }
-
-  console.log(`[SQL Query] SELECT id, full_name, email, password_hash, role FROM users WHERE email = '${email}';`);
+// ---------- GET /api/users/:id — single profile (CRITICAL FOR PROFILE PAGE) ----------
+app.get('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid user id' });
+  console.log(`\n[Backend API] GET /api/users/${id}`);
   try {
     const result = await pool.query(
-      'SELECT id, full_name, email, password_hash, role FROM users WHERE email = $1',
+      `SELECT ${USER_PUBLIC_COLS} FROM users WHERE id = $1`,
+      [id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch user', detail: err.message });
+  }
+});
+
+// ---------- POST /api/login ----------
+app.post('/api/login', async (req, res) => {
+  const { email, password } = req.body;
+  console.log(`\n[Backend API] POST /api/login - ${email}`);
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required.' });
+  try {
+    const result = await pool.query(
+      `SELECT id, full_name, email, password_hash, role, phone, department, institution, city, avatar_image FROM users WHERE email = $1`,
       [email]
     );
-
-    if (result.rowCount === 0) {
-      console.log(`[Backend Fail] Login failed: User "${email}" not found.`);
-      return res.status(401).json({ error: 'Invalid email or password.' });
-    }
-
+    if (result.rowCount === 0) return res.status(401).json({ error: 'Invalid email or password.' });
     const user = result.rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) return res.status(401).json({ error: 'Invalid email or password.' });
 
-    if (!match) {
-      console.log(`[Backend Fail] Login failed: Incorrect password for "${email}".`);
-      return res.status(401).json({ error: 'Invalid email or password.' });
-    }
-
-    console.log(`[Backend Success] Login successful for user: "${user.full_name}" (Role: ${user.role})`);
+    console.log(`[OK] Login success: ${user.full_name}`);
     res.json({
       id: user.id,
       full_name: user.full_name,
       email: user.email,
       role: user.role,
+      phone: user.phone,
+      department: user.department,
+      institution: user.institution,
+      city: user.city,
+      avatar_image: user.avatar_image,
     });
   } catch (err) {
-    console.error(`[Backend Error]`, err);
-    res.status(500).json({ error: 'Login failed.' });
+    console.error(err);
+    res.status(500).json({ error: 'Login failed.', detail: err.message });
   }
 });
 
-
-
-// ---------- POST /api/users — add a new user ----------
+// ---------- POST /api/users — add new user ----------
 app.post('/api/users', async (req, res) => {
-  const { full_name, email, password, role } = req.body;
-  console.log(`\n[Backend API] POST /api/users - Registering user: "${full_name}" (${email}) with role: "${role || 'student'}"`);
-
-  if (!full_name || !email || !password) {
-    return res.status(400).json({ error: 'full_name, email, and password are required.' });
-  }
-
-  if (role && !['student', 'admin'].includes(role)) {
-    return res.status(400).json({ error: 'role must be "student" or "admin".' });
-  }
-
-  console.log(`[SQL Query] INSERT INTO users (full_name, email, password_hash, role) VALUES ('${full_name}', '${email}', '<bcrypt_hash>', '${role || 'student'}');`);
+  const { full_name, email, password, role, phone, department, institution, city } = req.body;
+  if (!full_name || !email || !password) return res.status(400).json({ error: 'full_name, email, and password are required.' });
+  if (role && !['student', 'admin'].includes(role)) return res.status(400).json({ error: 'role must be student or admin' });
   try {
     const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
-
     const result = await pool.query(
-      `INSERT INTO users (full_name, email, password_hash, role)
-       VALUES ($1, $2, $3, COALESCE($4, 'student'))
-       RETURNING id, full_name, email, role, created_at`,
-      [full_name, email, password_hash, role]
+      `INSERT INTO users (full_name, email, password_hash, role, phone, department, institution, city)
+       VALUES ($1, $2, $3, COALESCE($4, 'student'), $5, $6, $7, $8)
+       RETURNING ${USER_PUBLIC_COLS}`,
+      [full_name, email, password_hash, role, phone || null, department || null, institution || null, city || null]
     );
-
-    console.log(`[Backend Success] Registered user ID: ${result.rows[0].id} in PostgreSQL.`);
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') {
-      console.log(`[Backend Fail] Registration failed: Email "${email}" already exists.`);
-      return res.status(409).json({ error: 'A user with that email already exists.' });
-    }
-    console.error(`[Backend Error]`, err);
-    res.status(500).json({ error: 'Failed to create user.' });
+    if (err.code === '23505') return res.status(409).json({ error: 'A user with that email already exists.' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create user.', detail: err.message });
   }
 });
 
-// ---------- DELETE /api/users/:id — remove a user ----------
-app.delete('/api/users/:id', async (req, res) => {
+// ---------- PUT /api/users/:id/profile — UPDATE PROFILE (FIX FOR YOUR ISSUE) ----------
+app.put('/api/users/:id/profile', async (req, res) => {
   const { id } = req.params;
-  console.log(`\n[Backend API] DELETE /api/users/${id} - Request to delete user account.`);
+  if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid user id' });
 
-  if (!/^\d+$/.test(id)) {
-    return res.status(400).json({ error: 'Invalid user id.' });
+  const { full_name, email, phone, department, institution, city, avatar_image } = req.body;
+  console.log(`\n[Backend API] PUT /api/users/${id}/profile`, { full_name, email, phone, department, institution, city, hasAvatar: !!avatar_image });
+
+  // Basic validation
+  if (full_name !== undefined && full_name.trim() === '') return res.status(400).json({ error: 'full_name cannot be empty' });
+  if (email !== undefined && email.trim() === '') return res.status(400).json({ error: 'email cannot be empty' });
+
+  // Avatar size guard: base64 ~ 1.33x raw. Limit 3MB string ~ 2.2MB image
+  if (avatar_image && avatar_image.length > 4_000_000) {
+    return res.status(400).json({ error: 'Avatar image too large. Please use < 2MB image or compress it.' });
   }
 
-  console.log(`[SQL Query] DELETE FROM users WHERE id = ${id};`);
+  try {
+    // Dynamic update - keep existing if undefined
+    const result = await pool.query(
+      `UPDATE users SET
+         full_name = COALESCE($1, full_name),
+         email = COALESCE($2, email),
+         phone = $3,
+         department = $4,
+         institution = $5,
+         city = $6,
+         avatar_image = COALESCE($7, avatar_image)
+       WHERE id = $8
+       RETURNING ${USER_PUBLIC_COLS}`,
+      [
+        full_name || null,
+        email || null,
+        phone || null,
+        department || null,
+        institution || null,
+        city || null,
+        avatar_image || null,
+        id
+      ]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+
+    console.log(`[OK] Profile updated for user ${id}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'Email already in use by another account' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update profile', detail: err.message });
+  }
+});
+
+// ---------- PUT /api/users/:id/avatar — dedicated avatar endpoint (optional) ----------
+app.put('/api/users/:id/avatar', async (req, res) => {
+  const { id } = req.params;
+  const { avatar_image } = req.body;
+  if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid user id' });
+  if (!avatar_image) return res.status(400).json({ error: 'avatar_image required (base64)' });
+  if (avatar_image.length > 4_000_000) return res.status(400).json({ error: 'Image too large, use <2MB' });
   try {
     const result = await pool.query(
-      'DELETE FROM users WHERE id = $1 RETURNING id',
+      `UPDATE users SET avatar_image = $1 WHERE id = $2 RETURNING ${USER_PUBLIC_COLS}`,
+      [avatar_image, id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update avatar' });
+  }
+});
+
+// DELETE avatar
+app.delete('/api/users/:id/avatar', async (req, res) => {
+  const { id } = req.params;
+  if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid user id' });
+  try {
+    const result = await pool.query(
+      `UPDATE users SET avatar_image = NULL WHERE id = $1 RETURNING ${USER_PUBLIC_COLS}`,
       [id]
     );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete avatar' });
+  }
+});
 
-    if (result.rowCount === 0) {
-      console.log(`[Backend Fail] Deletion failed: User ID ${id} not found.`);
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    console.log(`[Backend Success] Deleted user ID: ${id} from PostgreSQL database.`);
+// ---------- DELETE /api/users/:id ----------
+app.delete('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!/^\\d+$/.test(id)) return res.status(400).json({ error: 'Invalid user id.' });
+  try {
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found.' });
     res.json({ deleted: true, id: Number(id) });
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to delete user.' });
   }
 });
 
-// ---------- GET /api/quizzes — list all quizzes ----------
+// ---------- Quizzes (unchanged, but keep) ----------
 app.get('/api/quizzes', async (req, res) => {
-  console.log(`\n[Backend API] GET /api/quizzes - Fetching all quizzes.`);
   try {
     const result = await pool.query('SELECT * FROM quizzes ORDER BY id ASC');
     res.json(result.rows);
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch quizzes.' });
   }
 });
 
-// ---------- GET /api/quizzes/:id/questions — list questions for quiz ----------
 app.get('/api/quizzes/:id/questions', async (req, res) => {
   const { id } = req.params;
-  console.log(`\n[Backend API] GET /api/quizzes/${id}/questions - Fetching questions.`);
   try {
     const result = await pool.query('SELECT * FROM questions WHERE quiz_id = $1 ORDER BY id ASC', [id]);
     res.json(result.rows);
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch questions.' });
   }
 });
 
-// ---------- POST /api/quizzes/:id/submit — submit student answers ----------
 app.post('/api/quizzes/:id/submit', async (req, res) => {
   const { id } = req.params;
-  const { student_id, student_name, quiz_title, answers } = req.body; // answers is like { "question_id_1": "A", ... }
-  console.log(`\n[Backend API] POST /api/quizzes/${id}/submit - Student "${student_name}" (ID: ${student_id}) submitting answers.`);
-  
+  const { student_id, student_name, quiz_title, answers } = req.body;
   try {
-    // 1. Fetch correct answers from DB
     const questionsResult = await pool.query('SELECT id, correct_option FROM questions WHERE quiz_id = $1', [id]);
     const questions = questionsResult.rows;
-    
-    if (questions.length === 0) {
-      return res.status(400).json({ error: 'This quiz has no questions yet.' });
-    }
-    
-    // 2. Calculate score
+    if (questions.length === 0) return res.status(400).json({ error: 'This quiz has no questions yet.' });
     let correctCount = 0;
     questions.forEach(q => {
       const studentAnswer = answers[q.id];
-      if (studentAnswer && studentAnswer.toUpperCase() === q.correct_option.toUpperCase()) {
-        correctCount++;
-      }
+      if (studentAnswer && studentAnswer.toUpperCase() === q.correct_option.toUpperCase()) correctCount++;
     });
-    
     const score = Math.round((correctCount / questions.length) * 100);
-    
-    // 3. Save submission
     const result = await pool.query(
       `INSERT INTO student_submissions (student_id, student_name, quiz_id, quiz_title, answers, score)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, score, submitted_at`,
       [student_id, student_name, id, quiz_title, JSON.stringify(answers), score]
     );
-    
-    console.log(`[Backend Success] Saved submission ID: ${result.rows[0].id} with score: ${score}%`);
     res.json({ submission_id: result.rows[0].id, score, correct_count: correctCount, total_count: questions.length });
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to submit quiz.' });
   }
 });
 
-// ---------- GET /api/submissions — list all student submissions (for admin) ----------
 app.get('/api/submissions', async (req, res) => {
-  console.log(`\n[Backend API] GET /api/submissions - Fetching student scores.`);
   try {
     const result = await pool.query('SELECT * FROM student_submissions ORDER BY submitted_at DESC');
     res.json(result.rows);
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch submissions.' });
   }
 });
 
-// ---------- POST /api/quizzes — create a new quiz (admin) ----------
 app.post('/api/quizzes', async (req, res) => {
   const { course_name, title } = req.body;
-  console.log(`\n[Backend API] POST /api/quizzes - Admin creating quiz: "${title}" for "${course_name}"`);
   try {
     const result = await pool.query(
       'INSERT INTO quizzes (course_name, title) VALUES ($1, $2) RETURNING id, course_name, title, created_at',
@@ -249,34 +329,20 @@ app.post('/api/quizzes', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to create quiz.' });
   }
 });
 
-// ---------- POST /api/quizzes/:id/questions — add a question to a quiz (admin) ----------
 app.delete('/api/quizzes/:id', async (req, res) => {
   const { id } = req.params;
-
-  if (!/^\d+$/.test(id)) {
-    return res.status(400).json({ error: 'Invalid quiz id.' });
-  }
-
-  console.log(`\n[Backend API] DELETE /api/quizzes/${id} - Deleting quiz and dependent data.`);
+  if (!/^\\d+$/.test(id)) return res.status(400).json({ error: 'Invalid quiz id.' });
   try {
-    const result = await pool.query(
-      'DELETE FROM quizzes WHERE id = $1 RETURNING id, title',
-      [id]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Quiz not found.' });
-    }
-
-    console.log(`[Backend Success] Deleted quiz ID: ${id}.`);
+    const result = await pool.query('DELETE FROM quizzes WHERE id = $1 RETURNING id, title', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Quiz not found.' });
     res.json({ deleted: true, quiz: result.rows[0] });
   } catch (err) {
-    console.error('[Backend Error]', err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to delete quiz.' });
   }
 });
@@ -284,7 +350,6 @@ app.delete('/api/quizzes/:id', async (req, res) => {
 app.post('/api/quizzes/:id/questions', async (req, res) => {
   const { id } = req.params;
   const { question_text, option_a, option_b, option_c, option_d, correct_option } = req.body;
-  console.log(`\n[Backend API] POST /api/quizzes/${id}/questions - Adding question text.`);
   try {
     const result = await pool.query(
       `INSERT INTO questions (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_option)
@@ -294,56 +359,44 @@ app.post('/api/quizzes/:id/questions', async (req, res) => {
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to create question.' });
   }
 });
 
-// ---------- PUT /api/questions/:id — edit a question (admin) ----------
 app.put('/api/questions/:id', async (req, res) => {
   const { id } = req.params;
   const { question_text, option_a, option_b, option_c, option_d, correct_option } = req.body;
-  console.log(`\n[Backend API] PUT /api/questions/${id} - Editing question.`);
   try {
     const result = await pool.query(
-      `UPDATE questions
-       SET question_text = $1, option_a = $2, option_b = $3, option_c = $4, option_d = $5, correct_option = $6
-       WHERE id = $7
-       RETURNING id`,
+      `UPDATE questions SET question_text=$1, option_a=$2, option_b=$3, option_c=$4, option_d=$5, correct_option=$6 WHERE id=$7 RETURNING id`,
       [question_text, option_a, option_b, option_c, option_d, correct_option, id]
     );
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Question not found.' });
-    }
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Question not found.' });
     res.json({ updated: true, id: Number(id) });
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to update question.' });
   }
 });
 
-// ---------- DELETE /api/questions/:id — delete a question (admin) ----------
 app.delete('/api/questions/:id', async (req, res) => {
   const { id } = req.params;
-  console.log(`\n[Backend API] DELETE /api/questions/${id} - Deleting question.`);
   try {
     const result = await pool.query('DELETE FROM questions WHERE id = $1 RETURNING id', [id]);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Question not found.' });
-    }
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Question not found.' });
     res.json({ deleted: true, id: Number(id) });
   } catch (err) {
-    console.error(`[Backend Error]`, err);
+    console.error(err);
     res.status(500).json({ error: 'Failed to delete question.' });
   }
 });
 
-// Vercel imports this Express app from api/[...path].js. Only open a port
-// when the file is started directly for local development.
 if (require.main === module) {
   const PORT = process.env.PORT || 4000;
   app.listen(PORT, () => {
-    console.log(`Softmarc admin API running on http://localhost:${PORT}`);
+    console.log(`Softmarc API running on http://localhost:${PORT}`);
+    console.log(`Check health: http://localhost:${PORT}/api/health`);
   });
 }
 
