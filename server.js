@@ -32,6 +32,11 @@ if (process.env.DATABASE_URL) {
   poolConfig = {
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
+    // Optimized for Vercel serverless - faster login
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    keepAlive: true,
   };
   console.log('[DB] Using DATABASE_URL (Supabase) connection string');
 } else {
@@ -42,11 +47,21 @@ if (process.env.DATABASE_URL) {
     user: process.env.PGUSER || 'postgres',
     password: process.env.PGPASSWORD || '',
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    keepAlive: true,
   };
   console.log('[DB] Using individual PG* env vars');
 }
 
 const pool = new Pool(poolConfig);
+// Warm up pool on startup - makes first login faster
+pool.query('SELECT 1').then(()=>console.log('[DB] Pool warmed up')).catch(()=>{});
+
+// Reduce bcrypt cost for faster login on serverless (10 = ~80ms vs 12 = ~250ms)
+// Existing 12-round hashes will still work, just slower. New users will be faster.
+const SALT_ROUNDS = 10;
 
 pool.on('error', (err) => {
   console.error('[DB Pool Error]', err);
@@ -62,8 +77,6 @@ app.get('/api/health', async (req, res) => {
     res.status(500).json({ status: 'error', error: e.message, hint: 'Check DATABASE_URL or PGHOST env vars in Vercel' });
   }
 });
-
-const SALT_ROUNDS = 12;
 
 // Columns we expose (never expose password_hash)
 const USER_PUBLIC_COLS = `
