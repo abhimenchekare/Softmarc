@@ -426,7 +426,7 @@ form {
 window.addEventListener('load', () => {
   setTimeout(() => {
     document.querySelector('.left-login-panel').classList.add('show');
-  }, 400); // Reduced from 1900ms to 400ms for faster feel
+  }, 1900); // Reduced from 1900ms to 400ms for faster feel
   // Warm up Vercel serverless function - makes login faster (cold start fix)
   fetch('/api/health').catch(()=>{});
 });
