@@ -319,7 +319,21 @@ form {
 }
 .welcome-progress-track{ height:4px; background:rgba(255,255,255,0.12); border-radius:4px; overflow:hidden; position:relative; z-index:1; }
 .welcome-progress-fill{ height:100%; width:0%; background:linear-gradient(90deg,#11C7F4,#22B37A); border-radius:4px; transition:width 2.4s cubic-bezier(.4,0,.2,1); }
-.welcome-continue{ margin-top:16px; font-size:12px; color:rgba(255,255,255,0.5); position:relative; z-index:1; display:flex; align-items:center; justify-content:center; gap:8px; }
+.welcome-cta{
+  width:100%; padding:13px 18px; margin-bottom:16px;
+  background:linear-gradient(90deg,#11C7F4,#22B37A);
+  border:none; border-radius:12px;
+  color:#fff; font-family:var(--font-display); font-weight:700; font-size:14px;
+  cursor:pointer; position:relative; z-index:1;
+  box-shadow:0 8px 20px rgba(17,199,244,0.35);
+  transition:transform .15s, box-shadow .15s;
+  animation:ctaPulse 1.5s infinite;
+}
+.welcome-cta:hover{ transform:translateY(-2px); box-shadow:0 12px 28px rgba(17,199,244,0.45); }
+.welcome-cta:active{ transform:translateY(0); }
+@keyframes ctaPulse{0%,100%{box-shadow:0 8px 20px rgba(17,199,244,0.35)}50%{box-shadow:0 8px 24px rgba(34,179,122,0.45)}}
+.welcome-card{ cursor:pointer; }
+.welcome-continue{ margin-top:12px; font-size:12px; color:rgba(255,255,255,0.5); position:relative; z-index:1; display:flex; align-items:center; justify-content:center; gap:8px; }
 .welcome-continue .dot{ width:6px; height:6px; background:var(--success); border-radius:50%; animation:pulseDot 1.2s infinite; }
 @keyframes pulseDot{0%{box-shadow:0 0 0 0 rgba(34,179,122,.7)}70%{box-shadow:0 0 0 6px rgba(34,179,122,0)}100%{box-shadow:0 0 0 0 rgba(34,179,122,0)}}
 @keyframes avatarPop{0%{transform:scale(0)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
@@ -344,21 +358,24 @@ form {
   <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4" type="video/mp4">
 </video>
 
-<!-- Beautiful Welcome Popup (shows after login) -->
+<!-- Beautiful Welcome Popup (shows after login) - Clickable only via button, no auto-redirect -->
 <div class="welcome-overlay" id="welcomeOverlay">
-  <div class="welcome-card">
+  <div class="welcome-card" id="welcomeCard">
     <div class="welcome-confetti" id="welcomeConfetti"></div>
     <div class="welcome-avatar" id="welcomeAvatar">AB</div>
     <div class="welcome-greet" id="welcomeGreet">Good Morning 👋</div>
     <div class="welcome-name" id="welcomeName">Abhishek Menchikare</div>
     <div class="welcome-role" id="welcomeRole">Student</div>
-    <div class="welcome-email" id="welcomeEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7213101a1b32011d14061f1300115c111d1f">[email&#160;protected]</a></div>
+    <div class="welcome-email" id="welcomeEmail"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4d2c2f25240d3e222b39202c3f2e632e2220">[email&#160;protected]</a></div>
     <div class="welcome-msg">
-      Welcome back to <strong style="color:#fff;">Softmarc Learning Portal</strong>!<br>
-      Your CATIA mastery journey continues. Let's keep the streak alive 🚀
+      <div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#7EDEFF;font-weight:700;margin-bottom:6px;">Welcome to Automotive Product Design World</div>
+      <div style="color:#fff;font-weight:600;margin-bottom:6px;">Where Ideas Become Precision Engineering</div>
+      <div style="font-size:12.5px;color:rgba(255,255,255,0.7);line-height:1.5;">
+        At <strong style="color:#fff;">Softmarc</strong>, innovation drives every curve, every surface, every assembly. You've entered an ecosystem built for future automotive designers – master CATIA, build real-world products, and accelerate from concept to creation.
+      </div>
     </div>
-    <div class="welcome-progress-track"><div class="welcome-progress-fill" id="welcomeProgress"></div></div>
-    <div class="welcome-continue"><span class="dot"></span> Taking you to dashboard...</div>
+    <button class="welcome-cta" id="welcomeContinueBtn">Click here for Dashboard →</button>
+    <div class="welcome-continue" style="margin-top:10px;">🎉 Ready to start learning?</div>
     <img class="brand-logo-mini" src="logo.png" alt="Softmarc" style="filter:brightness(0) invert(1);">
   </div>
 </div>
@@ -409,7 +426,9 @@ form {
 window.addEventListener('load', () => {
   setTimeout(() => {
     document.querySelector('.left-login-panel').classList.add('show');
-  }, 1900); // Exact 1.5-second delay!
+  }, 400); // Reduced from 1900ms to 400ms for faster feel
+  // Warm up Vercel serverless function - makes login faster (cold start fix)
+  fetch('/api/health').catch(()=>{});
 });
 
 const _rawSession = localStorage.getItem('softmarc_user');
@@ -441,7 +460,7 @@ if (bgVideo) {
   });
 }
 
-// ---------- Beautiful Welcome Modal Logic ----------
+// ---------- Beautiful Welcome Modal Logic - NO AUTO REDIRECT, only button ----------
 function getGreeting(){
   const h = new Date().getHours();
   if(h < 12) return 'Good Morning';
@@ -450,6 +469,10 @@ function getGreeting(){
 }
 function getInitials(name){ return (name||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
 
+function goToDashboard(){
+  window.location.href = 'soft_dashboard.html';
+}
+
 function showWelcome(user){
   const overlay = document.getElementById('welcomeOverlay');
   const nameEl = document.getElementById('welcomeName');
@@ -457,7 +480,7 @@ function showWelcome(user){
   const greetEl = document.getElementById('welcomeGreet');
   const avatarEl = document.getElementById('welcomeAvatar');
   const emailEl = document.getElementById('welcomeEmail');
-  const progressEl = document.getElementById('welcomeProgress');
+  const ctaBtn = document.getElementById('welcomeContinueBtn');
 
   greetEl.textContent = getGreeting() + ' 👋';
   nameEl.textContent = user.full_name || 'Welcome!';
@@ -471,16 +494,14 @@ function showWelcome(user){
   }
 
   overlay.classList.add('show');
-  // confetti burst
   spawnWelcomeConfetti();
-  // animate progress bar
-  progressEl.style.width = '0%';
-  setTimeout(()=>{ progressEl.style.width = '100%'; }, 100);
 
-  // auto redirect after 2.6s
-  setTimeout(()=>{
-    window.location.href = 'soft_dashboard.html';
-  }, 2600);
+  // ONLY button goes to dashboard - no auto redirect, no card click
+  ctaBtn.onclick = (e)=>{ e.stopPropagation(); goToDashboard(); };
+  // Optional: close on ESC key
+  document.addEventListener('keydown', function escHandler(e){
+    if(e.key==='Escape'){ document.removeEventListener('keydown', escHandler); goToDashboard(); }
+  });
 }
 
 function spawnWelcomeConfetti(){
@@ -548,5 +569,5 @@ form.addEventListener('submit', async (e) => {
 });
 </script>
 
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ca9458ad4e4461',t:'MTc4Njk4OTYzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2e9226cdaa546ec',t:'MTc4NzMxMDAzMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2ca9458ad4e4461',t:'MTc4Njk4OTYzOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
