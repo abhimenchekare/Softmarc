@@ -3,727 +3,391 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Softmarc Learning Portal — Assessments</title>
+<title>Softmarc — Assessments</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="logo.png">
 <style>
-:root{
-  --navy-950:#051B33;
-  --navy-900:#06284A;
-  --navy-800:#0A3D66;
-  --cyan-500:#11C7F4;
-  --cyan-600:#0A9FD1;
-  --cyan-700:#0A73B8;
-  --surface:#FFFFFF;
-  --bg:#F1F6FB;
-  --text-900:#0E2238;
-  --text-600:#55677E;
-  --text-400:#90A0B4;
-  --border:#E1E9F1;
-  --success:#22B37A;
-  --success-bg:#E8F9F0;
-  --danger:#D9463C;
-  --danger-bg:#FDECEB;
-  --warn:#F59E0B;
-  --warn-bg:#FEF3C7;
-  --font-display:'Space Grotesk',sans-serif;
-  --font-body:'Inter',sans-serif;
-  --font-mono:'IBM Plex Mono',monospace;
-  --radius-lg:18px;
-  --radius-md:14px;
-  --radius-sm:10px;
-  --sidebar-w:252px;
+/* Assessments page — row/list style like the reference, with current dashboard colors */
+.assess-hero{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px 24px;margin-bottom:24px;box-shadow:var(--shadow-sm);
+  display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;
 }
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:var(--font-body);background:var(--bg);color:var(--text-900);display:flex;min-height:100vh;}
-a{color:inherit;text-decoration:none;}
-/* Sidebar */
-.sidebar{width:var(--sidebar-w);flex-shrink:0;background:linear-gradient(180deg,var(--navy-950),var(--navy-900));color:#fff;padding:26px 18px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;}
-.brand{display:flex;align-items:center;gap:12px;padding:6px 10px 26px;}
-.brand-mark{width:38px;height:38px;flex-shrink:0;object-fit:contain;background:rgba(255,255,255,.94);border-radius:9px;padding:5px;}
-.brand-name{font-family:var(--font-display);font-weight:700;font-size:17px;}
-.brand-sub{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:1px;}
-.nav{display:flex;flex-direction:column;gap:3px;}
-.nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius-sm);color:rgba(255,255,255,.82);font-size:14.5px;font-weight:500;transition:background .15s,color .15s;}
-.nav a .icon{width:19px;text-align:center;flex-shrink:0;}
-.nav a:hover{background:rgba(255,255,255,.08);color:#fff;}
-.nav a.active{background:linear-gradient(90deg,rgba(0,191,206,.22),rgba(0,191,206,.06));color:#fff;box-shadow:inset 3px 0 0 var(--cyan-500);}
-.nav-group-label{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,.4);margin:20px 14px 8px;}
-.sidebar-footer{margin-top:auto;padding:14px;border-radius:var(--radius-sm);background:rgba(255,255,255,.06);font-size:12.5px;color:rgba(255,255,255,.7);line-height:1.5;}
-/* Main */
-.main{flex:1;padding:28px 34px 40px;min-width:0;}
-.topbar{background:var(--surface);padding:18px 24px;border-radius:var(--radius-md);display:flex;justify-content:space-between;align-items:center;gap:20px;box-shadow:0 4px 18px rgba(10,40,80,.06);margin-bottom:28px;}
-.greeting h1{font-family:var(--font-display);font-size:21px;font-weight:600;}
-.greeting .sub{font-size:13px;color:var(--text-600);margin-top:2px;}
-.topbar-right{display:flex;align-items:center;gap:16px;}
-.search-wrap{position:relative;}
-.search-wrap svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);opacity:.5;}
-.search-wrap input{padding:11px 14px 11px 38px;width:240px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);font-size:14px;font-family:var(--font-body);outline:none;transition:border-color .15s,box-shadow .15s;}
-.search-wrap input:focus{border-color:var(--cyan-600);box-shadow:0 0 0 4px rgba(0,191,206,.14);background:#fff;}
-.avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--navy-800),var(--cyan-600));color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:600;font-size:14px;flex-shrink:0;}
-.panel{background:var(--surface);border-radius:var(--radius-md);box-shadow:0 4px 18px rgba(10,40,80,.06);overflow:hidden;}
-.badge{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:5px;}
-.badge-cyan{background:rgba(17,199,244,.14);color:var(--cyan-700);}
-.badge-navy{background:rgba(10,61,102,.12);color:var(--navy-800);}
-.badge-green{background:rgba(34,179,122,.14);color:#1A9A68;}
-.badge-warn{background:rgba(245,158,11,.14);color:#B45309;}
-.btn{padding:11px 18px;border:none;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;font-family:var(--font-body);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;justify-content:center;gap:8px;}
-.btn-primary{background:linear-gradient(90deg,var(--navy-800),var(--cyan-600));color:#fff;}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(17,199,244,.28);}
-.btn-primary:disabled{opacity:.6;transform:none;cursor:not-allowed;}
-.btn-outline{background:var(--surface);color:var(--cyan-700);border:1.5px solid var(--cyan-600);}
-.btn-outline:hover{background:rgba(17,199,244,.08);}
-.btn-ghost{background:var(--bg);color:var(--text-600);border:1.5px solid transparent;}
-.btn-ghost:hover{background:var(--border);color:var(--text-900);}
-.menu-toggle{display:none;}
-.scrim{display:none;position:fixed;inset:0;background:rgba(2,12,26,.4);z-index:15;}
-.scrim.show{display:block;}
-@media(max-width:980px){
-  .sidebar{position:fixed;left:0;top:0;z-index:20;transform:translateX(-100%);transition:transform .2s ease;}
-  .sidebar.open{transform:translateX(0);}
-  .main{padding:20px;}
-  .menu-toggle{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface);cursor:pointer;}
-  .search-wrap input{width:160px;}
+.assess-title h1{font-family:var(--font-display);font-size:22px;font-weight:700;letter-spacing:-.45px;color:var(--text-900);margin:0 0 4px;}
+.assess-title p{font-size:13.5px;color:var(--text-500);margin:0;line-height:1.45;}
+.assess-tools{display:flex;align-items:center;gap:12px;margin-left:auto;}
+.assess-search{width:260px;height:42px;border:1px solid var(--border);background:var(--surface-hover);border-radius:10px;display:flex;align-items:center;gap:9px;padding:0 13px;color:var(--text-500);}
+.assess-search svg{width:15px;height:15px;flex-shrink:0;opacity:.8}.assess-search input{border:0;outline:0;background:transparent;color:var(--text-900);font:500 13.5px var(--font-body);width:100%;}.assess-search input::placeholder{color:var(--text-400);}
+.assessment-list{display:flex;flex-direction:column;gap:14px;}
+.assessment-row{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;
+  box-shadow:var(--shadow-sm);display:grid;grid-template-columns:52px minmax(0,1fr) auto 38px auto;align-items:center;gap:16px;
+  transition:all .18s ease;
 }
-/* Assessment list */
-.assess-list{display:flex;flex-direction:column;gap:14px;}
-.assess-item{background:var(--surface);border-radius:var(--radius-md);box-shadow:0 4px 18px rgba(10,40,80,.06);padding:20px 24px;display:flex;align-items:center;gap:20px;transition:transform .15s, box-shadow .15s;border:1.5px solid transparent;}
-.assess-item:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(10,40,80,.10);border-color:rgba(17,199,244,.18);}
-.assess-icon{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--navy-800),var(--cyan-600));display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;color:#fff;}
-.assess-info{flex:1;}
-.assess-info h3{font-family:var(--font-display);font-size:15.5px;font-weight:600;margin-bottom:4px;}
-.assess-info .meta{font-size:13px;color:var(--text-600);}
-.assess-score{font-family:var(--font-mono);font-size:22px;font-weight:500;color:var(--navy-800);min-width:70px;text-align:right;}
-@media(max-width:600px){.assess-item{flex-wrap:wrap;}.assess-score{text-align:left;}}
+.assessment-row:hover{box-shadow:var(--shadow);border-color:var(--border-strong);transform:translateY(-1px);}
+.assess-icon{width:44px;height:44px;border-radius:10px;background:#0A1930;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(10,25,48,.12);}
+.assess-icon svg{width:22px;height:22px}.assess-info h3{font-family:var(--font-display);font-size:16px;font-weight:700;letter-spacing:-.2px;color:var(--text-900);margin:0 0 6px;}.assess-meta{font-size:13px;color:var(--text-500);display:flex;flex-wrap:wrap;gap:6px;align-items:center;}.assess-meta span:not(:last-child)::after{content:'·';margin-left:6px;color:var(--text-400);}.status-pill{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:var(--cyan-bg);color:var(--cyan);font-size:12px;font-weight:800;white-space:nowrap;}.status-pill::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;}.dash-mark{color:var(--text-400);font-weight:700;text-align:center;}.start-btn{min-width:96px;height:40px;border-radius:10px;border:1px solid #0A1930;background:#0A1930;color:#fff;font-weight:800;font-size:13px;font-family:var(--font-body);cursor:pointer;transition:all .15s;}.start-btn:hover{background:#12315F;border-color:#12315F;transform:translateY(-1px);}
+.quiz-panel{display:none;margin-top:22px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow-sm);overflow:hidden}.quiz-panel.show{display:block}.quiz-head{padding:20px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:16px}.quiz-body{padding:22px}.pill{display:inline-flex;width:max-content;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:var(--cyan-bg);color:var(--cyan);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}.question{border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;background:var(--surface-hover)}.question h4{font-size:14.5px;margin-bottom:12px;color:var(--text-900)}.option{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--surface);padding:11px 12px;border-radius:9px;margin:7px 0;cursor:pointer;color:var(--text-700)}.option.selected{border-color:#0A1930;background:#E0F2FE;color:#0A1930;font-weight:800}.result{display:none;margin-top:14px;padding:14px;border-radius:12px;background:var(--success-bg);color:var(--success);font-weight:800}.empty{padding:34px;text-align:center;color:var(--text-500);background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-top:18px}
+html[data-theme="dark"] .assess-icon,body[data-theme="dark"] .assess-icon{background:#FFFFFF;color:#0A1930;box-shadow:none;}html[data-theme="dark"] .start-btn,body[data-theme="dark"] .start-btn{background:#FFFFFF!important;color:#0A1930!important;border-color:#FFFFFF!important;}html[data-theme="dark"] .start-btn:hover,body[data-theme="dark"] .start-btn:hover{background:#E2E8F0!important;border-color:#E2E8F0!important;color:#0A1930!important;}html[data-theme="dark"] .option.selected,body[data-theme="dark"] .option.selected{border-color:#FFFFFF;background:#0C2A3F;color:#F1F5F9;}
+@media(max-width:860px){.assessment-row{grid-template-columns:44px minmax(0,1fr);}.status-pill,.dash-mark,.start-btn{grid-column:2}.start-btn{width:max-content}.assess-tools{width:100%;margin-left:0}.assess-search{width:100%;}}@media(max-width:520px){.assess-hero{padding:18px}.assessment-row{padding:16px}.content{padding:18px!important}}
 
-/* Quiz Modal */
-.quiz-modal{position:fixed;inset:0;background:rgba(2,12,26,0.6);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px;animation:fadeIn .2s ease;}
-.quiz-modal-content{background:var(--surface);border-radius:16px;box-shadow:0 20px 60px rgba(5,27,51,.25);width:100%;max-width:680px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;animation:slideUp .3s ease;}
-.quiz-modal-header{padding:18px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,rgba(10,61,102,.04),rgba(17,199,244,.04));}
-.quiz-modal-header h2{font-family:var(--font-display);font-size:16.5px;font-weight:700;color:var(--navy-950);display:flex;align-items:center;gap:10px;}
-.quiz-modal-close{width:32px;height:32px;border-radius:8px;background:var(--bg);border:1px solid var(--border);font-size:14px;color:var(--text-600);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;}
-.quiz-modal-close:hover{background:var(--danger-bg);color:var(--danger);border-color:rgba(217,70,60,.2);}
-.quiz-progress{padding:14px 24px 0;background:var(--surface);}
-.quiz-progress-bar{height:6px;background:var(--border);border-radius:6px;overflow:hidden;}
-.quiz-progress-fill{height:100%;background:linear-gradient(90deg,var(--navy-800),var(--cyan-500));border-radius:6px;transition:width .3s ease;width:0%;}
-.quiz-progress-text{font-size:12px;color:var(--text-600);margin-top:8px;font-family:var(--font-mono);display:flex;justify-content:space-between;}
-.quiz-modal-body{padding:24px;overflow-y:auto;flex:1;}
-.quiz-modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--surface);gap:12px;}
 
-.question-block{margin-bottom:28px;padding:18px;background:rgba(241,246,251,.7);border-radius:12px;border:1px solid var(--border);}
-.question-block:last-child{margin-bottom:0;}
-.question-text{font-size:14.5px;font-weight:600;color:var(--text-900);margin-bottom:14px;line-height:1.5;display:flex;gap:8px;}
-.q-number{background:var(--navy-800);color:#fff;font-size:11px;font-family:var(--font-mono);padding:3px 8px;border-radius:6px;flex-shrink:0;height:fit-content;margin-top:2px;}
-.options-list{display:flex;flex-direction:column;gap:10px;}
-.option-item{display:flex;align-items:center;gap:12px;padding:14px 14px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:.15s;font-size:13.5px;background:var(--surface);position:relative;}
-.option-item:hover{border-color:rgba(17,199,244,.4);background:rgba(17,199,244,.04);transform:translateY(-1px);}
-.option-item.selected{border-color:var(--cyan-600);background:rgba(17,199,244,.10);box-shadow:0 0 0 3px rgba(17,199,244,.15);}
-.option-item.selected .option-letter{background:var(--cyan-600);color:#fff;border-color:var(--cyan-600);}
-.option-letter{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-display);font-size:13px;flex-shrink:0;transition:.15s;background:var(--surface);}
-.option-item input{position:absolute;opacity:0;pointer-events:none;}
-.option-text{flex:1;line-height:1.4;}
+/* Popup assessment modal + congratulations modal */
+.assessment-row{cursor:pointer;}
+.status-pill.completed{background:#D1FAE5!important;color:#059669!important;}
+.status-pill.completed::before{background:#059669!important;}
+html[data-theme="dark"] .status-pill.completed,body[data-theme="dark"] .status-pill.completed{background:#0A2E1A!important;color:#22C55E!important;}
+html[data-theme="dark"] .status-pill.completed::before,body[data-theme="dark"] .status-pill.completed::before{background:#22C55E!important;}
+.quiz-panel{position:fixed!important;inset:0!important;z-index:220!important;display:none!important;align-items:center!important;justify-content:center!important;padding:24px!important;background:rgba(2,6,23,.58)!important;backdrop-filter:blur(10px)!important;border:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important;overflow:auto!important;}
+.quiz-panel.show{display:flex!important;}
+.quiz-dialog{width:min(920px,96vw);max-height:90vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--border);border-radius:20px;box-shadow:0 30px 80px rgba(2,6,23,.34);overflow:hidden;animation:modalPop .22s ease;}
+.quiz-dialog .quiz-body{overflow:auto;}
+.quiz-head{background:linear-gradient(180deg,var(--surface),var(--surface-hover));}
+.option.correct{border-color:#059669!important;background:#D1FAE5!important;color:#065F46!important;font-weight:800;}
+.option.wrong{border-color:#DC2626!important;background:#FEF2F2!important;color:#991B1B!important;font-weight:800;}
+.congrats-modal{position:fixed;inset:0;z-index:260;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(2,6,23,.62);backdrop-filter:blur(12px);}
+.congrats-modal.show{display:flex;}
+.congrats-card{width:min(520px,94vw);position:relative;overflow:hidden;background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:34px 30px;text-align:center;box-shadow:0 35px 90px rgba(2,6,23,.38);animation:modalPop .24s ease;}
+.congrats-card::before{content:'';position:absolute;inset:-70px -40px auto auto;width:190px;height:190px;border-radius:50%;background:rgba(14,165,233,.16);}
+.congrats-medal{width:82px;height:82px;margin:0 auto 18px;border-radius:50%;background:linear-gradient(135deg,#0A1930,#0EA5E9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:38px;box-shadow:0 18px 38px rgba(14,165,233,.26);}
+.congrats-card h2{font-family:var(--font-display);font-size:28px;line-height:1.12;letter-spacing:-.7px;color:var(--text-900);margin:0 0 8px;}
+.congrats-card p{color:var(--text-500);font-size:14.5px;line-height:1.6;margin:0 0 20px;}
+.score-ring{width:112px;height:112px;margin:0 auto 22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(#059669 0 100%,var(--border) 0);box-shadow:inset 0 0 0 10px var(--surface);font-family:var(--font-display);font-weight:800;font-size:28px;color:#059669;}
+.congrats-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+body.modal-open{overflow:hidden;}
+@keyframes modalPop{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+html[data-theme="dark"] .option.correct,body[data-theme="dark"] .option.correct{background:#0A2E1A!important;color:#86EFAC!important;border-color:#22C55E!important;}
+html[data-theme="dark"] .option.wrong,body[data-theme="dark"] .option.wrong{background:#450A0A!important;color:#FCA5A5!important;border-color:#F87171!important;}
+html[data-theme="dark"] .congrats-medal,body[data-theme="dark"] .congrats-medal{background:linear-gradient(135deg,#FFFFFF,#38BDF8);color:#0A1930;}
+@media(max-width:640px){.quiz-panel{padding:12px!important}.quiz-dialog{max-height:94vh;border-radius:16px}.congrats-card{padding:28px 20px}.congrats-card h2{font-size:24px}}
 
-/* RESULT MODAL - Fixed Premium Design */
-.result-modal{position:fixed;inset:0;background:rgba(2,12,26,0.68);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:10001;padding:16px;animation:fadeIn .25s ease;}
-.result-modal-content{background:var(--surface);border-radius:20px;box-shadow:0 24px 80px rgba(5,27,51,.35);width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;animation:resultPop .45s cubic-bezier(.34,1.56,.64,1);position:relative;}
-.result-modal-content.passed{box-shadow:0 24px 80px rgba(34,179,122,.25), 0 0 0 1px rgba(34,179,122,.12);}
-.result-modal-content.failed{box-shadow:0 24px 80px rgba(245,158,11,.22), 0 0 0 1px rgba(245,158,11,.12);}
 
-.result-header{text-align:center;padding:28px 28px 20px;position:relative;flex-shrink:0;z-index:1;background:var(--surface);}
-.result-header.passed{background:linear-gradient(135deg,#F0FDF4 0%, #ECFEFF 100%);}
-.result-header.failed{background:linear-gradient(135deg,#FFFBEB 0%, #FEF2F2 100%);}
-.result-icon-wrap{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;animation:iconBounce .6s cubic-bezier(.34,1.56,.64,1) .2s both;position:relative;z-index:1;}
-.result-header.passed .result-icon-wrap{background:linear-gradient(135deg,#22B37A,#11C7F4);color:#fff;box-shadow:0 10px 24px rgba(34,179,122,.35);}
-.result-header.failed .result-icon-wrap{background:linear-gradient(135deg,#F59E0B,#D9463C);color:#fff;box-shadow:0 10px 24px rgba(245,158,11,.35);}
-.result-header h2{font-family:var(--font-display);font-size:22px;font-weight:700;margin-bottom:6px;position:relative;z-index:1;}
-.result-header.passed h2{color:#166534;}
-.result-header.failed h2{color:#92400E;}
-.result-header .result-subtitle{font-size:13.5px;color:var(--text-600);line-height:1.5;max-width:380px;margin:0 auto;position:relative;z-index:1;}
-.result-header .result-quiz-title{font-size:11px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;color:var(--text-400);margin-bottom:10px;position:relative;z-index:1;}
 
-/* Separate score section - no overlap */
-.result-score{display:flex;align-items:center;justify-content:center;gap:24px;padding:18px 28px;background:#FFFFFF;border-top:1px solid var(--border);border-bottom:1px solid var(--border);flex-shrink:0;position:relative;z-index:1;}
-.score-ring{position:relative;width:118px;height:118px;flex-shrink:0;}
-.score-ring svg{transform:rotate(-90deg);width:100%;height:100%;}
-.score-ring-bg{fill:none;stroke:var(--border);stroke-width:10;}
-.score-ring-fill{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1) .3s;}
-.score-ring-fill.passed{stroke:url(#gradPass);}
-.score-ring-fill.failed{stroke:url(#gradFail);}
-.score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.score-percent{font-family:var(--font-display);font-size:30px;font-weight:700;line-height:1;color:var(--navy-950);}
-.score-label{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text-400);margin-top:3px;}
-.score-stats{display:flex;flex-direction:column;gap:10px;text-align:left;min-width:180px;}
-.stat-item{display:flex;align-items:center;gap:10px;font-size:13px;}
-.stat-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;font-weight:700;}
-.stat-icon.correct{background:var(--success-bg);color:var(--success);}
-.stat-icon.total{background:rgba(10,61,102,.08);color:var(--navy-800);}
-.stat-icon.status-ok{background:var(--success-bg);color:var(--success);}
-.stat-icon.status-bad{background:var(--warn-bg);color:var(--warn);}
-.stat-text strong{color:var(--text-900);}
-.stat-text span{color:var(--text-600);}
-
-.result-body{padding:18px 22px 18px;overflow-y:auto;flex:1;min-height:0;position:relative;z-index:1;background:var(--surface);}
-.result-section-title{font-family:var(--font-display);font-size:12.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-400);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.review-list{display:flex;flex-direction:column;gap:10px;}
-.review-item{border-radius:12px;border:1.5px solid var(--border);padding:14px 16px;transition:.15s;background:var(--surface);}
-.review-item.correct{border-color:rgba(34,179,122,.25);background:rgba(34,179,122,.04);}
-.review-item.wrong{border-color:rgba(217,70,60,.20);background:rgba(217,70,60,.03);}
-.review-item-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;}
-.review-q-text{font-size:13px;font-weight:600;color:var(--text-900);line-height:1.4;flex:1;}
-.review-status{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;flex-shrink:0;}
-.review-status.correct{background:var(--success-bg);color:var(--success);}
-.review-status.wrong{background:var(--danger-bg);color:var(--danger);}
-.review-answers{font-size:12.5px;line-height:1.5;color:var(--text-600);display:flex;flex-direction:column;gap:3px;}
-.review-answers strong{font-weight:600;}
-.review-answers .your-answer.wrong{color:var(--danger);}
-.review-answers .your-answer.correct{color:var(--success);}
-.result-footer{padding:16px 24px;background:var(--surface);border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;}
-.result-footer .btn{flex:1;min-width:120px;}
-@media(max-width:520px){
-  .result-score{flex-direction:column;gap:16px;padding:16px 20px;}
-  .result-header{padding:22px 20px 16px;}
-  .result-body{padding:14px 16px;}
-  .result-footer{flex-direction:column;padding:14px 16px;}
-  .result-footer .btn{width:100%;}
-  .score-stats{width:100%;}
+/* Professional congratulations modal redesign */
+.congrats-modal{background:rgba(7,13,27,.68)!important;backdrop-filter:blur(14px)!important;}
+.congrats-card.pro{
+  width:min(560px,94vw)!important;
+  padding:0!important;
+  border-radius:24px!important;
+  border:1px solid rgba(226,232,240,.9)!important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(14,165,233,.18) 0 22%, transparent 23%),
+    radial-gradient(circle at 5% 100%, rgba(5,150,105,.12) 0 20%, transparent 21%),
+    linear-gradient(180deg,#FFFFFF 0%,#F8FAFC 100%)!important;
+  box-shadow:0 34px 90px rgba(2,6,23,.38),0 2px 0 rgba(255,255,255,.75) inset!important;
+  overflow:hidden!important;
+  position:relative!important;
 }
+.congrats-card.pro::before{content:''!important;position:absolute!important;left:0!important;right:0!important;top:0!important;height:6px!important;background:linear-gradient(90deg,#0A1930,#0EA5E9,#059669)!important;}
+.congrats-card.pro::after{content:'';position:absolute;inset:6px;border-radius:20px;border:1px solid rgba(255,255,255,.65);pointer-events:none;}
+.success-emblem{width:86px;height:86px;margin:34px auto 14px;color:#059669;filter:drop-shadow(0 14px 22px rgba(5,150,105,.22));position:relative;z-index:1;}
+.success-emblem svg{width:100%;height:100%;display:block;}
+.congrats-kicker{position:relative;z-index:1;margin:0 auto 8px;width:max-content;padding:6px 12px;border-radius:999px;background:#E0F2FE;color:#0369A1;font-size:11px;font-weight:900;letter-spacing:.9px;text-transform:uppercase;}
+.congrats-card.pro h2{position:relative;z-index:1;margin:0 28px 8px!important;font-family:var(--font-display)!important;font-size:34px!important;letter-spacing:-1px!important;line-height:1.05!important;color:#0F172A!important;}
+.congrats-card.pro p{position:relative;z-index:1;margin:0 auto 22px!important;max-width:420px!important;color:#475569!important;font-size:15px!important;line-height:1.65!important;}
+.score-panel{position:relative;z-index:1;margin:0 30px 26px;padding:18px;border:1px solid #D1FAE5;border-radius:18px;background:rgba(236,253,245,.72);display:flex;align-items:center;gap:16px;text-align:left;}
+.score-ring{width:96px!important;height:96px!important;margin:0!important;flex:0 0 96px!important;border-radius:50%!important;background:#FFFFFF!important;border:9px solid #059669!important;box-shadow:0 12px 28px rgba(5,150,105,.18), inset 0 0 0 1px #D1FAE5!important;color:#064E3B!important;font-family:var(--font-display)!important;font-weight:900!important;font-size:25px!important;display:flex!important;align-items:center!important;justify-content:center!important;}
+.score-copy strong{display:block;color:#064E3B;font-size:15px;font-weight:900;margin-bottom:4px;}.score-copy span{display:block;color:#64748B;font-size:13px;line-height:1.5;}
+.congrats-actions{position:relative;z-index:1;display:flex!important;gap:12px!important;justify-content:center!important;flex-wrap:wrap!important;padding:0 30px 34px!important;}
+.congrats-actions .btn{min-width:145px!important;justify-content:center!important;padding:12px 18px!important;}
+.confetti{position:absolute;width:9px;height:9px;border-radius:3px;opacity:.9;}.confetti.c1{left:68px;top:78px;background:#0EA5E9;transform:rotate(18deg)}.confetti.c2{right:88px;top:112px;background:#059669;border-radius:50%}.confetti.c3{left:106px;bottom:98px;background:#F59E0B;transform:rotate(35deg)}.confetti.c4{right:62px;bottom:126px;background:#06B6D4;transform:rotate(12deg)}
+html[data-theme="dark"] .congrats-card.pro,body[data-theme="dark"] .congrats-card.pro{background:radial-gradient(circle at 88% 0%, rgba(56,189,248,.20) 0 22%, transparent 23%),radial-gradient(circle at 5% 100%, rgba(34,197,94,.12) 0 20%, transparent 21%),linear-gradient(180deg,#111D33 0%,#0B1426 100%)!important;border-color:#1E355A!important;}
+html[data-theme="dark"] .congrats-card.pro h2,body[data-theme="dark"] .congrats-card.pro h2{color:#F8FAFC!important;}html[data-theme="dark"] .congrats-card.pro p,body[data-theme="dark"] .congrats-card.pro p{color:#CBD5E1!important;}html[data-theme="dark"] .congrats-kicker,body[data-theme="dark"] .congrats-kicker{background:#0C2A3F;color:#7DD3FC;}html[data-theme="dark"] .score-panel,body[data-theme="dark"] .score-panel{background:rgba(10,46,26,.55);border-color:#14532D;}html[data-theme="dark"] .score-ring,body[data-theme="dark"] .score-ring{background:#111D33!important;border-color:#22C55E!important;color:#BBF7D0!important;}html[data-theme="dark"] .score-copy strong,body[data-theme="dark"] .score-copy strong{color:#BBF7D0;}html[data-theme="dark"] .score-copy span,body[data-theme="dark"] .score-copy span{color:#94A3B8;}
+@media(max-width:560px){.score-panel{margin:0 20px 22px;flex-direction:column;text-align:center}.congrats-card.pro h2{font-size:28px!important}.success-emblem{margin-top:30px}.congrats-actions{padding:0 20px 28px!important}.congrats-actions .btn{width:100%;}}
 
-/* Confetti */
-.confetti-container{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:20px;}
-.confetti-piece{position:absolute;width:10px;height:10px;top:-10px;animation:confettiFall 3s linear forwards;}
-@keyframes confettiFall {
-  0%{transform:translateY(-10px) rotate(0deg) translateX(0);opacity:1;}
-  100%{transform:translateY(600px) rotate(720deg) translateX(var(--drift));opacity:0;}
-}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes slideUp{from{opacity:0;transform:translateY(20px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
-@keyframes resultPop{0%{opacity:0;transform:scale(.85) translateY(30px)}100%{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes iconBounce{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
 
-/* Toast - improved but secondary now */
-.toast{position:fixed;right:20px;bottom:20px;background:var(--navy-900);color:#fff;padding:14px 18px;border-radius:12px;font-size:13.5px;font-weight:500;box-shadow:0 12px 28px rgba(5,27,51,.22);transform:translateY(120px);opacity:0;transition:all .35s cubic-bezier(.4,0,.2,1);z-index:10010;max-width:360px;display:flex;align-items:center;gap:10px;}
-.toast.show{transform:translateY(0);opacity:1;}
-.toast.success{background:linear-gradient(90deg,#166534,#22B37A);}
-.toast.error{background:linear-gradient(90deg,#7F1D1D,#D9463C);}
-.toast::before{content:'';width:22px;height:22px;border-radius:50%;background:rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
-.toast.success::before{content:'✓';}
-.toast.error::before{content:'!';}
 
-/* Loading */
-.btn-spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* Animated party poppers, confetti, and car for congratulations */
+.celebration-stage{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:24px;z-index:0;}
+.party-popper{position:absolute;top:82px;font-size:30px;filter:drop-shadow(0 8px 12px rgba(2,6,23,.18));animation:popperBounce 1.8s ease-in-out infinite;}
+.party-popper.left{left:30px;transform:rotate(-18deg);}.party-popper.right{right:30px;transform:rotate(18deg);animation-delay:.25s;}
+.confetti-rain i{position:absolute;top:-18px;width:8px;height:14px;border-radius:3px;background:#0EA5E9;animation:confettiFall 3.2s linear infinite;opacity:.95;}
+.confetti-rain i:nth-child(1){left:9%;background:#0EA5E9;animation-delay:0s}.confetti-rain i:nth-child(2){left:18%;background:#22C55E;animation-delay:.35s}.confetti-rain i:nth-child(3){left:27%;background:#F59E0B;animation-delay:.7s}.confetti-rain i:nth-child(4){left:36%;background:#06B6D4;animation-delay:1.05s}.confetti-rain i:nth-child(5){left:45%;background:#EF4444;animation-delay:.2s}.confetti-rain i:nth-child(6){left:54%;background:#8B5CF6;animation-delay:.55s}.confetti-rain i:nth-child(7){left:63%;background:#14B8A6;animation-delay:.9s}.confetti-rain i:nth-child(8){left:72%;background:#F97316;animation-delay:1.25s}.confetti-rain i:nth-child(9){left:81%;background:#0EA5E9;animation-delay:.1s}.confetti-rain i:nth-child(10){left:88%;background:#22C55E;animation-delay:.45s}.confetti-rain i:nth-child(11){left:14%;background:#EAB308;animation-delay:1.45s}.confetti-rain i:nth-child(12){left:76%;background:#EC4899;animation-delay:1.65s}
+.car-road{position:absolute;left:0;right:0;bottom:88px;height:74px;opacity:.98;}
+.car-road::before{content:'';position:absolute;left:42px;right:42px;bottom:12px;height:3px;border-radius:999px;background:linear-gradient(90deg,transparent,#CBD5E1 18%,#CBD5E1 82%,transparent);opacity:.9;}
+.car-svg{position:absolute;left:-230px;bottom:2px;width:176px;color:#0F172A;animation:carDrive 4.6s cubic-bezier(.42,0,.2,1) infinite;filter:drop-shadow(0 12px 14px rgba(2,6,23,.16));}
+.wheel{transform-origin:center;transform-box:fill-box;animation:wheelSpin .65s linear infinite;}
+@keyframes carDrive{0%{transform:translateX(0) translateY(0)}8%{transform:translateX(105px) translateY(-1px)}42%{transform:translateX(370px) translateY(0)}55%{transform:translateX(500px) translateY(-1px)}100%{transform:translateX(760px) translateY(0)}}
+@keyframes wheelSpin{to{transform:rotate(360deg)}}
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:0}8%{opacity:1}100%{transform:translateY(430px) rotate(680deg);opacity:0}}
+@keyframes popperBounce{0%,100%{translate:0 0;scale:1}50%{translate:0 -8px;scale:1.08}}
+.congrats-card.pro > :not(.celebration-stage){position:relative;z-index:1;}
+/* Make content slightly lower to give the car room */
+.congrats-card.pro .success-emblem{margin-top:92px!important;}
+@media(max-width:560px){.party-popper{display:none}.car-road{bottom:92px}.car-svg{width:154px}.congrats-card.pro .success-emblem{margin-top:82px!important}}
+@media(prefers-reduced-motion:reduce){.car-svg,.wheel,.confetti-rain i,.party-popper{animation:none!important}.car-svg{left:50%;transform:translateX(-50%)!important}}
+
+
+
+/* Premium sports-car animation upgrade */
+.car-road{bottom:92px!important;height:118px!important;}
+.car-road::before{left:34px!important;right:34px!important;bottom:19px!important;height:4px!important;background:linear-gradient(90deg,transparent,#94A3B8 14%,#CBD5E1 50%,#94A3B8 86%,transparent)!important;}
+.car-road::after{content:'';position:absolute;left:60px;right:60px;bottom:31px;height:2px;border-radius:999px;background:repeating-linear-gradient(90deg,rgba(14,165,233,.55) 0 28px,transparent 28px 48px);animation:roadDash 1.2s linear infinite;}
+.car-svg.premium-car{width:236px!important;left:-260px!important;bottom:0!important;animation:premiumCarDrive 4.8s cubic-bezier(.35,0,.14,1) infinite!important;}
+.wheel-premium{transform-box:fill-box;transform-origin:center;animation:wheelSpin .55s linear infinite;}
+.motion-lines{animation:motionPulse .55s ease-in-out infinite alternate;}
+@keyframes premiumCarDrive{0%{transform:translateX(0) translateY(0) rotate(.2deg)}10%{transform:translateX(125px) translateY(-2px) rotate(-.4deg)}42%{transform:translateX(382px) translateY(0) rotate(.15deg)}58%{transform:translateX(505px) translateY(-2px) rotate(-.2deg)}100%{transform:translateX(820px) translateY(0) rotate(.1deg)}}
+@keyframes roadDash{to{background-position:-48px 0}}
+@keyframes motionPulse{from{opacity:.25;transform:translateX(0)}to{opacity:.7;transform:translateX(-8px)}}
+@media(max-width:560px){.car-road{bottom:96px!important;height:100px!important}.car-svg.premium-car{width:205px!important}.congrats-card.pro .success-emblem{margin-top:104px!important}}
+@media(prefers-reduced-motion:reduce){.car-svg.premium-car{animation:none!important;left:50%!important;transform:translateX(-50%)!important}.wheel-premium,.motion-lines,.car-road::after{animation:none!important}}
+
 </style>
+<link rel="stylesheet" href="softmarc-unified.css">
 </head>
 <body>
 <div class="scrim" id="scrim"></div>
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-  <div class="brand">
-    <img class="brand-mark" src="data:image/png;base64,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" alt="Softmarc logo">
-    <div>
-      <div class="brand-name">Softmarc</div>
-      <div class="brand-sub">Learning Portal</div>
-    </div>
+  <div class="sidebar-top"><a class="brand" href="soft_dashboard.html" aria-label="Softmarc dashboard"><img class="brand-full-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMTQiIGhlaWdodD0iNTYiIHZpZXdCb3g9IjAgMCAyMTQgNTYiPgogIDxyZWN0IHg9IjEiIHk9IjciIHdpZHRoPSI0MiIgaGVpZ2h0PSI0MiIgcng9IjgiIGZpbGw9IiNmZmZmZmYiLz4KICA8aW1hZ2UgaHJlZj0iZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFTd0FBQUVzQ0FZQUFBQjVmWTUxQUFBUVEwbEVRVlI0bk8zZDBYVVR5YmJHOFkrN0pvQ2VDSzZJQU9FRWtDSVk4ZG92eUJGZ0VoQ21FN0NKd09KRnIyZ2lVSk9BcklrQVRRVFRONEo3SHJaME1CNWpTMVpYNzZycS8yOHRGalByektuYTU4Qjg3S3F1cnBZQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBRDY0SVYzQWNrb3E0R2t3ZTd2aHBJS3AwcUEyTTIxbUcxRERFeGczV2ZCTk56OWVDVUxxYUZYT1VDQ0dra3Z0WmcxYlEvOFc5c0RKcWVzQ2trVFNXOGtqZlNqaXdMd1BJWHNEL202N1lIN0dWaldSVTBrdlJQZEU1Q00vZ1RXajA3cXZRZ3BJRW41QjVaMVV4OWxZVlY0bGdMZ05Qa0dWbG1OWkV1K3FXOGhBTnFTWDJCWlIzVWw2NmdBWkNTZndMSTlxaXZSVVFIWitoL3ZBbHBSVmhlU3ZvdXdBcktXZG9kVlZrTkpOK0twSDlBTDZYWllaWFVwNlZhRUZkQWI2WFZZdGxmMVZYWXFIVUNQcE5WaDJWR0Y3eUtzZ0Y1S0o3QnNZMzBsRG44Q3ZaWEdrckNzYnNRVFFLRDM0ZzRzMjYrNkVZZEFBU2ptd0xLd1dvbW5nQUIyNHR6RElxd0FQQ0Mrd0NLc0FQeENmSUZGV0FINGhiZ0N5NTRHRHIzTEFCQ25lQUtyckxocEFjQ2o0Z2lzc3BwS3VuQ3VBa0RrL0FQTGJseTQ4aTREUVB4OEErdkh3ZERDdFE0QVNmRHVzSzdFSmp1QUEva0ZWbGxOeENZN2dDUDRCTmFQcFNBQUhNeXJ3N29TKzFZQWp0UjlZTmtsZk5QTzV3V1FQSThPaXlNTVFQNmFFSU4yZTcyTUhSQWRkam9uZ0M0MWtqNXJNZHVFR0x6cis3QStkanhmbXphU2FrbC9TZHBLMm1neGEvektBZnFudThDeTdtclEyWHp0V0VyNlU5S1NjQUw4ZGRsaHBkSmROWkxtc3JaMjYxb0pnSjkwRTFqcGRGZWZKRjNUVFFGeDZxckRpcjI3cWlXZDAxRUJjUXNmV0hidWFoQjhudWY3cE1YczByc0lBRS9yb3NONjE4RWN6OUZJZXF2RnJIYXVBOENCWGdRZDNkNFovQ2ZvSE0vVFNCcUhPaXNDSUl6UUo5MG5nY2QvamthRUZaQ2swSUgxUHZENHgycEVXQUhKQ2hkWVpUVlFmSy9obkJOV1FMcENkbGlqZ0dNL3g3VVdzNlYzRVFDZUwyUmcvUkZ3N0dOdHRKaDk4QzRDd0duNjBtR2RleGNBNEhSaEFzcyszVlVFR2Z0NGMvYXRnRHlFNnJCR2djWjlqay9lQlFCb1I2akFlaFZvM0dQTmVUOFF5RWVvd0JvR0d2ZFlkRmRBUm5JT3JKcnVDc2hMKzRGbHR6UEU0SXQzQVFEYUZhTERLZ0tNK1J4TDd3SUF0Q3RFWUEwRGpIbXNtbHREZ2Z4NGZmazV0Ry9lQlFCb1g0akFlaE5nekdQVjNnVUFhRit1SGRiR3V3QUE3Y3N4c0JyMnI0QTg1ZmlVY09NOFA0QkFjbjFLQ0NCRE9TNEpOOTRGQUFnang4RDZQKzhDQUlTUlkyQUJ5RlNJd05vR0dCTUFzZ3lzLzNXZUgwQWdPUzRKQjk0RkFBZ2p4OEFxdkFzQUVFYU9TOEtoOC93QUFna1JXSDhIR1BNNDl0VWVBSmtKRVZoTmdER1BOZkl1QUVEN1FnVFdKc0NZeDRyaGloc0FMY3R4RDB1aXd3S3kxSDVneGZHbG1rSmxOZlV1QWtDN1FoMXJxQU9OZTR4MzNnVUFhRmVvd05vR0d2Y1lJNVhWd0xzSUFPMEpGVml4ZkFUaW8zY0JBTm9US3JBMmdjWTkxcFF6V1VBK3dnVFdZclpSSE9leEpPbkt1d0FBN1FqNUxtRWRjT3hqakZSV0Y5NUZBRGpkaTJBajI3R0NtMkRqSDZlUk5ONTFmbWpUYWoyUzNaQXhrRjN0TTdqM1R6U1MvdHI5ZFMxcG8vRlowMEZseUZESXdCcEkraDVzL09OdFpLSFZPTmVSdHRWNklHa2k2UTg5LzREdVJoWmVYelErMjV4ZUZQb2lYR0JKVWxuZEtxN2JFK1phek02OWkwalNhajJWblcwYnRUenlWdElYU2RkMFhuaEs2UHV3dmdRZS8xaFRsVlVzeTlRMHJOWlRyZGJmWmN2N1VZQVpCckxqSjkrMVdsOXF0UzRDeklGTWhBNnNaZUR4bjRQUU9zUnFQZEpxZlNzTHFrRUhNeGI2RVZ3WEhjeUhCSVZkRWtwU1dhMFU1OHZJYzBrZjJOTjZ3R3A5SmVuQ3VZcGEwcm5HWjF2bk9oQ1JMcTVJam0xWnVEZVZ0T0wxblR0VzYyTFhWVjE0bHlMN1ErNVdxL1hFdVE1RXBJdkFXaXFlUTZUM0RTWGRxcXdtem5YNFc2MkhzcWU2UTk5Q2ZsSkkrcnJiOEFjNldCSktVbG5Gc01SNFNpM3BQSkxyY2JwbFliVlMzQi93bUd0OHhoUGVudXZxcXptZk81cm5GQ05KMzFWV043MWFKcVlSVnBJMDFXcDk2VjBFZkhYVFlVbmFQWm1iZGpiZjZlYVN2bWd4cTUzckNNY09nZDRxL3JDNjYxempzN2wzRWZEUlpXQU5GTmZKOTBOdFpmdHdmMllWWG5iZWFhVzQ5cXdPOVpvVDh2M1VYV0JKS1haWkQ2bGxJZmIzN3VkdEIzTnVXOTliaStQb3duTnRaYUhWdERhaS9ZRTZhRzI4ZjJ2LzE3Q0h1ZzZzZ2RMc3NtSndyc1ZzM3NwSTlzTHlxcFd4L0xTM0NkLzlpL3JiT3ovK2xyMWJ1U0hRbnRadFlFbXBQREdNVWFQRjdQZFdSckpYYlFhdGpPVnJyUEZaZmZJb1pmV1A0dGpIYTJUaDlVMVNuZFVXUkV0K2M1anprMnhaV0RqTW5iS2lsVkhzU2R1Z2xiSDhYVWw2M2NJNFJRdGp0S0dRUGEwZVNmcW9zcEpzLy9TYnBDVWRtRWVISmNWMlYxWTZGclBUZnIxc28vMjc0dmtYdEEyblB6VXNxLzl2cDVUZ05ySTNSK1o5ZmFXc3EzTllQN085bU5wbDduNmJLcSt3a3ZyMU9iZWhyS3Y4UjJYMXRZOXZhUGdFbGpsWHZLL3M1T3E5ZHdFQmpIYUhYL3RtSXVtcnl1cTd5bXFxc2lxYzYrbUVYMkRaZXZ5VDIveDlZLzlTRDV5ckNDWEhJRDdVUUxhOThsMWxkWmw3Y0hsMldOSmlkcTA0Nzh6S1VjNUxwNGwzQVJFb3RMOVBMT09QcnZnR2xqbFhIRitLenQzRXU0Q0FpcDR1Q3g5U1NMcmFMUlVuenJXMHpqK3c3R25IVys4eXNtYnZEQTZjcXdodDRsMUFaQWF5UGE2czduenpEeXhwLytGVnJnNEpaK2hkUUFkZWVSY1FxWkhzenJjTDV6cGFFVWRnU2Z1akRtekNoekgwTHFBRFErOENJbGJJbG9uSmQxdnhCSllrTFdhWHNtdGQwSzQzM2dWMFlPQmRRQUpHU3Z5RzNiZ0NTOUx1dTRGejd6S1FJRGJlRDFISTlyYXV2QXQ1anZnQ1N5SzAybGQ0RjlDUndydUFoRnlvckc1VE83Y1ZaMkJKaEZhN2h0NEZJRXBEMlJKeDZGekh3ZUlOTEluUUFzSWJ5RDUzTjNTdTR5QnhCNWEwRDYxcjd6S0FqQld5MEpvNjEvR2srQU5Ma2hhekQrS2MxaWxxN3dJUXZVTFNUZXlobFVaZ1NmdHpXcS9GRFEvNHRZMTNBUm1JT3JUU0NTeHBmeUwrcGVnWWpyWDFMcUFUYlg2VW90OXVZajJybFZaZ1NmYnU0V0kybHZSQmRGdUgrdHU3Z0E1c3ZBdkl6RTJNRy9IcEJkYWVYVTN6V25SYmg2aTlDK2pBeHJ1QXpCU0s4T2xodW9FbDJTV0FkRnVIMkhnWDBJRy92QXZJVUNIcnRBcm5PdjRyN2NEYXMyN3JwVGorOEREYjI5azRWeEhhMHJ1QVRBMFYwUWRqOGdnc2FiKzM5VUVXWEhQbmFtTDB4YnVBZ0RZYW4yMjlpOGpZUkdWMTZWMkVsRk5nN2RreThWd0UxMzFMN3dJQ3lqbU1ZL0ZSWlRYeUxpSy93TnI3T2JnK3FlOTdYTmFCMU01VmhMTDBMcUFuM1BlejhnMnNQUXV1eTkxbjN0K3EzNys1UDNzWEVNQ2M1V0JuQm5MZXo4by9zTzVhekpaYXpONUsrbDMycXM5U2ZlcTh4bWRMNVhlSWxGdHF1elh4UEZUcTg2bjYyTmphZkNTN21YUGtXY29qbWwyWGVKclZlaVJwZGZJNGNaaHJmSGI2TzZabDlZKzRTK3NZVzBtdmR4K1E2ZFJ2WFU4WXBjV3MxdDM5SFRzc041UzF3UHZyaFVkZGx2U0FENjJNTWo2cnRWclg4di9mYzZwRzdYVlhuMlhmOU1OaEJyTC92OXI1UFhrRU9xeGpXWmdWSGMvYTdONmpiSWQ5OXV0V2FYY1ZIelErdTI1dHREQy9ybmZIZkxYNzYxSExjM2g2dWZ1Q2UyY0lyTDVhcmFlSzZFRGdrV3FOejhiZVJUeWJoZU5JMXIxUFBFczVVYjE3MDZRekJGYWZyZFkza3FiZVpSeXBrZlF5bTVzWjdKakFSTkk3cGRsOWpYZGJLcDBnc1BwdXRiNVZPbmUrTjVMR0dwOXRuT3NJd3pxdjkwcnJENUZPdXl3Q3ErOVc2MEwyMUhEb1c4aVRHdVVjVm5mWngwNXZsRTdIMVZtWDFhOXpXUGczVzFxTkZmZkwwWTM2RWxiUzNWdEl4a3JqM0Z4blQxZ0pMTndOcmFWdklROXExS2V3dXN1Nmx0ZUsvNTNZVVZmdkdSSllNT096UnVPenQ0cnI1UGhHdHNHK2NhN0RqOTFDY2k1N002TnhydVl4NzdxWWhEMHMvSnVkaHIrUkhSRDA4a25qczB2SCtlTmptL0lyeFh0Kzd2ZlFwOS9wc1BCdjQ3TmF0aFR4NkxacVdWZDE2VEIzM096d2NNejdXdFBRRTlCaDRYRjJLdjZqd3Y5bXJHVmRWUjE0bnZUWjJhMWIrWGJBRDlscU1Yc1pjZ0lDQzRleDR3OVQyVG1oUVV1ak5yS04vcys5M3FkNmpuaVhoNjliZlkzc0hnSUx4N091YTZJZnQxc1VSL3kzYTlsbStyZmRkVGQ0TGd1dFcrOHk3cm5lWFZVZUJJR0YwMW4zTmR6OTNlamVmN3FSZFZKYkx0b0xvS3d1SkYxNWwzRkgwR1VoZ1FXa3JxeStLcTZYcUlNdEMzbEtDS1F2dGpOYW8xQURFMWhBNnV6c1UrZVg2VDNpajFBREUxaEFEaGF6dWVMNUt0SW8xTUFFRnBDUGVGNnJDdlJ1SVlFRjVPTCt0d2w4RFVNTVNtQUJlWW5sSzlodm52NUhqa2RnQVRteHZheXRjeFZTb05lR0NDd2dQMHZ2QXNTU0VNQ0I0bGdXMnF0RHJTS3dnTnpZS2ZQR3VRb3B3SXZaQkJhUXA2VjNBUXB3SG92QUF2TDBsM2NCSVJCWVFKNDIzZ1ZJZXRYMmdBUVdrS01PdjhiOGlLTHRBUWtzQU1rZ3NJQjgxZDRGdEkzQUFoREtxTzBCQ1N3QXlTQ3dBQ1NEd0FLUURBSUxRRElJTENCZmhmUDhkZHNERWxoQXZvYmVCYlNOd0FKeVZGWUQ3eEpDSUxDQVBBMjhDMUNBSzI0SUxDQlBJKzhDRk9ER0NBSUx5Rk9RajBCNEk3Q0FQSTI4Q3hCUENRRThxYXdtM2lYc05HMFBTR0FCK2ZuRHV3QkorN3ZsVzBWZ0FUa3BxMExTMUxrS0tkQ05wd1FXa0pjTDd3SjJOaUVHSmJDQVhGaDM5ZDY3akowZ0g4RWdzSUI4WE1qLy9jRzlPc1NnTDBJTUNxQmoxbDE5Vnh5QjFXZ3grejNFd0hSWVFCNnVGRWRZU1FIdmtpZXdnTlNWMVVoeFBCbmMrelBVd0FRV2tESmJDbjcxTHVPZU90VEFCQmFRdHErS1p5a29TUnN0WnR0UWd4TllRS3JLNmtaeHZETjQxNWVRZ3hOWVFJcks2a0p4N1Z2dExVTU9UbUFCcVNtcnFleXBZR3lXSVplREVvRUZwS1dzcmlUZGVKZnhDOEdlRHU1eGNCUklnVDBOdkZLY3kwQXA0R0hSdTM0TFBRR0FFNVhWVU5aVkRYMExlZFRuTGlaaFNRakVyS3d1SmQwcTdyQnFKRjEzTVJFZEZoQWpPNzErcGJpRGFtK3B4YXpwWWlJQ0M0aUpCZFZIeFhlKzZqR2Z1cHFJd0FLODJZYjZSSGFYMWRDemxHZTREbjJVNFM0Q0MvQmdYMllleWU1Zm4zaVdjb0pHSFhaWFV1akFzcWNiUmRBNWdEU01kaisva1hWUmhWY2hMZnJjMWQ3VlhyaHpXR1gxVmVuK3lRSGdjVnN0WmkrN25qVE1zUWJiT0p3RUdSdEFETTQ5SnVVY0ZvQmpMYldZMVI0VEUxZ0FqdEhJcWJ1U0NDd0F4em52ZXFQOUxnSUx3S0d1dFpndFBRc2dzQUFjWXFPT3oxdzloTUFDOEpSRzBsdlBwZUFlZ1FYZ0tXKzdmUDNtTVFRV2dNZWNleDFoZUFpQkJlQlg1bHJNNXQ1RjNFVmdBWGpJWEl1WjIzbXJYeUd3QU53WFpWaEpCQmFBbjBVYlZoS0JCZUNIcU1OS0lyQUFtT2pEU2lLd0FFZ2ZVZ2dyaVN1U2dUNXJaT2VzbHM1MUhJd09DK2luamFSeFNtRWxFVmhBSDgxbFliVnhydU5vTEFtQi9taGsrMVZ6NXpxZWpjQUMrcUdXN1ZkdG5lczRDWUVGNUsxUllodnJqMkVQQzhqWHRhU1h1WVNWUkljRjVHZ3U2VlBxeTcrSEVGaEFQcGF5cnpIWHpuVUVRMkFCNlpzcjA0N3FQZ0lMU05OVzBoZlpsMndhMzFLNlEyQUI2V2hreTc0dk9TLzdIa05nQVhIYnlrTHFXMDVQKzU2THdBTGlzdG45K0NhcDdzTysxREZlQkJ1NXJHNGtUWU9ORDZTdDN2MzhUYmJVMi9SMW1YZU1jSUVsU1dVMWxGUUVuUU5JQllFRUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQ0FnL3dIcHBLQU1VZWxLSGNBQUFBQVNVVk9SSzVDWUlJPSIgeD0iNyIgeT0iMTMiIHdpZHRoPSIzMCIgaGVpZ2h0PSIzMCIgcHJlc2VydmVBc3BlY3RSYXRpbz0ieE1pZFlNaWQgbWVldCIvPgogIDx0ZXh0IHg9IjU2IiB5PSIyNiIgZm9udC1mYW1pbHk9IkludGVyLCBBcmlhbCwgSGVsdmV0aWNhLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmZmZmIj5Tb2Z0bWFyYzwvdGV4dD4KICA8dGV4dCB4PSI1NiIgeT0iNDIiIGZvbnQtZmFtaWx5PSJJbnRlciwgQXJpYWwsIEhlbHZldGljYSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZm9udC13ZWlnaHQ9IjYwMCIgbGV0dGVyLXNwYWNpbmc9IjEuNTUiIGZpbGw9IiM4RkE0QkYiPkxFQVJOSU5HIFBPUlRBTDwvdGV4dD4KPC9zdmc+" alt="Softmarc Learning Portal"></a></div>
+  <div class="sidebar-nav">
+    <div class="nav-section"><div class="nav-label">Workspace</div><nav class="nav">
+      <a href="soft_dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Dashboard</a>
+      <a href="courses.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> My Courses</a>
+      <a href="assessments.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Assessments</a>
+      <a href="certificates.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg> Certificates</a>
+    </nav></div>
+    <div class="nav-section"><div class="nav-label">Account</div><nav class="nav">
+      <a href="profile.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Profile</a>
+      <a href="settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 9 15a1.65 1.65 0 0 0-1-1.51V13a2 2 0 0 1 0-4v-.49c0-.6.4-1.12 1-1.51A1.65 1.65 0 0 0 9 5a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 13.5 1a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 4 0v.49c0 .6-.4 1.12-1 1.51A1.65 1.65 0 0 0 15 7a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 11 13v.49c0 .6.4 1.12 1 1.51z"/></svg> Settings</a>
+      <a href="admin.html" id="adminLink" style="display:none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg> Admin Panel</a>
+      <a href="#" id="logoutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout</a>
+    </nav></div>
   </div>
-  <nav class="nav" aria-label="Primary">
-    <a href="soft_dashboard.html"><span class="icon">🏠</span>Dashboard</a>
-    <a href="courses.html"><span class="icon">📚</span>My Courses</a>
-    <a href="assessments.html" class="active"><span class="icon">📝</span>Assessments</a>
-    <a href="certificates.html"><span class="icon">🏆</span>Certificates</a>
-  </nav>
-  <div class="nav-group-label">Account</div>
-  <nav class="nav" aria-label="Account">
-    <a href="profile.html"><span class="icon">👤</span>Profile</a>
-    <a href="settings.html"><span class="icon">⚙</span>Settings</a>
-    <a href="admin.html" id="adminLink" style="display:none;"><span class="icon">🛡</span>Admin Panel</a>
-    <a href="#" id="logoutBtn"><span class="icon">🚪</span>Logout</a>
-  </nav>
-  <div class="sidebar-footer">
-    <strong>Certification streak:</strong> 12 days<br>
-    Keep learning!
-  </div>
+  <div class="sidebar-bottom"><div class="user-mini"><div class="user-mini-avatar" id="sidebarAvatar">SU</div><div class="user-mini-info"><div class="user-mini-name" id="sidebarName">Softmarc User</div><div class="user-mini-role">Student</div></div></div></div>
 </aside>
 <main class="main">
   <div class="topbar">
-    <div style="display:flex;align-items:center;gap:14px;">
-      <button class="menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button>
-      <div class="greeting">
-        <h1 id="topbarName">Assessments</h1>
-        <div class="sub">Tests, quizzes & results — prove your CATIA mastery</div>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div class="search-wrap">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="#55677E" stroke-width="2"/><path d="M21 21l-4.3-4.3" stroke="#55677E" stroke-width="2" stroke-linecap="round"/></svg>
-        <input type="search" placeholder="Search assessments" aria-label="Search" id="assessSearch">
-      </div>
-      <div class="avatar" id="avatarInitials">AB</div>
-    </div>
+    <div style="display:flex;align-items:center;gap:12px;"><button class="menu-toggle" id="menuToggle" aria-label="Menu">☰</button><div class="breadcrumb"><span>Softmarc</span> / <strong>Assessments</strong></div></div>
+    <div class="topbar-actions"><button class="btn btn-secondary" id="refreshBtn">Refresh</button><div class="avatar-top" id="avatarInitials">SU</div></div>
   </div>
-  
-<div class="assess-list" id="assessList">
-  <!-- Rendered dynamically -->
-</div>
-
-<!-- Interactive Quiz Modal -->
-<div class="quiz-modal" id="quizModal" style="display:none;">
-  <div class="quiz-modal-content">
-    <div class="quiz-modal-header">
-      <h2 id="modalQuizTitle"><span style="background:var(--bg);padding:6px 10px;border-radius:8px;font-size:14px;">📐</span> CATIA V5 Part Design Quiz</h2>
-      <button class="quiz-modal-close" onclick="closeQuizModal()" aria-label="Close quiz">✕</button>
-    </div>
-    <div class="quiz-progress">
-      <div class="quiz-progress-bar"><div class="quiz-progress-fill" id="quizProgressFill"></div></div>
-      <div class="quiz-progress-text"><span id="quizProgressText">0 of 0 answered</span><span id="quizProgressPercent">0%</span></div>
-    </div>
-    <div class="quiz-modal-body" id="modalQuizBody"></div>
-    <div class="quiz-modal-footer">
-      <div style="font-size:12.5px;color:var(--text-600);display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;background:var(--success);border-radius:50%;display:inline-block;"></span> Auto-saved locally</div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-ghost" onclick="closeQuizModal()">Cancel</button>
-        <button class="btn btn-primary" id="submitQuizBtn" onclick="submitQuizAnswers()">Submit Answers</button>
+  <div class="content">
+    <div class="assess-hero">
+      <div class="assess-title">
+        <h1 id="assessmentHeading">Assessments</h1>
+        <p>Tests, quizzes & results — prove your CATIA mastery</p>
+      </div>
+      <div class="assess-tools">
+        <label class="assess-search" aria-label="Search assessments">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3" stroke-linecap="round"></path></svg>
+          <input id="assessmentSearch" type="search" placeholder="Search assessments">
+        </label>
       </div>
     </div>
+
+    <div id="assessmentGrid" class="assessment-list"></div>
+    <div id="emptyState" class="empty" style="display:none;">No assessments are available yet. Ask an admin to add quizzes from the Admin Panel.</div>
+
+    <section id="quizPanel" class="quiz-panel" aria-live="polite">
+      <div class="quiz-dialog">
+      <div class="quiz-head"><div><div class="pill">Active Quiz</div><h2 id="quizTitle" style="font-family:var(--font-display);margin-top:8px;">Quiz</h2><p id="quizCourse" style="color:var(--text-500);font-size:13px;margin-top:4px;"></p></div><button class="btn btn-secondary" id="closeQuiz">Close</button></div>
+      <div class="quiz-body"><div id="questionList"></div><button class="btn btn-primary" id="submitQuiz">Submit assessment</button><div id="resultBox" class="result"></div></div>
+      </div>
+    </section>
   </div>
-</div>
-
-<!-- NEW: Result Modal -->
-<svg width="0" height="0" style="position:absolute;">
-  <defs>
-    <linearGradient id="gradPass" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#22B37A"/>
-      <stop offset="100%" stop-color="#11C7F4"/>
-    </linearGradient>
-    <linearGradient id="gradFail" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#F59E0B"/>
-      <stop offset="100%" stop-color="#D9463C"/>
-    </linearGradient>
-  </defs>
-</svg>
-
-<div class="result-modal" id="resultModal" style="display:none;">
-  <div class="result-modal-content" id="resultContent">
-    <div class="confetti-container" id="confettiContainer"></div>
-
-    <div class="result-header" id="resultHeader">
-      <div class="result-icon-wrap" id="resultIcon">🏆</div>
-      <div class="result-quiz-title" id="resultQuizTitleLabel">QUIZ COMPLETED</div>
-      <h2 id="resultTitle">Quiz Completed!</h2>
-      <p class="result-subtitle" id="resultSubtitle">Great effort! Here's how you performed.</p>
-    </div>
-
-    <!-- Separate Score Section - fixes overlap bug -->
-    <div class="result-score" id="resultScoreSection">
-      <div class="score-ring">
-        <svg viewBox="0 0 120 120">
-          <circle class="score-ring-bg" cx="60" cy="60" r="52"/>
-          <circle class="score-ring-fill" id="scoreRingFill" cx="60" cy="60" r="52" stroke-dasharray="326.56" stroke-dashoffset="326.56"/>
-        </svg>
-        <div class="score-center">
-          <div class="score-percent" id="scorePercent">0%</div>
-          <div class="score-label">Score</div>
-        </div>
-      </div>
-      <div class="score-stats">
-        <div class="stat-item"><div class="stat-icon correct">✓</div><div class="stat-text"><strong id="statCorrect">0/0</strong> <span>correct answers</span></div></div>
-        <div class="stat-item"><div class="stat-icon total">◷</div><div class="stat-text"><strong id="statTotal">0 Questions</strong> <span id="statPassMark">Pass mark: 70%</span></div></div>
-        <div class="stat-item"><div class="stat-icon status-ok" id="statStatusIcon">★</div><div class="stat-text"><strong id="statStatusText">Passed</strong> <span id="statStatusSub">Qualified for certificate</span></div></div>
-      </div>
-    </div>
-
-    <div class="result-body">
-      <div class="result-section-title"><span>📋</span> Answer Review</div>
-      <div class="review-list" id="reviewList"></div>
-    </div>
-
-    <div class="result-footer">
-      <button class="btn btn-ghost" onclick="closeResultModal()">Close</button>
-      <button class="btn btn-outline" id="btnRetake" onclick="retakeFromResult()">🔄 Retake Quiz</button>
-      <button class="btn btn-primary" id="btnPrimaryAction" onclick="handlePrimaryAction()">Review Course →</button>
-    </div>
-  </div>
-</div>
-
 </main>
+
+
+<div class="congrats-modal" id="congratsModal" role="dialog" aria-modal="true" aria-labelledby="congratsTitle">
+  <div class="congrats-card pro">
+    <span class="confetti c1"></span><span class="confetti c2"></span><span class="confetti c3"></span><span class="confetti c4"></span>
+
+    <div class="celebration-stage" aria-hidden="true">
+      <div class="party-popper left">🎉</div>
+      <div class="party-popper right">🎊</div>
+      <div class="confetti-rain"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="car-road">
+        <svg class="car-svg premium-car" viewBox="0 0 340 118" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="premiumBody" x1="44" y1="32" x2="293" y2="82" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#061B33"/>
+              <stop offset="0.48" stop-color="#0EA5E9"/>
+              <stop offset="1" stop-color="#14B8A6"/>
+            </linearGradient>
+            <linearGradient id="glassGrad" x1="116" y1="26" x2="207" y2="62" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#E0F2FE"/>
+              <stop offset="1" stop-color="#7DD3FC"/>
+            </linearGradient>
+            <filter id="carGlow" x="0" y="0" width="340" height="118" filterUnits="userSpaceOnUse">
+              <feDropShadow dx="0" dy="10" stdDeviation="8" flood-color="#020617" flood-opacity="0.23"/>
+              <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#0EA5E9" flood-opacity="0.18"/>
+            </filter>
+          </defs>
+          <g class="motion-lines" stroke="#38BDF8" stroke-width="4" stroke-linecap="round" opacity="0.45">
+            <path d="M10 66H48"/><path d="M0 81H38"/><path d="M24 51H58"/>
+          </g>
+          <ellipse cx="168" cy="96" rx="118" ry="13" fill="#020617" opacity="0.16"/>
+          <g filter="url(#carGlow)">
+            <path d="M50 73C58 52 78 43 110 40L136 22C146 15 158 12 173 12H211C229 12 244 20 256 34L279 60C299 62 314 73 319 89C296 91 273 92 251 92H70C51 92 35 88 28 80C33 77 41 74 50 73Z" fill="url(#premiumBody)"/>
+            <path d="M72 66C85 48 105 39 132 36H232C250 36 267 46 279 61L292 77H48C53 71 61 67 72 66Z" fill="url(#premiumBody)"/>
+            <path d="M126 38L146 24C153 20 162 18 174 18H205C220 18 232 25 242 38H126Z" fill="#071A2F" opacity="0.92"/>
+            <path d="M139 36L153 26C158 23 165 22 174 22H184V54H112L126 38H139Z" fill="url(#glassGrad)" opacity="0.95"/>
+            <path d="M191 22H205C217 22 228 28 237 38L249 54H191V22Z" fill="#BAE6FD" opacity="0.92"/>
+            <path d="M112 54H249" stroke="#0F172A" stroke-width="4" stroke-linecap="round" opacity="0.35"/>
+            <path d="M62 70C95 61 238 61 288 68" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity="0.38"/>
+            <path d="M48 80H317C314 87 307 91 295 92H61C47 91 35 87 28 80H48Z" fill="#061B33" opacity="0.46"/>
+            <path d="M294 64L314 70C318 71 320 76 317 80H289L294 64Z" fill="#67E8F9" opacity="0.95"/>
+            <path d="M45 68H64C58 72 51 74 36 76C37 72 40 69 45 68Z" fill="#FDE68A"/>
+            <path d="M86 78C90 64 104 54 120 54C136 54 150 64 154 78H86Z" fill="#071A2F" opacity="0.92"/>
+            <path d="M222 78C226 64 240 54 256 54C272 54 286 64 290 78H222Z" fill="#071A2F" opacity="0.92"/>
+            <g class="wheel-premium" transform-origin="120 80">
+              <circle cx="120" cy="80" r="22" fill="#020617"/>
+              <circle cx="120" cy="80" r="15" fill="#111827" stroke="#64748B" stroke-width="3"/>
+              <path d="M120 65V95M105 80H135M109 69L131 91M131 69L109 91" stroke="#38BDF8" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="120" cy="80" r="5" fill="#E2E8F0"/>
+            </g>
+            <g class="wheel-premium" transform-origin="256 80">
+              <circle cx="256" cy="80" r="22" fill="#020617"/>
+              <circle cx="256" cy="80" r="15" fill="#111827" stroke="#64748B" stroke-width="3"/>
+              <path d="M256 65V95M241 80H271M245 69L267 91M267 69L245 91" stroke="#38BDF8" stroke-width="3" stroke-linecap="round"/>
+              <circle cx="256" cy="80" r="5" fill="#E2E8F0"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="success-emblem" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="30" fill="currentColor" opacity="0.10"></circle>
+        <circle cx="32" cy="32" r="22" fill="currentColor"></circle>
+        <path d="M22 32.5l6.5 6.5L43 24.5" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </div>
+    <div class="congrats-kicker">Assessment completed</div>
+    <h2 id="congratsTitle">Congratulations!</h2>
+    <p id="congratsMessage">You completed this assessment with a perfect score.</p>
+    <div class="score-panel">
+      <div class="score-ring" id="congratsScore">100%</div>
+      <div class="score-copy">
+        <strong>Perfect score achieved</strong>
+        <span>Great job — your result has been saved and you can now view your certificate.</span>
+      </div>
+    </div>
+    <div class="congrats-actions">
+      <button class="btn btn-secondary" id="congratsClose">Close</button>
+      <a class="btn btn-primary" href="certificates.html">View Certificates</a>
+    </div>
+  </div>
+</div>
+<script src="softmarc-content.js"></script>
 <script>
-// Toast
-function showToast(msg, type = '') {
-  let t = document.getElementById('toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast';
-    t.className = 'toast';
-    document.body.appendChild(t);
-  }
-  t.textContent = msg;
-  t.className = 'toast show ' + type;
-  clearTimeout(t._t);
-  t._t = setTimeout(() => { t.className = 'toast'; }, 3600);
+const API_HOST='';
+const fallbackQuizzes=[
+  {id:'local-catia-assembly',title:'CATIA Design',course_name:'CATIA Assembly Design',local:true},
+  {id:'local-catia-part',title:'CATIA V5',course_name:'CATIA V5 Part Design',local:true}
+];
+const fallbackQuestions={
+  'local-catia-part':[
+    {id:1,question_text:'Which CATIA workbench is used to create solid features such as pad and pocket?',option_a:'Drafting',option_b:'Part Design',option_c:'DMU Kinematics',option_d:'Generative Shape Design',correct_option:'B'},
+    {id:2,question_text:'A fully constrained sketch normally appears in which color in CATIA V5?',option_a:'Green',option_b:'White',option_c:'Orange',option_d:'Red',correct_option:'A'}
+  ],
+  'local-catia-assembly':[
+    {id:1,question_text:'Which workbench is used for positioning components in a product?',option_a:'Part Design',option_b:'Assembly Design',option_c:'Drafting',option_d:'Sketcher only',correct_option:'B'},
+    {id:2,question_text:'Which constraint commonly aligns circular axes?',option_a:'Coincidence',option_b:'Offset',option_c:'Contact',option_d:'Fix together only',correct_option:'A'}
+  ]
+};
+let quizzes=[],filteredQuizzes=[],activeQuiz=null,questions=[],answers={};
+function authGuard(){const raw=localStorage.getItem('softmarc_user'); if(!raw) window.location.href='index.html'; return raw?JSON.parse(raw):{};}
+const user=authGuard();
+const firstName=(user.full_name||user.email||'Student').split(' ')[0];
+document.getElementById('assessmentHeading').textContent='Assessments — '+firstName;
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function normaliseQuiz(q){return {...q,title:q.title||q.quiz_title||'Assessment',course_name:q.course_name||q.course||'Softmarc Course'};}
+function quizDoneKey(q){return 'assessment_done_'+(user.id||'local')+'_'+q.id;}
+async function loadQuizzes(){
+  const list=document.getElementById('assessmentGrid'),empty=document.getElementById('emptyState');
+  list.innerHTML='<div class="empty" style="margin:0;">Loading assessments…</div>'; empty.style.display='none';
+  try{
+    const res=await fetch(API_HOST+'/api/quizzes');
+    if(!res.ok) throw new Error('API unavailable');
+    quizzes=(await res.json()).map(normaliseQuiz);
+    if(!quizzes.length) quizzes=fallbackQuizzes;
+  }catch(e){ quizzes=fallbackQuizzes; }
+  if(window.SoftmarcContent){ quizzes=SoftmarcContent.getAssessments(quizzes); }
+  const params=new URLSearchParams(location.search); const course=params.get('course');
+  if(course) quizzes=quizzes.filter(q=>(q.course_name||'').toLowerCase().includes(course.toLowerCase())||(q.title||'').toLowerCase().includes(course.toLowerCase()));
+  renderAssessmentList();
 }
-
-const _raw = localStorage.getItem('softmarc_user');
-if (!_raw) { window.location.href = 'index.html'; }
-const _user = JSON.parse(_raw || '{}');
-document.getElementById('topbarName').textContent = `Assessments — ${_user.full_name?.split(' ')[0] || 'User'}`;
-const _ini = (_user.full_name||'AB').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-document.getElementById('avatarInitials').textContent = _ini;
-if (_user.role === 'admin') {
-  const al = document.getElementById('adminLink');
-  if(al){ al.style.display='flex'; al.href='admin.html'; }
-}
-document.getElementById('logoutBtn').addEventListener('click', e => {
-  e.preventDefault();
-  localStorage.removeItem('softmarc_user');
-  window.location.href = 'index.html';
-});
-const _sb = document.getElementById('sidebar');
-const _sc = document.getElementById('scrim');
-const _mt = document.getElementById('menuToggle');
-if(_mt){ _mt.addEventListener('click', ()=>{ _sb.classList.toggle('open'); _sc.classList.toggle('show'); }); }
-if(_sc){ _sc.addEventListener('click', ()=>{ _sb.classList.remove('open'); _sc.classList.remove('show'); }); }
-
-const API_HOST = '';
-let activeQuizId = null;
-let activeQuizTitle = '';
-let activeQuestions = [];
-let lastSubmission = null;
-
-// Load Quizzes
-async function loadQuizzesAndScores(filterText='') {
-  try {
-    const quizzesRes = await fetch(`${API_HOST}/api/quizzes`);
-    const quizzes = await quizzesRes.json();
-    const submissionsRes = await fetch(`${API_HOST}/api/submissions`);
-    const submissions = await submissionsRes.json();
-    const mySubmissions = submissions.filter(s => s.student_id === _user.id);
-    const scoreMap = {};
-    mySubmissions.forEach(sub => {
-      if (!scoreMap[sub.quiz_id] || sub.score > scoreMap[sub.quiz_id]) scoreMap[sub.quiz_id] = sub.score;
-    });
-    const listElement = document.getElementById('assessList');
-    listElement.innerHTML = '';
-    let filtered = quizzes;
-    if(filterText){
-      filtered = quizzes.filter(q=> q.title.toLowerCase().includes(filterText.toLowerCase()) || q.course_name.toLowerCase().includes(filterText.toLowerCase()));
-    }
-    if (filtered.length === 0) {
-      listElement.innerHTML = `
-        <div style="background:var(--surface);border-radius:var(--radius-md);padding:40px 24px;text-align:center;box-shadow:0 4px 18px rgba(10,40,80,.06);">
-          <div style="width:64px;height:64px;background:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;">${filterText?'🔍':'📝'}</div>
-          <h3 style="margin-bottom:8px;font-family:var(--font-display);">${filterText?'No matching quizzes':'No Quizzes Available'}</h3>
-          <p style="color:var(--text-600);font-size:14px;">${filterText?'Try a different search.':'Admins haven\'t added any quiz questions to the database yet.'}</p>
-        </div>`;
-      return;
-    }
-    filtered.forEach(quiz => {
-      const highestScore = scoreMap[quiz.id];
-      let badgeHtml = '';
-      let scoreHtml = '';
-      let buttonHtml = '';
-      if (highestScore !== undefined) {
-        if (highestScore >= 70) {
-          badgeHtml = '<span class="badge badge-green">✓ Passed</span>';
-          scoreHtml = `<div class="assess-score" style="color:var(--success)">${highestScore}%</div>`;
-          buttonHtml = `<button class="btn btn-outline" onclick="openQuiz('${quiz.id}', \`${quiz.title.replace(/`/g,'\\`')}\`)">Retake</button>`;
-        } else {
-          badgeHtml = '<span class="badge badge-warn">✗ Failed</span>';
-          scoreHtml = `<div class="assess-score" style="color:var(--warn)">${highestScore}%</div>`;
-          buttonHtml = `<button class="btn btn-primary" onclick="openQuiz('${quiz.id}', \`${quiz.title.replace(/`/g,'\\`')}\`)">Retake</button>`;
-        }
-      } else {
-        badgeHtml = '<span class="badge badge-cyan">● Upcoming</span>';
-        scoreHtml = '<div class="assess-score" style="color:var(--text-400)">—</div>';
-        buttonHtml = `<button class="btn btn-primary" onclick="openQuiz('${quiz.id}', \`${quiz.title.replace(/`/g,'\\`')}\`)">Start</button>`;
-      }
-      const itemHtml = `
-        <div class="assess-item">
-          <div class="assess-icon">📐</div>
-          <div class="assess-info">
-            <h3>${quiz.title}</h3>
-            <div class="meta">${quiz.course_name} · ${quiz.question_count||'Interactive'} questions · ${highestScore!==undefined?'Best score '+highestScore+'%':'New assessment'}</div>
-          </div>
-          ${badgeHtml}
-          ${scoreHtml}
-          ${buttonHtml}
-        </div>`;
-      listElement.insertAdjacentHTML('beforeend', itemHtml);
-    });
-  } catch (err) {
-    console.error('Error loading assessments:', err);
-    showToast('Failed to connect to the database API.', 'error');
-  }
-}
-
-// Search
-document.getElementById('assessSearch')?.addEventListener('input', (e)=> loadQuizzesAndScores(e.target.value));
-
-// Open Quiz
-async function openQuiz(id, title) {
-  activeQuizId = id;
-  activeQuizTitle = title;
-  document.getElementById('modalQuizTitle').innerHTML = `<span style="background:var(--navy-800);color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;font-family:var(--font-mono);">${activeQuestions.length||'•'} Q</span> ${title}`;
-  try {
-    const res = await fetch(`${API_HOST}/api/quizzes/${id}/questions`);
-    activeQuestions = await res.json();
-    document.getElementById('modalQuizTitle').innerHTML = `<span style="background:var(--navy-800);color:#fff;padding:6px 10px;border-radius:8px;font-size:12px;font-family:var(--font-mono);">${activeQuestions.length} Q</span> ${title}`;
-    const body = document.getElementById('modalQuizBody');
-    body.innerHTML = '';
-    if (activeQuestions.length === 0) {
-      body.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-600);"><div style="font-size:28px;margin-bottom:8px;">📭</div><p>This quiz has no questions yet.</p></div>';
-      document.getElementById('submitQuizBtn').style.display = 'none';
-    } else {
-      document.getElementById('submitQuizBtn').style.display = 'inline-flex';
-      activeQuestions.forEach((q, idx) => {
-        const qHtml = `
-          <div class="question-block" data-qid="${q.id}">
-            <div class="question-text"><span class="q-number">Q${idx+1}</span><span>${escapeHtml(q.question_text)}</span></div>
-            <div class="options-list">
-              ${['A','B','C','D'].map(letter=>`
-                <label class="option-item" data-letter="${letter}" onclick="selectOption(this, '${q.id}')">
-                  <span class="option-letter">${letter}</span>
-                  <input type="radio" name="q_${q.id}" value="${letter}">
-                  <span class="option-text">${escapeHtml(q['option_'+letter.toLowerCase()])}</span>
-                </label>`).join('')}
-            </div>
-          </div>`;
-        body.insertAdjacentHTML('beforeend', qHtml);
-      });
-      updateQuizProgress();
-    }
-    document.getElementById('quizModal').style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-  } catch (err) {
-    console.error(err);
-    showToast('Failed to load quiz questions.', 'error');
-  }
-}
-
-function closeQuizModal() {
-  document.getElementById('quizModal').style.display = 'none';
-  document.body.style.overflow = '';
-}
-
-function escapeHtml(str){
-  if(!str) return '';
-  return str.replace(/[&<>"']/g, m=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-}
-
-function selectOption(labelEl, qid){
-  // remove selected from siblings
-  const block = labelEl.closest('.question-block');
-  block.querySelectorAll('.option-item').forEach(el=> el.classList.remove('selected'));
-  labelEl.classList.add('selected');
-  const input = labelEl.querySelector('input');
-  input.checked = true;
-  updateQuizProgress();
-  // subtle haptic feedback style pulse
-  labelEl.animate([{transform:'scale(1)'},{transform:'scale(1.01)'},{transform:'scale(1)'}],{duration:180});
-}
-
-function updateQuizProgress(){
-  const total = activeQuestions.length;
-  const answered = document.querySelectorAll('#modalQuizBody input[type=radio]:checked').length;
-  const pct = total? Math.round((answered/total)*100) : 0;
-  const fill = document.getElementById('quizProgressFill');
-  const text = document.getElementById('quizProgressText');
-  const pctText = document.getElementById('quizProgressPercent');
-  if(fill) fill.style.width = pct+'%';
-  if(text) text.textContent = `${answered} of ${total} answered`;
-  if(pctText) pctText.textContent = `${pct}%`;
-}
-
-// Submit
-async function submitQuizAnswers() {
-  const answers = {};
-  const selectedMap = {};
-  let unansweredCount = 0;
-  activeQuestions.forEach(q => {
-    const selected = document.querySelector(`input[name="q_${q.id}"]:checked`);
-    if (!selected) unansweredCount++;
-    else { answers[q.id] = selected.value; selectedMap[q.id]=selected.value; }
+function renderAssessmentList(){
+  const list=document.getElementById('assessmentGrid'),empty=document.getElementById('emptyState');
+  const term=(document.getElementById('assessmentSearch')?.value||'').trim().toLowerCase();
+  filteredQuizzes=quizzes.filter(q=>!term || (q.title+' '+q.course_name).toLowerCase().includes(term));
+  list.innerHTML='';
+  if(!filteredQuizzes.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  filteredQuizzes.forEach(q=>{
+    const completed=localStorage.getItem(quizDoneKey(q))==='100';
+    const row=document.createElement('article');
+    row.className='assessment-row';
+    row.innerHTML=`
+      <div class="assess-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity=".18" fill="currentColor"></path><path d="M7 17V7l10 10H7z"></path><path d="M10 14l2-2 2 2"></path></svg></div>
+      <div class="assess-info"><h3>${escapeHtml(q.title)}</h3><div class="assess-meta"><span>${escapeHtml(q.course_name)}</span><span>Interactive questions</span><span>${completed?'Perfect score completed':'New assessment'}</span></div></div>
+      <span class="status-pill ${completed?'completed':''}">${completed?'Completed':'Upcoming'}</span>
+      <span class="dash-mark">—</span>
+      <button type="button" class="start-btn">${completed?'Retake':'Start'}</button>`;
+    row.querySelector('.start-btn').addEventListener('click',(ev)=>{ev.stopPropagation();startQuiz(q);});
+    row.addEventListener('click',()=>startQuiz(q));
+    list.appendChild(row);
   });
-  if (unansweredCount>0) {
-    const proceed = confirm(`You have ${unansweredCount} unanswered question(s). Do you want to submit anyway?`);
-    if (!proceed) return;
-  }
-  const submitBtn = document.getElementById('submitQuizBtn');
-  const originalText = submitBtn.innerHTML;
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="btn-spinner"></span> Submitting...';
-  try {
-    const res = await fetch(`${API_HOST}/api/quizzes/${activeQuizId}/submit`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        student_id: _user.id,
-        student_name: _user.full_name,
-        quiz_title: activeQuizTitle,
-        answers: answers
-      })
-    });
-    const result = await res.json();
-    if (!res.ok) throw new Error(result.error);
-    lastSubmission = {result, selectedMap};
-    // Instead of toast, show premium result modal
-    closeQuizModal();
-    showResultModal(result, selectedMap);
-    loadQuizzesAndScores(document.getElementById('assessSearch')?.value||'');
-  } catch (err) {
-    console.error(err);
-    showToast('Failed to submit quiz. '+ (err.message||''), 'error');
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = originalText;
-  }
 }
-
-// RESULT MODAL LOGIC
-function showResultModal(apiResult, selectedMap){
-  const score = apiResult.score;
-  const correct = apiResult.correct_count;
-  const total = apiResult.total_count;
-  const isPass = score >= 70;
-  const content = document.getElementById('resultContent');
-  const header = document.getElementById('resultHeader');
-  const icon = document.getElementById('resultIcon');
-  const title = document.getElementById('resultTitle');
-  const subtitle = document.getElementById('resultSubtitle');
-  const scorePercent = document.getElementById('scorePercent');
-  const statCorrect = document.getElementById('statCorrect');
-  const statTotal = document.getElementById('statTotal');
-  const statStatusIcon = document.getElementById('statStatusIcon');
-  const statStatusText = document.getElementById('statStatusText');
-  const statStatusSub = document.getElementById('statStatusSub');
-  const ringFill = document.getElementById('scoreRingFill');
-  const quizLabel = document.getElementById('resultQuizTitleLabel');
-
-  // Reset classes
-  content.className = 'result-modal-content ' + (isPass?'passed':'failed');
-  header.className = 'result-header ' + (isPass?'passed':'failed');
-  ringFill.classList.remove('passed','failed');
-  ringFill.classList.add(isPass?'passed':'failed');
-
-  quizLabel.textContent = activeQuizTitle.toUpperCase();
-  
-  if(isPass){
-    icon.textContent = '🏆';
-    title.textContent = 'Congratulations!';
-    subtitle.textContent = `Amazing work! You passed ${activeQuizTitle} with a solid performance.`;
-    statStatusIcon.textContent = '✔';
-    statStatusIcon.className = 'stat-icon status-ok';
-    statStatusIcon.style.background = 'var(--success-bg)';
-    statStatusIcon.style.color = 'var(--success)';
-    statStatusText.textContent = 'Passed';
-    statStatusText.style.color = 'var(--success)';
-    statStatusSub.textContent = 'Qualified for certificate';
-    document.getElementById('btnPrimaryAction').textContent = 'View Certificates →';
-    document.getElementById('btnPrimaryAction').onclick = ()=> window.location.href='certificates.html';
-    spawnConfetti();
-  } else {
-    icon.textContent = score < 40 ? '💪' : '📚';
-    title.textContent = score < 40 ? 'Keep Going!' : 'Almost There!';
-    subtitle.textContent = score < 40 ? `Don't give up. Review the material and try again — you can do it!` : `You scored ${score}%. You need 70% to pass. Review and retry!`;
-    statStatusIcon.textContent = '↻';
-    statStatusIcon.className = 'stat-icon status-bad';
-    statStatusText.textContent = 'Failed';
-    statStatusText.style.color = 'var(--warn)';
-    statStatusSub.textContent = `Need ${70-score}% more to pass`;
-    document.getElementById('btnPrimaryAction').textContent = 'Review Course →';
-    document.getElementById('btnPrimaryAction').onclick = ()=> window.location.href='courses.html';
-    clearConfetti();
-  }
-
-  // Score animation
-  scorePercent.textContent = '0%';
-  setTimeout(()=>{
-    scorePercent.textContent = score+'%';
-    const circumference = 2*Math.PI*52;
-    const offset = circumference - (score/100)*circumference;
-    ringFill.style.strokeDashoffset = circumference;
-    // trigger reflow
-    void ringFill.offsetWidth;
-    ringFill.style.strokeDashoffset = offset;
-  }, 100);
-
-  statCorrect.textContent = `${correct}/${total}`;
-  statTotal.textContent = `${total} Questions`;
-  document.getElementById('statPassMark').textContent = 'Pass mark: 70%';
-
-  // Build review
-  const reviewList = document.getElementById('reviewList');
-  reviewList.innerHTML = '';
-  activeQuestions.forEach((q, idx)=>{
-    const userAns = selectedMap[q.id];
-    const correctAns = (q.correct_option||'').toUpperCase();
-    const isCorrect = userAns && userAns.toUpperCase()===correctAns;
-    const userText = userAns ? q['option_'+userAns.toLowerCase()] : null;
-    const correctText = q['option_'+correctAns.toLowerCase()];
-    const item = document.createElement('div');
-    item.className = 'review-item ' + (userAns ? (isCorrect?'correct':'wrong') : 'wrong');
-    item.innerHTML = `
-      <div class="review-item-header">
-        <div class="review-q-text">Q${idx+1}. ${escapeHtml(q.question_text)}</div>
-        <span class="review-status ${isCorrect?'correct':'wrong'}">${userAns ? (isCorrect?'✓ Correct':'✗ Wrong') : '○ Skipped'}</span>
-      </div>
-      <div class="review-answers">
-        ${userAns ? `<div class="your-answer ${isCorrect?'correct':'wrong'}"><strong>Your answer:</strong> ${userAns}) ${escapeHtml(userText||'')}</div>` : `<div class="your-answer wrong"><strong>Your answer:</strong> Not answered</div>`}
-        ${!isCorrect ? `<div><strong>Correct answer:</strong> ${correctAns}) ${escapeHtml(correctText||'')}</div>` : ''}
-      </div>
-    `;
-    reviewList.appendChild(item);
+function openQuizModal(){document.getElementById('quizPanel').classList.add('show');document.body.classList.add('modal-open');}
+function closeQuizModal(){document.getElementById('quizPanel').classList.remove('show');document.body.classList.remove('modal-open');}
+function showCongrats(pct){
+  closeQuizModal();
+  localStorage.setItem(quizDoneKey(activeQuiz),'100');
+  document.getElementById('congratsMessage').textContent=`Excellent work, ${firstName}! You completed ${activeQuiz.title} with a perfect score.`;
+  document.getElementById('congratsScore').textContent=pct+'%';
+  document.getElementById('congratsModal').classList.add('show');
+  document.body.classList.add('modal-open');
+  renderAssessmentList();
+}
+function closeCongrats(){document.getElementById('congratsModal').classList.remove('show');document.body.classList.remove('modal-open');}
+async function startQuiz(q){
+  activeQuiz=q; answers={}; document.getElementById('resultBox').style.display='none';
+  document.getElementById('quizTitle').textContent=q.title; document.getElementById('quizCourse').textContent=q.course_name||'';
+  if(q.questions&&q.questions.length){ questions=q.questions; renderQuestions(); openQuizModal(); return; }
+  try{ if(q.local) throw new Error('local'); const res=await fetch(API_HOST+'/api/quizzes/'+q.id+'/questions'); if(!res.ok) throw new Error('No questions'); questions=await res.json(); }
+  catch(e){ questions=fallbackQuestions[q.id]||[]; }
+  renderQuestions(); openQuizModal();
+}
+function renderQuestions(){
+  const list=document.getElementById('questionList');
+  if(!questions.length){list.innerHTML='<div class="empty" style="margin:0 0 14px;">This assessment has no questions yet.</div>';return;}
+  list.innerHTML=questions.map((q,i)=>`<div class="question"><h4>${i+1}. ${escapeHtml(q.question_text)}</h4>${['A','B','C','D'].map(opt=>`<button type="button" class="option" data-q="${q.id}" data-opt="${opt}">${opt}. ${escapeHtml(q['option_'+opt.toLowerCase()])}</button>`).join('')}</div>`).join('');
+  list.querySelectorAll('.option').forEach(btn=>btn.onclick=()=>{const qid=btn.dataset.q; answers[qid]=btn.dataset.opt; list.querySelectorAll(`.option[data-q="${qid}"]`).forEach(b=>b.classList.remove('selected')); btn.classList.add('selected');});
+}
+document.getElementById('submitQuiz').onclick=async()=>{
+  if(!activeQuiz||!questions.length)return;
+  if(Object.keys(answers).length<questions.length){alert('Please answer all questions before submitting.');return;}
+  let score=0; questions.forEach(q=>{if(answers[q.id]===q.correct_option)score++;});
+  const pct=Math.round((score/questions.length)*100);
+  document.querySelectorAll('.option').forEach(btn=>{
+    const q=questions.find(x=>String(x.id)===String(btn.dataset.q));
+    if(!q) return;
+    btn.disabled=true;
+    if(btn.dataset.opt===q.correct_option) btn.classList.add('correct');
+    else if(answers[q.id]===btn.dataset.opt) btn.classList.add('wrong');
   });
-
-  document.getElementById('resultModal').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-}
-
-function closeResultModal(){
-  document.getElementById('resultModal').style.display = 'none';
-  document.body.style.overflow = '';
-  clearConfetti();
-}
-function retakeFromResult(){
-  const id = activeQuizId;
-  const title = activeQuizTitle;
-  closeResultModal();
-  setTimeout(()=> openQuiz(id,title), 200);
-}
-function handlePrimaryAction(){
-  const el = document.getElementById('btnPrimaryAction');
-  if(el.onclick) el.onclick();
-}
-
-function spawnConfetti(){
-  const container = document.getElementById('confettiContainer');
-  container.innerHTML='';
-  const colors = ['#22B37A','#11C7F4','#0A3D66','#F59E0B','#22B37A','#11C7F4'];
-  for(let i=0;i<70;i++){
-    const div = document.createElement('div');
-    div.className='confetti-piece';
-    div.style.left = Math.random()*100+'%';
-    div.style.background = colors[Math.floor(Math.random()*colors.length)];
-    div.style.animationDelay = (Math.random()*0.6)+'s';
-    div.style.animationDuration = (2+Math.random()*1.5)+'s';
-    div.style.setProperty('--drift', (Math.random()*200-100)+'px');
-    div.style.transform = `rotate(${Math.random()*360}deg)`;
-    div.style.borderRadius = Math.random()>0.5?'50%':'2px';
-    div.style.width = (6+Math.random()*8)+'px';
-    div.style.height = (6+Math.random()*8)+'px';
-    container.appendChild(div);
+  if(!activeQuiz.local){try{await fetch(API_HOST+'/api/quizzes/'+activeQuiz.id+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:user.id,student_name:user.full_name||user.email||'Student',quiz_title:activeQuiz.title,answers})});}catch(e){console.warn(e);}}
+  const box=document.getElementById('resultBox');
+  if(pct===100){
+    box.textContent='Perfect score! Opening congratulations...'; box.style.display='block';
+    setTimeout(()=>showCongrats(pct),650);
+  }else{
+    box.textContent=`Submitted. Score: ${pct}% (${score}/${questions.length} correct). Review highlighted answers and try again for 100%.`;
+    box.style.display='block';
   }
-}
-function clearConfetti(){
-  const c = document.getElementById('confettiContainer');
-  if(c) c.innerHTML='';
-}
-
-// Close modals on backdrop
-document.getElementById('quizModal').addEventListener('click', (e)=>{ if(e.target===e.currentTarget) closeQuizModal(); });
-document.getElementById('resultModal').addEventListener('click', (e)=>{ if(e.target===e.currentTarget) closeResultModal(); });
-document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeQuizModal(); closeResultModal(); } });
-
-loadQuizzesAndScores();
+};
+document.getElementById('closeQuiz').onclick=closeQuizModal;
+document.getElementById('quizPanel').addEventListener('click',e=>{if(e.target.id==='quizPanel') closeQuizModal();});
+document.getElementById('congratsClose').addEventListener('click',closeCongrats);
+document.getElementById('congratsModal').addEventListener('click',e=>{if(e.target.id==='congratsModal') closeCongrats();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeQuizModal();closeCongrats();}});
+document.getElementById('refreshBtn').onclick=loadQuizzes;
+document.getElementById('assessmentSearch').addEventListener('input',renderAssessmentList);
+loadQuizzes();
 </script>
+<script src="softmarc-common.js"></script>
 </body>
 </html>

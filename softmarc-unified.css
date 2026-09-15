@@ -1,0 +1,160 @@
+
+/* Softmarc unified dashboard shell - added to make Profile, Settings, Certificates, Assessments and Admin use the same UI */
+:root{
+  --bg:#F7F8FA;--surface:#FFFFFF;--surface-hover:#F8FAFC;--border:#E5E7EB;--border-strong:#D1D5DB;
+  --text-900:#0F172A;--text-700:#334155;--text-500:#64748B;--text-400:#94A3B8;
+  --navy:#0A1930;--navy-800:#12315F;--cyan:#0EA5E9;--cyan-bg:#E0F2FE;--success:#0F9D6A;--success-bg:#DCFCE7;
+  --radius-xl:20px;--radius-lg:14px;--radius-md:10px;--radius-sm:8px;--sidebar-w:264px;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.04);--shadow:0 1px 3px rgba(15,23,42,.06),0 4px 12px rgba(15,23,42,.04);
+  --font-display:'Space Grotesk',sans-serif;--font-body:'Inter',sans-serif;--font-mono:'IBM Plex Mono',monospace;
+}
+[data-theme="dark"]{
+  --bg:#080E1C;--surface:#111D33;--surface-hover:#16233E;--border:#1E355A;--border-strong:#25426A;
+  --text-900:#F1F5F9;--text-700:#CBD5E1;--text-500:#94A3B8;--text-400:#64748B;
+  --navy:#E2E8F0;--navy-800:#F1F5F9;--cyan:#38BDF8;--cyan-bg:#0C2A3F;--success:#22C55E;--success-bg:#0A2E1A;
+}
+*{box-sizing:border-box} html{background:var(--bg)}
+body{font-family:var(--font-body)!important;background:var(--bg)!important;color:var(--text-900)!important;display:flex!important;min-height:100vh!important;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;margin:0!important;}
+a{text-decoration:none;color:inherit}.scrim{display:none}
+.sidebar{width:var(--sidebar-w)!important;flex-shrink:0!important;background:#0A1930!important;border-right:1px solid rgba(255,255,255,.06)!important;padding:0!important;position:sticky!important;top:0!important;height:100vh!important;display:flex!important;flex-direction:column!important;z-index:30!important;color:#fff!important;}
+[data-theme="dark"] .sidebar{background:#050C1A!important}.sidebar-top{padding:22px 20px 18px!important;border-bottom:1px solid rgba(255,255,255,.07)!important}.brand{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:12px!important;padding:0!important;min-height:44px!important}.brand-mark{width:176px!important;max-width:100%!important;height:58px!important;object-fit:contain!important;background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;display:block!important;filter:drop-shadow(0 3px 8px rgba(0,0,0,.18));}.brand-name,.brand-sub{display:none!important}.sidebar-nav{padding:16px 12px!important;flex:1!important;overflow-y:auto!important}.nav-section{margin-bottom:20px!important}.nav-label,.nav-group-label{font-size:10px!important;font-weight:700!important;letter-spacing:1px!important;text-transform:uppercase!important;color:rgba(255,255,255,.32)!important;padding:0 10px!important;margin:0 0 8px!important}.nav{display:flex!important;flex-direction:column!important;gap:3px!important}.nav a{display:flex!important;align-items:center!important;gap:10px!important;padding:9px 10px!important;border-radius:8px!important;color:rgba(255,255,255,.64)!important;font-size:13.5px!important;font-weight:500!important;text-decoration:none!important;transition:all .15s!important;box-shadow:none!important;background:transparent!important}.nav a svg{width:18px!important;height:18px!important;flex-shrink:0!important;opacity:.86!important}.nav a .icon{width:18px!important;text-align:center!important;flex-shrink:0!important}.nav a:hover{background:rgba(255,255,255,.06)!important;color:#fff!important}.nav a.active{background:#fff!important;color:#0A1930!important;font-weight:700!important;box-shadow:none!important}.nav a.active svg{opacity:1!important}.sidebar-bottom{padding:16px!important;border-top:1px solid rgba(255,255,255,.07)!important;margin-top:auto!important}.sidebar-footer{margin-top:auto!important;padding:16px!important;border-top:1px solid rgba(255,255,255,.07)!important;border-radius:0!important;background:transparent!important;color:rgba(255,255,255,.62)!important;font-size:12px!important;line-height:1.5!important}.user-mini{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07)}.user-mini-avatar{width:32px;height:32px;border-radius:50%;background:#0EA5E9;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;overflow:hidden;flex-shrink:0}.user-mini-info{min-width:0}.user-mini-name{font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}.user-mini-role{font-size:11px;color:rgba(255,255,255,.5);text-transform:capitalize}
+.main{flex:1!important;min-width:0!important;padding:0!important;display:flex!important;flex-direction:column!important;background:var(--bg)!important}.topbar{background:var(--surface)!important;border-bottom:1px solid var(--border)!important;border-radius:0!important;box-shadow:none!important;padding:14px 28px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;position:sticky!important;top:0!important;z-index:10!important}.breadcrumb{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-500)}.breadcrumb span{color:var(--text-400)}.breadcrumb strong{color:var(--text-900);font-weight:700}.greeting h1,.header h1,.page-header h1,#adminHeaderTitle{font-family:var(--font-display)!important;color:var(--text-900)!important;font-weight:700!important;letter-spacing:-.5px!important}.greeting .sub,.header p,.page-header p,#adminHeaderSub{color:var(--text-500)!important}.avatar,.avatar-top{width:32px!important;height:32px!important;border-radius:50%!important;background:#0A1930!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;font-weight:700!important;font-size:11px!important;overflow:hidden!important;border:1px solid var(--border)!important}.topbar-right,.topbar-actions{display:flex!important;align-items:center!important;gap:10px!important}.menu-toggle{display:none;border:1px solid var(--border);background:var(--surface);color:var(--text-700);width:36px;height:36px;border-radius:8px;font-size:18px;cursor:pointer}.content{padding:28px!important;flex:1!important}.main>.profile-layout,.main>#certContainer{margin:28px!important}.main>.tabs{margin:24px 28px 0!important}.main>.section-wrapper{margin:0 28px 28px!important}.panel,.form-panel,.profile-card,.tabs-card,.settings-card,.cert-card,.quiz-list-panel,.questions-panel{border:1px solid var(--border)!important;box-shadow:var(--shadow-sm)!important;background:var(--surface)!important;border-radius:var(--radius-lg)!important}.panel:hover,.form-panel:hover,.profile-card:hover,.cert-card:hover{box-shadow:var(--shadow)!important}.btn,.add-btn,.btn-primary,.btn-secondary,.btn-outline{border-radius:8px!important;font-family:var(--font-body)!important;font-weight:700!important}.btn-primary,.add-btn{background:#0A1930!important;color:#fff!important;border:1px solid #0A1930!important}.btn-primary:hover,.add-btn:hover{background:#12315F!important;box-shadow:0 4px 12px rgba(10,25,48,.15)!important;transform:translateY(-1px)}.btn-secondary,.btn-outline{background:var(--surface)!important;color:var(--text-700)!important;border:1px solid var(--border)!important}.btn-secondary:hover,.btn-outline:hover{background:var(--surface-hover)!important;border-color:var(--border-strong)!important}.tabs{border-bottom:1px solid var(--border)!important}.tab.on{color:#0A1930!important}.tab.on::after{background:#0A1930!important}.search-wrap{border:1px solid var(--border)!important;background:var(--surface-hover)!important;border-radius:8px!important}.search-wrap input{background:transparent!important;color:var(--text-900)!important}
+@media(max-width:900px){.sidebar{position:fixed!important;left:0!important;transform:translateX(-100%);transition:transform .2s ease}.sidebar.open{transform:translateX(0)}.scrim.show{display:block!important;position:fixed;inset:0;background:rgba(2,6,23,.42);z-index:25}.menu-toggle{display:flex!important;align-items:center;justify-content:center}.content,.main>.profile-layout,.main>#certContainer{margin:0!important;padding:20px!important}.main>.tabs{margin:20px 20px 0!important}.main>.section-wrapper{margin:0 20px 20px!important}.topbar{padding:12px 18px!important}.brand-mark{width:160px!important}}
+
+
+
+
+
+
+
+
+
+/* SELF-CONTAINED Softmarc full logo: text is inside SVG, so it cannot appear as icon-only */
+.sidebar-top{padding:24px 16px 22px!important;border-bottom:1px solid rgba(255,255,255,.07)!important;}
+.sidebar .brand{display:flex!important;align-items:center!important;justify-content:flex-start!important;width:100%!important;min-height:56px!important;padding:0!important;background:transparent!important;text-decoration:none!important;overflow:visible!important;}
+.sidebar .brand-full-logo{display:block!important;width:184px!important;height:auto!important;max-width:none!important;object-fit:contain!important;background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;filter:none!important;box-shadow:none!important;opacity:1!important;visibility:visible!important;}
+.sidebar .brand-mark,.sidebar .brand-icon-wrap,.sidebar .brand-copy,.sidebar .brand-name,.sidebar .brand-sub,.sidebar .brand-logo-exact,.sidebar .brand-logo-lockup{display:none!important;}
+@media(max-width:900px){.sidebar .brand-full-logo{width:184px!important}}
+
+/* FINAL button contrast fix for theme toggle
+   Light mode: active/primary buttons are black with white text.
+   Dark mode: active/primary buttons are white with black/navy text. */
+html:not([data-theme="dark"]) .main .btn-primary,
+html:not([data-theme="dark"]) .main .add-btn,
+html:not([data-theme="dark"]) .main .course-action.primary,
+html:not([data-theme="dark"]) .main .tab.on,
+body:not([data-theme="dark"]) .main .btn-primary,
+body:not([data-theme="dark"]) .main .add-btn,
+body:not([data-theme="dark"]) .main .course-action.primary,
+body:not([data-theme="dark"]) .main .tab.on{
+  background:#0A1930!important;
+  color:#FFFFFF!important;
+  border-color:#0A1930!important;
+}
+html:not([data-theme="dark"]) .main .btn-primary *,
+html:not([data-theme="dark"]) .main .add-btn *,
+html:not([data-theme="dark"]) .main .course-action.primary *,
+html:not([data-theme="dark"]) .main .tab.on *,
+body:not([data-theme="dark"]) .main .btn-primary *,
+body:not([data-theme="dark"]) .main .add-btn *,
+body:not([data-theme="dark"]) .main .course-action.primary *,
+body:not([data-theme="dark"]) .main .tab.on *{
+  color:#FFFFFF!important;
+}
+html[data-theme="dark"] .main .btn-primary,
+html[data-theme="dark"] .main .add-btn,
+html[data-theme="dark"] .main .course-action.primary,
+html[data-theme="dark"] .main .tab.on,
+body[data-theme="dark"] .main .btn-primary,
+body[data-theme="dark"] .main .add-btn,
+body[data-theme="dark"] .main .course-action.primary,
+body[data-theme="dark"] .main .tab.on{
+  background:#FFFFFF!important;
+  color:#0A1930!important;
+  border-color:#FFFFFF!important;
+}
+html[data-theme="dark"] .main .btn-primary *,
+html[data-theme="dark"] .main .add-btn *,
+html[data-theme="dark"] .main .course-action.primary *,
+html[data-theme="dark"] .main .tab.on *,
+body[data-theme="dark"] .main .btn-primary *,
+body[data-theme="dark"] .main .add-btn *,
+body[data-theme="dark"] .main .course-action.primary *,
+body[data-theme="dark"] .main .tab.on *{
+  color:#0A1930!important;
+}
+html[data-theme="dark"] .main .btn-primary:hover,
+html[data-theme="dark"] .main .add-btn:hover,
+html[data-theme="dark"] .main .course-action.primary:hover,
+html[data-theme="dark"] .main .tab.on:hover,
+body[data-theme="dark"] .main .btn-primary:hover,
+body[data-theme="dark"] .main .add-btn:hover,
+body[data-theme="dark"] .main .course-action.primary:hover,
+body[data-theme="dark"] .main .tab.on:hover{
+  background:#E2E8F0!important;
+  color:#0A1930!important;
+  border-color:#E2E8F0!important;
+}
+html:not([data-theme="dark"]) .main .btn-primary:hover,
+html:not([data-theme="dark"]) .main .add-btn:hover,
+html:not([data-theme="dark"]) .main .course-action.primary:hover,
+html:not([data-theme="dark"]) .main .tab.on:hover,
+body:not([data-theme="dark"]) .main .btn-primary:hover,
+body:not([data-theme="dark"]) .main .add-btn:hover,
+body:not([data-theme="dark"]) .main .course-action.primary:hover,
+body:not([data-theme="dark"]) .main .tab.on:hover{
+  background:#12315F!important;
+  color:#FFFFFF!important;
+  border-color:#12315F!important;
+}
+
+/* Remove underline/indicator from course filter tabs: All, In Progress, Completed */
+.main .tabs .tab,
+.main .tabs .tab.on,
+.main .tabs .tab:hover,
+.main .tabs .tab:focus{
+  text-decoration:none!important;
+}
+.main .tabs .tab::after,
+.main .tabs .tab.on::after,
+.main .tabs .tab:hover::after,
+.main .tabs .tab:focus::after{
+  content:none!important;
+  display:none!important;
+  width:0!important;
+  height:0!important;
+  background:transparent!important;
+}
+
+
+/* Theme toggle button shown on every dashboard page */
+.icon-btn.softmarc-theme-btn,
+.softmarc-theme-btn{
+  width:36px!important;
+  height:36px!important;
+  min-width:36px!important;
+  border-radius:8px!important;
+  border:1px solid var(--border)!important;
+  background:var(--surface)!important;
+  color:var(--text-500)!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  cursor:pointer!important;
+  padding:0!important;
+  transition:all .15s!important;
+}
+.icon-btn.softmarc-theme-btn:hover,
+.softmarc-theme-btn:hover{
+  background:var(--surface-hover)!important;
+  color:var(--text-900)!important;
+  border-color:var(--border-strong)!important;
+}
+html[data-theme="dark"] .icon-btn.softmarc-theme-btn,
+html[data-theme="dark"] .softmarc-theme-btn,
+body[data-theme="dark"] .icon-btn.softmarc-theme-btn,
+body[data-theme="dark"] .softmarc-theme-btn{
+  background:var(--surface)!important;
+  color:var(--text-700)!important;
+  border-color:var(--border)!important;
+}

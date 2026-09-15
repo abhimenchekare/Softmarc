@@ -71,7 +71,25 @@ pool.on('error', (err) => {
 app.get('/api/health', async (req, res) => {
   try {
     const r = await pool.query('SELECT NOW() as time, COUNT(*) as user_count FROM users');
-    res.json({ status: 'ok', time: r.rows[0].time, user_count: r.rows[0].user_count, using_url: !!process.env.DATABASE_URL });
+    let course_count = 'N/A';
+    try {
+      const cr = await pool.query('SELECT COUNT(*) as count FROM courses');
+      course_count = cr.rows[0].count;
+    } catch(e) { course_count = 'table_missing'; }
+    let subtopic_count = 'N/A';
+    try {
+      const sr = await pool.query('SELECT COUNT(*) as count FROM subtopics');
+      subtopic_count = sr.rows[0].count;
+    } catch(e) { subtopic_count = 'table_missing'; }
+    res.json({
+      status: 'ok',
+      time: r.rows[0].time,
+      user_count: r.rows[0].user_count,
+      course_count,
+      subtopic_count,
+      using_url: !!process.env.DATABASE_URL,
+      message: course_count === 'table_missing' ? 'Run COURSE_CONTENT_MIGRATION.sql in Supabase SQL Editor!' : 'Course content tables exist'
+    });
   } catch (e) {
     console.error('[Health Check Failed]', e);
     res.status(500).json({ status: 'error', error: e.message, hint: 'Check DATABASE_URL or PGHOST env vars in Vercel' });
@@ -304,6 +322,28 @@ app.delete('/api/users/:id/avatar', async (req, res) => {
   }
 });
 
+// ---------- PUT /api/users/:id/password — CHANGE PASSWORD ----------
+app.put('/api/users/:id/password', async (req, res) => {
+  const { id } = req.params;
+  const { current_password, new_password } = req.body;
+  if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Invalid user id' });
+  if (!current_password || !new_password) return res.status(400).json({ error: 'current_password and new_password required' });
+  if (new_password.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  try {
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    const match = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!match) return res.status(401).json({ error: 'Current password is incorrect' });
+    const new_hash = await bcrypt.hash(new_password, SALT_ROUNDS);
+    await pool.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [new_hash, id]);
+    console.log(`[OK] Password changed for user ${id}`);
+    res.json({ updated: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to change password', detail: err.message });
+  }
+});
+
 // ---------- DELETE /api/users/:id ----------
 app.delete('/api/users/:id', async (req, res) => {
   const { id } = req.params;
@@ -445,6 +485,294 @@ app.delete('/api/questions/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete question.' });
+  }
+});
+
+// =============================================================
+// COURSES & SUBTOPICS — Admin-managed content (Supabase)
+// This is the KEY fix: admin content now lives in Supabase
+// so ALL students see it from ANY browser/device.
+// =============================================================
+
+// ---------- GET /api/courses — list all courses with subtopics ----------
+app.get('/api/courses', async (req, res) => {
+  console.log('\n[Backend API] GET /api/courses');
+  try {
+    const coursesResult = await pool.query(
+      'SELECT * FROM courses WHERE status = $1 ORDER BY display_order ASC, id ASC',
+      ['active']
+    );
+    const courses = coursesResult.rows;
+
+    // Fetch all subtopics for these courses in one query
+    if (courses.length > 0) {
+      const courseIds = courses.map(c => c.id);
+      const subResult = await pool.query(
+        'SELECT * FROM subtopics WHERE course_id = ANY($1) ORDER BY display_order ASC, id ASC',
+        [courseIds]
+      );
+
+      // Attach subtopics to their courses
+      const subMap = new Map();
+      subResult.rows.forEach(s => {
+        if (!subMap.has(s.course_id)) subMap.set(s.course_id, []);
+        subMap.get(s.course_id).push(s);
+      });
+
+      courses.forEach(c => {
+        c.subtopics = subMap.get(c.id) || [];
+      });
+    }
+
+    console.log(`[OK] Returned ${courses.length} courses with subtopics`);
+    res.json(courses);
+  } catch (err) {
+    // If tables don't exist yet, return empty array (frontend falls back to hardcoded)
+    if (err.message.includes('does not exist')) {
+      console.warn('[Courses] Tables not created yet. Run COURSE_CONTENT_MIGRATION.sql');
+      return res.json([]);
+    }
+    console.error('[Courses Error]', err);
+    res.status(500).json({ error: 'Failed to fetch courses', detail: err.message });
+  }
+});
+
+// ---------- GET /api/courses/:id — single course with subtopics ----------
+app.get('/api/courses/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const courseResult = await pool.query('SELECT * FROM courses WHERE id = $1', [id]);
+    if (courseResult.rowCount === 0) return res.status(404).json({ error: 'Course not found' });
+
+    const course = courseResult.rows[0];
+    const subResult = await pool.query(
+      'SELECT * FROM subtopics WHERE course_id = $1 ORDER BY display_order ASC, id ASC',
+      [id]
+    );
+    course.subtopics = subResult.rows;
+    res.json(course);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch course' });
+  }
+});
+
+// ---------- POST /api/courses — create new course ----------
+app.post('/api/courses', async (req, res) => {
+  const { title, slug, tag, short_description, description, duration_hours, level, image, display_order } = req.body;
+  if (!title) return res.status(400).json({ error: 'title is required' });
+
+  const courseSlug = slug || title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO courses (title, slug, tag, short_description, description, duration_hours, level, image, display_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [title, courseSlug, tag || 'Course', short_description || '', description || '', duration_hours || 10, level || 'Beginner', image || '', display_order || 0]
+    );
+    console.log(`[OK] Course created: ${title}`);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(409).json({ error: 'A course with that slug already exists.' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create course', detail: err.message });
+  }
+});
+
+// ---------- PUT /api/courses/:id — update course ----------
+app.put('/api/courses/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, slug, tag, short_description, description, duration_hours, level, image, status, display_order } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE courses SET
+         title = COALESCE($1, title),
+         slug = COALESCE($2, slug),
+         tag = COALESCE($3, tag),
+         short_description = COALESCE($4, short_description),
+         description = COALESCE($5, description),
+         duration_hours = COALESCE($6, duration_hours),
+         level = COALESCE($7, level),
+         image = COALESCE($8, image),
+         status = COALESCE($9, status),
+         display_order = COALESCE($10, display_order),
+         updated_at = NOW()
+       WHERE id = $11
+       RETURNING *`,
+      [title, slug, tag, short_description, description, duration_hours, level, image, status, display_order, id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Course not found' });
+    console.log(`[OK] Course updated: ${id}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update course', detail: err.message });
+  }
+});
+
+// ---------- DELETE /api/courses/:id — delete course (cascades to subtopics) ----------
+app.delete('/api/courses/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM courses WHERE id = $1 RETURNING id, title', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Course not found' });
+    console.log(`[OK] Course deleted: ${result.rows[0].title}`);
+    res.json({ deleted: true, course: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete course' });
+  }
+});
+
+// ---------- POST /api/courses/:id/subtopics — add subtopic ----------
+app.post('/api/courses/:id/subtopics', async (req, res) => {
+  const courseId = req.params.id;
+  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order } = req.body;
+  if (!title) return res.status(400).json({ error: 'title is required' });
+
+  const subtopicSlug = slug || title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO subtopics (course_id, title, slug, dur, description, video_url, pdf_url, exercise, display_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING *`,
+      [courseId, title, subtopicSlug, dur || '15 min', description || '', video_url || '', pdf_url || '', exercise || '', display_order || 0]
+    );
+    console.log(`[OK] Subtopic created: ${title} (course ${courseId})`);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to create subtopic', detail: err.message });
+  }
+});
+
+// ---------- PUT /api/subtopics/:id — update subtopic ----------
+app.put('/api/subtopics/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE subtopics SET
+         title = COALESCE($1, title),
+         slug = COALESCE($2, slug),
+         dur = COALESCE($3, dur),
+         description = COALESCE($4, description),
+         video_url = COALESCE($5, video_url),
+         pdf_url = COALESCE($6, pdf_url),
+         exercise = COALESCE($7, exercise),
+         display_order = COALESCE($8, display_order),
+         updated_at = NOW()
+       WHERE id = $9
+       RETURNING *`,
+      [title, slug, dur, description, video_url, pdf_url, exercise, display_order, id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Subtopic not found' });
+    console.log(`[OK] Subtopic updated: ${id}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to update subtopic', detail: err.message });
+  }
+});
+
+// ---------- DELETE /api/subtopics/:id — delete subtopic ----------
+app.delete('/api/subtopics/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM subtopics WHERE id = $1 RETURNING id, title', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Subtopic not found' });
+    console.log(`[OK] Subtopic deleted: ${result.rows[0].title}`);
+    res.json({ deleted: true, subtopic: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete subtopic' });
+  }
+});
+
+// ---------- REAL PROGRESS TRACKING - lesson_progress ----------
+app.get('/api/progress', async (req, res) => {
+  const { student_id } = req.query;
+  if (!student_id || !/^\d+$/.test(student_id)) return res.status(400).json({ error: 'student_id required' });
+  try {
+    const result = await pool.query(
+      'SELECT * FROM lesson_progress WHERE student_id = $1 ORDER BY course_name ASC, module_index ASC',
+      [student_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    // If table doesn't exist yet, return empty (so frontend doesn't break) and hint to run migration
+    if (err.message.includes('does not exist')) {
+      console.warn('[Progress] Table missing, returning empty. Run lesson_progress_migration.sql');
+      return res.json([]);
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch progress', detail: err.message });
+  }
+});
+
+app.get('/api/progress/course', async (req, res) => {
+  const { student_id, course_name } = req.query;
+  if (!student_id || !course_name) return res.status(400).json({ error: 'student_id and course_name required' });
+  try {
+    const result = await pool.query(
+      'SELECT * FROM lesson_progress WHERE student_id = $1 AND course_name = $2 ORDER BY module_index ASC',
+      [student_id, course_name]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    if (err.message.includes('does not exist')) return res.json([]);
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch course progress' });
+  }
+});
+
+app.post('/api/progress', async (req, res) => {
+  const { student_id, course_name, module_index } = req.body;
+  console.log(`[Progress] Mark done: student ${student_id}, course "${course_name}", module ${module_index}`);
+  if (!student_id || !course_name || module_index === undefined) return res.status(400).json({ error: 'student_id, course_name, module_index required' });
+  if (!/^\d+$/.test(String(student_id)) || !/^\d+$/.test(String(module_index))) return res.status(400).json({ error: 'Invalid ids' });
+  try {
+    const result = await pool.query(
+      `INSERT INTO lesson_progress (student_id, course_name, module_index)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (student_id, course_name, module_index) DO NOTHING
+       RETURNING id, student_id, course_name, module_index, completed_at`,
+      [student_id, course_name, module_index]
+    );
+    // Return all progress for this course to update UI quickly
+    const all = await pool.query(
+      'SELECT * FROM lesson_progress WHERE student_id = $1 AND course_name = $2 ORDER BY module_index ASC',
+      [student_id, course_name]
+    );
+    res.status(201).json({ saved: result.rowCount > 0, progress: all.rows });
+  } catch (err) {
+    if (err.message.includes('does not exist')) {
+      return res.status(500).json({ error: 'lesson_progress table missing. Run lesson_progress_migration.sql in Supabase SQL Editor', detail: err.message });
+    }
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save progress', detail: err.message });
+  }
+});
+
+app.delete('/api/progress', async (req, res) => {
+  const { student_id, course_name, module_index } = req.query;
+  if (!student_id) return res.status(400).json({ error: 'student_id required' });
+  try {
+    if (course_name && module_index !== undefined) {
+      await pool.query('DELETE FROM lesson_progress WHERE student_id=$1 AND course_name=$2 AND module_index=$3', [student_id, course_name, module_index]);
+    } else if (course_name) {
+      await pool.query('DELETE FROM lesson_progress WHERE student_id=$1 AND course_name=$2', [student_id, course_name]);
+    } else {
+      await pool.query('DELETE FROM lesson_progress WHERE student_id=$1', [student_id]);
+    }
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete progress' });
   }
 });
 
