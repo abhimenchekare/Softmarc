@@ -151,7 +151,7 @@ a{color:inherit;text-decoration:none;}
           <button class="btn btn-outline" id="reloadBtn" style="margin-left:auto;">↻ Reload from DB</button>
         </div>
         <p style="font-size:11.5px;color:var(--text-400);margin-top:12px;line-height:1.5;">
-          ✅ Now your profile is saved to <strong>Supabase Postgres</strong> via <code>/api/users/:id/profile</code>.<br>
+          ✅ Now your profile is saved to <strong>Supabase Postgres</strong> via <code>/users.php/:id/profile</code>.<br>
           Check Supabase Dashboard → Table Editor → <code>users</code> to see columns: phone, department, institution, city, avatar_image.
         </p>
       </div>
@@ -172,7 +172,7 @@ function showToast(msg, type=''){
 const raw = localStorage.getItem('softmarc_user');
 if(!raw){ window.location.href='index.html'; }
 let _user = JSON.parse(raw);
-const API_HOST = ''; // Same origin - Vercel */api/* -> Express
+const API_HOST = '/api'; // Same origin - Vercel */api/* -> Express
 
 // ---------- Sidebar ----------
 const _sb=document.getElementById('sidebar'), _sc=document.getElementById('scrim'), _mt=document.getElementById('menuToggle');
@@ -229,7 +229,7 @@ async function loadFromSupabase(){
   const dbStatus=document.getElementById('dbStatus');
   try{
     badge.textContent='● Syncing…'; badge.className='badge-db offline';
-    const res=await fetch(`${API_HOST}/api/users/${_user.id}`);
+    const res=await fetch(`${API_HOST}/users.php/${_user.id}`);
     if(!res.ok) throw new Error('API '+res.status);
     const dbUser=await res.json();
     // Merge DB user into local session (DB is source of truth)
@@ -240,7 +240,7 @@ async function loadFromSupabase(){
     dbStatus.innerHTML='<span class="badge-db">● Supabase linked ✓</span>';
     showToast('Profile loaded from Supabase','success');
     // health also
-    fetch(`${API_HOST}/api/health`).then(r=>r.json()).then(h=>{
+    fetch(`${API_HOST}/health.php`).then(r=>r.json()).then(h=>{
       console.log('[Health]',h);
       if(h.status==='ok'){
         dbStatus.innerHTML+=` <span style="font-size:11px;color:var(--text-600);"> · ${h.user_count} users in DB</span>`;
@@ -274,7 +274,7 @@ async function saveToSupabase(showAvatar=false){
     showToast('Name and email required','error'); saveBtn.disabled=false; saveBtn.innerHTML=original; return;
   }
   try{
-    const res=await fetch(`${API_HOST}/api/users/${_user.id}/profile`,{
+    const res=await fetch(`${API_HOST}/users.php/${_user.id}/profile`,{
       method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
     });
     const data=await res.json();
@@ -308,7 +308,7 @@ document.getElementById('avatarFileInput').addEventListener('change',async (e)=>
     updateAvatarUI(_user);
     // immediately push avatar to Supabase
     try{
-      const res=await fetch(`${API_HOST}/api/users/${_user.id}/avatar`,{
+      const res=await fetch(`${API_HOST}/users.php/${_user.id}/avatar`,{
         method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({avatar_image: base64})
       });
       const data=await res.json();
@@ -329,7 +329,7 @@ document.getElementById('removePhotoBtn').addEventListener('click',async (e)=>{
   e.preventDefault();
   if(!confirm('Remove profile photo?')) return;
   try{
-    const res=await fetch(`${API_HOST}/api/users/${_user.id}/avatar`,{method:'DELETE'});
+    const res=await fetch(`${API_HOST}/users.php/${_user.id}/avatar`,{method:'DELETE'});
     const data=await res.json();
     if(!res.ok) throw new Error(data.error);
     _user={..._user, ...data};

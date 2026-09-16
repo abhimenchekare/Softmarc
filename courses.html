@@ -247,7 +247,7 @@ if(_mt) _mt.addEventListener('click', ()=>{ _sb.classList.toggle('open'); _sc.cl
 if(_sc) _sc.addEventListener('click', ()=>{ _sb.classList.remove('open'); _sc.classList.remove('show'); });
 
 // Course data with REAL uploaded videos + PDF + Exercise
-const API_HOST = '';
+const API_HOST = '/api';
 const COURSE_DATA = {
   'CATIA V5 Part Design': [
     {title:'Sketcher Workbench & Constraints', dur:'20 min', videoUrl:'videos/Your_First_Design_Project (1) 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Create a fully constrained sketch of a L-bracket with 2 holes. Use Coincidence, Distance, and Diameter constraints. Export as CATPart.'},
@@ -340,7 +340,7 @@ async function renderCoursesReal(){
   grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading real progress from Supabase...</div>';
   progressMap = new Map();
   try{
-    const res = await fetch(`${API_HOST}/api/progress?student_id=${_user.id}`);
+    const res = await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);
     if(!res.ok) throw new Error('progress failed');
     const rows = await res.json();
     rows.forEach(r=>{

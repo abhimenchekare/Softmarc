@@ -428,7 +428,7 @@ window.addEventListener('load', () => {
     document.querySelector('.left-login-panel').classList.add('show');
   }, 1900); // Reduced from 1900ms to 400ms for faster feel
   // Warm up Vercel serverless function - makes login faster (cold start fix)
-  fetch('/api/health').catch(()=>{});
+  fetch('/health.php').catch(()=>{});
 });
 
 const _rawSession = localStorage.getItem('softmarc_user');
@@ -540,8 +540,8 @@ form.addEventListener('submit', async (e) => {
   loginBtn.textContent = 'Signing in…';
 
   try {
-    const API_HOST = '';
-    const res = await fetch(`${API_HOST}/api/login`, {
+    const API_HOST = '/api';
+    const res = await fetch(`${API_HOST}/login.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password: pass }),

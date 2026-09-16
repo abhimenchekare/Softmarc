@@ -272,7 +272,7 @@ html[data-theme="dark"] .congrats-card.pro h2,body[data-theme="dark"] .congrats-
 </div>
 <script src="softmarc-content.js"></script>
 <script>
-const API_HOST='';
+const API_HOST='/api';
 const fallbackQuizzes=[
   {id:'local-catia-assembly',title:'CATIA Design',course_name:'CATIA Assembly Design',local:true},
   {id:'local-catia-part',title:'CATIA V5',course_name:'CATIA V5 Part Design',local:true}
@@ -299,7 +299,7 @@ async function loadQuizzes(){
   const list=document.getElementById('assessmentGrid'),empty=document.getElementById('emptyState');
   list.innerHTML='<div class="empty" style="margin:0;">Loading assessments…</div>'; empty.style.display='none';
   try{
-    const res=await fetch(API_HOST+'/api/quizzes');
+    const res=await fetch(API_HOST+'/quizzes.php');
     if(!res.ok) throw new Error('API unavailable');
     quizzes=(await res.json()).map(normaliseQuiz);
     if(!quizzes.length) quizzes=fallbackQuizzes;
@@ -347,7 +347,7 @@ async function startQuiz(q){
   activeQuiz=q; answers={}; document.getElementById('resultBox').style.display='none';
   document.getElementById('quizTitle').textContent=q.title; document.getElementById('quizCourse').textContent=q.course_name||'';
   if(q.questions&&q.questions.length){ questions=q.questions; renderQuestions(); openQuizModal(); return; }
-  try{ if(q.local) throw new Error('local'); const res=await fetch(API_HOST+'/api/quizzes/'+q.id+'/questions'); if(!res.ok) throw new Error('No questions'); questions=await res.json(); }
+  try{ if(q.local) throw new Error('local'); const res=await fetch(API_HOST+'/quizzes.php/'+q.id+'/questions'); if(!res.ok) throw new Error('No questions'); questions=await res.json(); }
   catch(e){ questions=fallbackQuestions[q.id]||[]; }
   renderQuestions(); openQuizModal();
 }
@@ -369,7 +369,7 @@ document.getElementById('submitQuiz').onclick=async()=>{
     if(btn.dataset.opt===q.correct_option) btn.classList.add('correct');
     else if(answers[q.id]===btn.dataset.opt) btn.classList.add('wrong');
   });
-  if(!activeQuiz.local){try{await fetch(API_HOST+'/api/quizzes/'+activeQuiz.id+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:user.id,student_name:user.full_name||user.email||'Student',quiz_title:activeQuiz.title,answers})});}catch(e){console.warn(e);}}
+  if(!activeQuiz.local){try{await fetch(API_HOST+'/quizzes.php/'+activeQuiz.id+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:user.id,student_name:user.full_name||user.email||'Student',quiz_title:activeQuiz.title,answers})});}catch(e){console.warn(e);}}
   const box=document.getElementById('resultBox');
   if(pct===100){
     box.textContent='Perfect score! Opening congratulations...'; box.style.display='block';

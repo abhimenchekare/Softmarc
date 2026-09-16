@@ -378,11 +378,11 @@ const metaEl = document.getElementById('lessonMeta');
 if(metaEl) metaEl.textContent = `Subtopic ${moduleIdx+1} of ${modules.length} · ${currentMod.dur} · ${courseName}`;
 
 // Real progress
-const API_HOST = '';
+const API_HOST = '/api';
 let done = new Set();
 async function loadProgress(){
   try{
-    const res = await fetch(`${API_HOST}/api/progress/course?student_id=${_user.id}&course_name=${encodeURIComponent(courseName)}`);
+    const res = await fetch(`${API_HOST}/progress.php?student_id=${_user.id}&course_name=${encodeURIComponent(courseName)}`);
     const rows = await res.json();
     done = new Set(rows.map(r=>r.module_index));
   }catch{ done = new Set(JSON.parse(localStorage.getItem('done_'+courseName)||'[]')); }
@@ -393,7 +393,7 @@ async function saveProgress(idx){
   localStorage.setItem('done_'+courseName, JSON.stringify([...done]));
   updateCompletionUI();
   try{
-    await fetch(`${API_HOST}/api/progress`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:_user.id,course_name:courseName,module_index:idx})});
+    await fetch(`${API_HOST}/progress.php`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:_user.id,course_name:courseName,module_index:idx})});
     showToast('✅ Completed — progress saved','success');
   }catch{ showToast('✅ Completed — saved locally','success'); }
 }

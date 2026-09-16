@@ -176,7 +176,7 @@ if(_mt){ _mt.addEventListener('click', ()=>{ _sb.classList.toggle('open'); _sc.c
 if(_sc){ _sc.addEventListener('click', ()=>{ _sb.classList.remove('open'); _sc.classList.remove('show'); }); }
 
 // Real progress - Certificates from Supabase
-const API_HOST = '';
+const API_HOST = '/api';
 const COURSE_DEFS = [
   { name: 'CATIA V5 Part Design', tag: 'Part Design', modules: 12, hours: 18, banner: '🏆', code: 'CPD' },
   { name: 'CATIA Assembly Design', tag: 'Assembly', modules: 10, hours: 14, banner: '🌟', code: 'CAD' },
@@ -197,7 +197,7 @@ async function renderCertificatesReal(){
   let progressMap = new Map();
   let useReal = true;
   try{
-    const res = await fetch(`${API_HOST}/api/progress?student_id=${_user.id}`);
+    const res = await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);
     if(!res.ok) throw new Error('progress failed');
     const rows = await res.json();
     rows.forEach(r=>{

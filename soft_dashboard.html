@@ -350,7 +350,7 @@ if(menuToggle) menuToggle.addEventListener('click', ()=>toggleSidebar(!sidebar.c
 if(scrim) scrim.addEventListener('click', ()=>toggleSidebar(false));
 
 // Courses - REAL PROGRESS TRACKING (Supabase)
-const API_HOST = '';
+const API_HOST = '/api';
 const COURSE_DEFS = [
   { name: 'CATIA V5 Part Design', tag: 'Part Design', modules: 12, hours: 18 },
   { name: 'CATIA Assembly Design', tag: 'Assembly', modules: 10, hours: 14 },
@@ -373,7 +373,7 @@ async function loadDashboard(){
   let useRealDB = true;
   
   try{
-    const res = await fetch(`${API_HOST}/api/progress?student_id=${user.id}`);
+    const res = await fetch(`${API_HOST}/progress.php?student_id=${user.id}`);
     if(!res.ok) throw new Error('progress failed');
     const rows = await res.json();
     // Build map

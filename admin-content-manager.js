@@ -1,7 +1,7 @@
 (function(){
   if(!window.SoftmarcContent) return;
 
-  const API_HOST = ''; // Same origin
+  const API_HOST = '/api'; // Same origin
   const $ = id => document.getElementById(id);
   const esc = s => String(s||'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const getCourses = () => SoftmarcContent.getCourses();
@@ -15,7 +15,7 @@
   // =============================================================
 
   async function supabaseCreateCourse(fields){
-    const res = await fetch(`${API_HOST}/api/courses`, {
+    const res = await fetch(`${API_HOST}/courses.php`, {
       method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(fields)
     });
     if(!res.ok) throw new Error((await res.json()).error || 'Failed');
@@ -23,7 +23,7 @@
   }
 
   async function supabaseUpdateCourse(id, fields){
-    const res = await fetch(`${API_HOST}/api/courses/${id}`, {
+    const res = await fetch(`${API_HOST}/courses.php?id=${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(fields)
     });
     if(!res.ok) throw new Error((await res.json()).error || 'Failed');
@@ -31,13 +31,13 @@
   }
 
   async function supabaseDeleteCourse(id){
-    const res = await fetch(`${API_HOST}/api/courses/${id}`, { method:'DELETE' });
+    const res = await fetch(`${API_HOST}/courses.php?id=${id}`, { method:'DELETE' });
     if(!res.ok) throw new Error('Failed');
     return res.json();
   }
 
   async function supabaseCreateSubtopic(courseId, fields){
-    const res = await fetch(`${API_HOST}/api/courses/${courseId}/subtopics`, {
+    const res = await fetch(`${API_HOST}/courses.php?id=${courseId}/subtopics`, {
       method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(fields)
     });
     if(!res.ok) throw new Error((await res.json()).error || 'Failed');
@@ -45,7 +45,7 @@
   }
 
   async function supabaseUpdateSubtopic(id, fields){
-    const res = await fetch(`${API_HOST}/api/subtopics/${id}`, {
+    const res = await fetch(`${API_HOST}/subtopics.php?id=${id}`, {
       method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(fields)
     });
     if(!res.ok) throw new Error((await res.json()).error || 'Failed');
@@ -53,7 +53,7 @@
   }
 
   async function supabaseDeleteSubtopic(id){
-    const res = await fetch(`${API_HOST}/api/subtopics/${id}`, { method:'DELETE' });
+    const res = await fetch(`${API_HOST}/subtopics.php?id=${id}`, { method:'DELETE' });
     if(!res.ok) throw new Error('Failed');
     return res.json();
   }
@@ -62,7 +62,7 @@
   let supabaseCourses = [];
   async function loadSupabaseCourses(){
     try{
-      const res = await fetch(`${API_HOST}/api/courses`);
+      const res = await fetch(`${API_HOST}/courses.php`);
       if(res.ok){
         supabaseCourses = await res.json();
       }

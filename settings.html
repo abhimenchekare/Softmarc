@@ -368,7 +368,7 @@ const lastTab=tabs.find(t=>t.dataset.tab===lastTabName);
 if(lastTab) activateTab(lastTab,false);
 
 // Settings logic - all functional
-const API_HOST='';
+const API_HOST='/api';
 const savedSettings=JSON.parse(localStorage.getItem('softmarc_settings')||'{}');
 ['langSelect','qualitySelect','themeSelect'].forEach(id=>{
   const el=document.getElementById(id);
@@ -407,7 +407,7 @@ document.getElementById('savePwd').addEventListener('click', async ()=>{
   if(nw!==cf){pwdError.textContent='Passwords do not match.'; return;}
   const btn=document.getElementById('savePwd'); btn.disabled=true; btn.textContent='Updating…';
   try{
-    const res=await fetch(`${API_HOST}/api/users/${_user.id}/password`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:cur,new_password:nw})});
+    const res=await fetch(`${API_HOST}/users.php/${_user.id}/password`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:cur,new_password:nw})});
     const data=await res.json(); if(!res.ok) throw new Error(data.error||'Failed');
     showToast('✅ Password updated in Supabase','success');
     currentPwd.value=''; newPwd.value=''; confirmPwd.value='';
@@ -417,10 +417,10 @@ document.getElementById('savePwd').addEventListener('click', async ()=>{
 
 // Danger
 document.getElementById('deleteAccountBtn').addEventListener('click', async ()=>{
-  if(!confirm(`Delete account ${_user.email}? This is irreversible and calls DELETE /api/users/${_user.id}`)) return;
+  if(!confirm(`Delete account ${_user.email}? This is irreversible and calls DELETE /users.php/${_user.id}`)) return;
   const btn=document.getElementById('deleteAccountBtn'); btn.disabled=true; btn.textContent='Deleting…';
   try{
-    const res=await fetch(`${API_HOST}/api/users/${_user.id}`,{method:'DELETE'});
+    const res=await fetch(`${API_HOST}/users.php/${_user.id}`,{method:'DELETE'});
     const data=await res.json(); if(!res.ok) throw new Error(data.error||'Failed');
     showToast('Account deleted','success'); localStorage.clear();
     setTimeout(()=>{window.location.href='index.html';},1200);
