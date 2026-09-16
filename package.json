@@ -1,7 +1,7 @@
 {
   "name": "softmarc-learning-portal",
   "version": "1.0.0",
-  "description": "Softmarc Learning Portal",
+  "description": "Softmarc Learning Portal - CATIA V5 Training",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
