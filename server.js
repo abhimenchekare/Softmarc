@@ -5,6 +5,39 @@ const cors = require('cors');
 const bcrypt = require('bcrypt');
 const { Pool } = require('pg');
 const path = require('path');
+const multer = require('multer');
+
+// =============================================================
+// SUPABASE CLIENT — For Storage (file uploads)
+// Set SUPABASE_URL and SUPABASE_SERVICE_KEY in Vercel env vars
+// =============================================================
+let supabase = null;
+try {
+  const { createClient } = require('@supabase/supabase-js');
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+    supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    console.log('[Supabase] Storage client initialized');
+  } else {
+    console.log('[Supabase] No SUPABASE_URL/SUPABASE_SERVICE_KEY set — file uploads will use fallback');
+  }
+} catch (e) {
+  console.log('[Supabase] @supabase/supabase-js not installed — run: npm install @supabase/supabase-js');
+}
+
+// Configure multer for memory storage
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 }, // 200MB max
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/avi',
+      'application/pdf',
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif'
+    ];
+    if (allowedTypes.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('File type not allowed: ' + file.mimetype), false);
+  }
+});
 
 const app = express();
 app.use(cors());
@@ -485,6 +518,129 @@ app.delete('/api/questions/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to delete question.' });
+  }
+});
+
+// =============================================================
+// FILE UPLOAD — Videos & PDFs to Supabase Storage
+// Admin uploads → stored in Supabase Storage → URL saved to DB
+// Students fetch URL from DB → play/view the file
+// =============================================================
+
+// ---------- POST /api/upload — Upload file (video, pdf, image) ----------
+app.post('/api/upload', upload.single('file'), async (req, res) => {
+  const { subtopic_id, type } = req.body; // type: 'video', 'pdf', 'image'
+  const file = req.file;
+
+  if (!file) return res.status(400).json({ error: 'No file uploaded' });
+
+  console.log(`\n[Upload] ${type} file: ${file.originalname} (${(file.size/1024/1024).toFixed(2)} MB)`);
+
+  // If no Supabase Storage, return error
+  if (!supabase) {
+    return res.status(500).json({
+      error: 'Supabase Storage not configured. Set SUPABASE_URL and SUPABASE_SERVICE_KEY in Vercel environment variables.',
+      hint: 'Go to Vercel → Settings → Environment Variables → Add SUPABASE_URL and SUPABASE_SERVICE_KEY'
+    });
+  }
+
+  try {
+    // Ensure bucket exists
+    const bucketName = 'course-media';
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const exists = buckets?.some(b => b.name === bucketName);
+      if (!exists) {
+        const { error: createErr } = await supabase.storage.createBucket(bucketName, {
+          public: true,
+          fileSizeLimit: 200 * 1024 * 1024,
+          allowedMimeTypes: ['video/*', 'application/pdf', 'image/*']
+        });
+        if (createErr) console.warn('[Upload] Bucket create warning:', createErr.message);
+        else console.log('[Upload] Created bucket: course-media');
+      }
+    } catch (e) {
+      console.warn('[Upload] Bucket check:', e.message);
+    }
+
+    // Generate file path
+    const timestamp = Date.now();
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const folder = type === 'video' ? 'videos' : type === 'pdf' ? 'pdfs' : 'images';
+    const filePath = `${folder}/${subtopic_id || 'general'}/${timestamp}_${safeName}`;
+
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .upload(filePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: true
+      });
+
+    if (error) {
+      console.error('[Upload] Storage error:', error);
+      return res.status(500).json({ error: 'Upload to storage failed', detail: error.message });
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage.from(bucketName).getPublicUrl(filePath);
+    const publicUrl = urlData.publicUrl;
+
+    // Update subtopic in database if subtopic_id provided
+    if (subtopic_id && !isNaN(subtopic_id)) {
+      const urlField = type === 'video' ? 'video_url' : type === 'pdf' ? 'pdf_url' : 'image';
+      try {
+        await pool.query(`UPDATE subtopics SET ${urlField} = $1, updated_at = NOW() WHERE id = $2`, [publicUrl, subtopic_id]);
+        console.log(`[Upload] Updated subtopic ${subtopic_id} with ${urlField}`);
+      } catch (dbErr) {
+        console.warn('[Upload] DB update failed:', dbErr.message);
+      }
+    }
+
+    console.log(`[OK] File uploaded: ${publicUrl}`);
+    res.json({
+      url: publicUrl,
+      path: filePath,
+      size: file.size,
+      type: file.mimetype,
+      originalName: file.originalname
+    });
+
+  } catch (err) {
+    console.error('[Upload Error]', err);
+    res.status(500).json({ error: 'Upload failed', detail: err.message });
+  }
+});
+
+// ---------- POST /api/upload/course-image — Upload course preview image ----------
+app.post('/api/upload/course-image', upload.single('file'), async (req, res) => {
+  const { course_id } = req.body;
+  const file = req.file;
+  if (!file) return res.status(400).json({ error: 'No file uploaded' });
+  if (!supabase) return res.status(500).json({ error: 'Supabase Storage not configured' });
+
+  try {
+    const filePath = `courses/${course_id || 'general'}/preview_${Date.now()}.${file.originalname.split('.').pop()}`;
+
+    const { error } = await supabase.storage.from('course-media').upload(filePath, file.buffer, {
+      contentType: file.mimetype, upsert: true
+    });
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage.from('course-media').getPublicUrl(filePath);
+    const publicUrl = urlData.publicUrl;
+
+    // Update course image in DB
+    if (course_id && !isNaN(course_id)) {
+      try {
+        await pool.query('UPDATE courses SET image = $1, updated_at = NOW() WHERE id = $2', [publicUrl, course_id]);
+      } catch (e) {}
+    }
+
+    res.json({ url: publicUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Upload failed', detail: err.message });
   }
 });
 
