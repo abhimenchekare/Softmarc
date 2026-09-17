@@ -349,7 +349,7 @@ function toggleSidebar(open){ sidebar.classList.toggle('open', open); scrim.clas
 if(menuToggle) menuToggle.addEventListener('click', ()=>toggleSidebar(!sidebar.classList.contains('open')));
 if(scrim) scrim.addEventListener('click', ()=>toggleSidebar(false));
 
-// Courses - REAL PROGRESS TRACKING (Supabase)
+// Courses - REAL PROGRESS TRACKING (Database)
 const API_HOST = '/api';
 const COURSE_DEFS = [
   { name: 'CATIA V5 Part Design', tag: 'Part Design', modules: 12, hours: 18 },
@@ -367,7 +367,7 @@ if(window.SoftmarcContent){
 async function loadDashboard(){
   const container = document.getElementById('continueCourses');
   const statsEl = document.getElementById('statsCards');
-  container.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-500);font-size:13px;">Loading real progress from Supabase...</div>`;
+  container.innerHTML = `<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-500);font-size:13px;">Loading progress...</div>`;
   
   let progressMap = new Map(); // course_name -> Set(module_index)
   let useRealDB = true;
@@ -381,7 +381,7 @@ async function loadDashboard(){
       if(!progressMap.has(r.course_name)) progressMap.set(r.course_name, new Set());
       progressMap.get(r.course_name).add(r.module_index);
     });
-    console.log(`[Dashboard] Real progress loaded: ${rows.length} completed modules from Supabase`);
+    console.log(`[Dashboard] Real progress loaded: ${rows.length} completed modules from database`);
     if(rows.length===0){
       // Check if table missing
       console.log('No real progress yet - user needs to complete lessons. Run lesson_progress_migration.sql if table missing');
@@ -422,7 +422,7 @@ async function loadDashboard(){
           <div class="course-thumb" style="background-image:url('${course.image || (window.SoftmarcContent && SoftmarcContent.defaultImage(course.name, course.tag))}')"></div>
           <div class="course-head">
             <div class="course-tag ${tagClass}">${course.tag}</div>
-            <div class="course-dot ${dotClass}" title="${useRealDB?'Real Supabase progress':'Local cache'}"></div>
+            <div class="course-dot ${dotClass}" title="${useRealDB?'Database progress':'Local cache'}"></div>
           </div>
           <h3>${course.name}</h3>
           <div class="progress-wrap"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div></div>
@@ -443,7 +443,7 @@ async function loadDashboard(){
       </div>
       <div class="stat-label">Courses enrolled</div>
       <div class="stat-value">${totalCourses}</div>
-      <div class="stat-meta"><span class="badge-trend neutral">${completedCount} certified</span><span>· ${useRealDB?'Supabase':'Cache'}</span></div>
+      <div class="stat-meta"><span class="badge-trend neutral">${completedCount} certified</span><span>· ${useRealDB?'Synced':'Cache'}</span></div>
     </div>
     <div class="stat-card">
       <div class="stat-top">
@@ -480,5 +480,5 @@ function viewCert(){ window.location.href='certificates.html'; }
 loadDashboard();
 </script>
 <script src="softmarc-common.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c9815769603fa9',t:'MTc4OTY2MjcyOA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

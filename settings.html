@@ -207,7 +207,7 @@ a{text-decoration:none;color:inherit;}
   <div class="content">
     <div class="header">
       <h1>Settings</h1>
-      <p>Professional workspace controls for your Softmarc account. Every tab is keyboard accessible, screen-reader friendly, and fully functional with Supabase.</p>
+      <p>Professional workspace controls for your Softmarc account. Every tab is keyboard accessible, screen-reader friendly, and fully functional.</p>
     </div>
 
     <div class="settings-shell">
@@ -277,7 +277,7 @@ a{text-decoration:none;color:inherit;}
         <!-- Danger -->
         <div class="panel" role="tabpanel" id="panel-danger" aria-labelledby="tab-danger" tabindex="0" hidden>
           <div class="panel-header"><h3 style="color:var(--danger);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Danger Zone</h3><p>Irreversible professional actions</p></div>
-          <div class="row"><div class="row-info"><h4>Delete account</h4><p>Permanently deletes from Supabase <code>users</code> table. All progress lost.</p></div><div class="row-action"><button class="btn btn-danger" id="deleteAccountBtn">Delete account</button></div></div>
+          <div class="row"><div class="row-info"><h4>Delete account</h4><p>Permanently deletes from the <code>users</code> table. All progress lost.</p></div><div class="row-action"><button class="btn btn-danger" id="deleteAccountBtn">Delete account</button></div></div>
           <div class="row"><div class="row-info"><h4>Clear local workspace</h4><p>Resets course progress and settings stored locally</p></div><div class="row-action"><button class="btn btn-secondary" id="clearLocalBtn">Clear local data</button></div></div>
         </div>
       </div>
@@ -409,7 +409,7 @@ document.getElementById('savePwd').addEventListener('click', async ()=>{
   try{
     const res=await fetch(`${API_HOST}/users.php/${_user.id}/password`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:cur,new_password:nw})});
     const data=await res.json(); if(!res.ok) throw new Error(data.error||'Failed');
-    showToast('✅ Password updated in Supabase','success');
+    showToast('✅ Password updated successfully','success');
     currentPwd.value=''; newPwd.value=''; confirmPwd.value='';
   }catch(err){pwdError.textContent=err.message; showToast(err.message,'error');}
   finally{btn.disabled=false; btn.textContent='Update password';}
@@ -433,5 +433,6 @@ document.getElementById('clearLocalBtn').addEventListener('click', ()=>{
 });
 </script>
 <script src="softmarc-common.js"></script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c98170281e3fa9',t:'MTc4OTY2MjczMg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

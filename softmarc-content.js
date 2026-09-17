@@ -7,7 +7,7 @@
   // =============================================================
 
   const KEY='softmarc_courses_v1';
-  const API_HOST='/api'; // Same origin on Vercel
+  const API_HOST=''; // Same origin on Vercel
   const API={};
 
   function slug(s){return String(s||'course').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||('course-'+Date.now());}
@@ -126,7 +126,7 @@
   API._fetchFromSupabase = function(courseData, defs){
     if(_fetchPromise) return _fetchPromise;
 
-    _fetchPromise = fetch(`${API_HOST}/courses.php`)
+    _fetchPromise = fetch(`${API_HOST}/api/courses`)
       .then(res => {
         if(!res.ok) throw new Error('API failed');
         return res.json();

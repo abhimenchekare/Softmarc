@@ -201,7 +201,7 @@ html[data-theme="dark"] .resource-complete-pill,body[data-theme="dark"] .resourc
         <video id="realVideoPlayer" class="video-player" controls></video>
         <div class="lesson-nav">
           <button class="btn btn-secondary" id="prevBtn">← Prev subtopic</button>
-          <button class="btn btn-secondary" id="markDoneBtn">✓ Mark done (Supabase)</button>
+          <button class="btn btn-secondary" id="markDoneBtn">✓ Mark done</button>
           <button class="btn btn-primary" id="nextBtn">Next subtopic →</button>
         </div>
       </div>
@@ -445,7 +445,7 @@ function openResource(type){
     const view=document.getElementById('exView');
     view.classList.add('active');
     document.getElementById('exViewTitle').textContent = currentMod.title + ' — Exercise';
-    document.getElementById('exContent').innerHTML = `<strong>${currentMod.title}</strong><br><br>${currentMod.exercise}<br><br><em>Mark as done after completing in CATIA V5 for real Supabase tracking.</em>`;
+    document.getElementById('exContent').innerHTML = `<strong>${currentMod.title}</strong><br><br>${currentMod.exercise}<br><br><em>Mark as done after completing in CATIA V5.</em>`;
   }
 }
 
@@ -478,5 +478,5 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
 });
 </script>
 <script src="softmarc-common.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c981883d603fa9',t:'MTc4OTY2MjczNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

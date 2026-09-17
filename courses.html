@@ -190,7 +190,7 @@ a{text-decoration:none;color:inherit;}
     <!-- Subtopic view -->
     <div id="subtopicView" style="display:none;">
       <div class="subtopic-header">
-        <div><h2 id="subCourseTitle">CATIA V5 Part Design</h2><p id="subCourseMeta">12 modules · Real Supabase progress · Click Video to play your uploaded video</p></div>
+        <div><h2 id="subCourseTitle">CATIA V5 Part Design</h2><p id="subCourseMeta">12 modules · Progress synced · Click Video to play your uploaded video</p></div>
         <button class="btn btn-secondary" onclick="showMainView()">← Back to courses</button>
       </div>
       <div class="subtopic-list" id="subtopicList"></div>
@@ -337,7 +337,7 @@ let progressMap = new Map();
 // Main view - courses grid with real progress
 async function renderCoursesReal(){
   const grid = document.getElementById('coursesGrid');
-  grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading real progress from Supabase...</div>';
+  grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';
   progressMap = new Map();
   try{
     const res = await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);
@@ -397,7 +397,7 @@ function openSubtopics(courseName){
         <div class="sub-num ${isDone?'done':''}">${isDone?'✓':idx+1}</div>
         <div class="sub-info">
           <h4>${mod.title}</h4>
-          <div class="sub-meta">${mod.dur} · Subtopic ${idx+1} · ${isDone?'Completed in Supabase':'Click to open resource window'}</div>
+          <div class="sub-meta">${mod.dur} · Subtopic ${idx+1} · ${isDone?'Completed':'Click to open resource window'}</div>
         </div>
         <div class="sub-actions">
           <button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="event.stopPropagation(); openSubtopicWindow('${courseName}', ${idx})">Open →</button>
@@ -457,5 +457,6 @@ document.querySelectorAll('.tab').forEach(tab=>{
 function openLesson(course, module){ window.location.href = `lesson.html?course=${encodeURIComponent(course)}&module=${module}`; }
 </script>
 <script src="softmarc-common.js"></script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c981bcdaa13fa9',t:'MTc4OTY2Mjc0NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

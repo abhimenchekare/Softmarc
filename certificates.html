@@ -175,7 +175,7 @@ const _mt = document.getElementById('menuToggle');
 if(_mt){ _mt.addEventListener('click', ()=>{ _sb.classList.toggle('open'); _sc.classList.toggle('show'); }); }
 if(_sc){ _sc.addEventListener('click', ()=>{ _sb.classList.remove('open'); _sc.classList.remove('show'); }); }
 
-// Real progress - Certificates from Supabase
+// Real progress - Certificates from Database
 const API_HOST = '/api';
 const COURSE_DEFS = [
   { name: 'CATIA V5 Part Design', tag: 'Part Design', modules: 12, hours: 18, banner: '🏆', code: 'CPD' },
@@ -192,7 +192,7 @@ if(window.SoftmarcContent){
 
 async function renderCertificatesReal(){
   const container = document.getElementById('certContainer');
-  container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-600);">Loading real certificates from Supabase...</div>';
+  container.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-600);">Loading certificates...</div>';
   
   let progressMap = new Map();
   let useReal = true;
@@ -222,17 +222,17 @@ async function renderCertificatesReal(){
 
   if (completedCourses.length === 0) {
     container.innerHTML = `
-      <p style="color:var(--text-600);margin-bottom:22px;font-size:14.5px;">You have not earned any certificates yet. ${useReal?'Real Supabase tracking':'Local cache'} – complete 100% of modules to unlock.</p>
+      <p style="color:var(--text-600);margin-bottom:22px;font-size:14.5px;">You have not earned any certificates yet. ${useReal?'Database tracking':'Local cache'} – complete 100% of modules to unlock.</p>
       <div style="background:var(--surface);border-radius:var(--radius-md);box-shadow:0 4px 18px rgba(10,40,80,.06);padding:40px;text-align:center;">
         <h3 style="font-size:18px;margin-bottom:8px;">No Certifications Found</h3>
-        <p style="color:var(--text-600);margin-bottom:20px;">Complete 100% of any course's modules in lesson player to unlock your certificate here. Progress is now tracked in Supabase <code>lesson_progress</code> table.</p>
+        <p style="color:var(--text-600);margin-bottom:20px;">Complete 100% of any course's modules in lesson player to unlock your certificate here. Progress is tracked in the <code>lesson_progress</code> table.</p>
         <button class="btn btn-primary" onclick="window.location.href='courses.html'">Go to My Courses</button>
       </div>`;
     return;
   }
 
   let html = `
-    <p style="color:var(--text-600);margin-bottom:22px;font-size:14.5px;">You have earned <strong>${completedCourses.length} certificates</strong> ${useReal?'(Real Supabase)':''}. Download or share them below.</p>
+    <p style="color:var(--text-600);margin-bottom:22px;font-size:14.5px;">You have earned <strong>${completedCourses.length} certificates</strong> ${useReal?'(Database synced)':''}. Download or share them below.</p>
     <div class="cert-grid">`;
 
   completedCourses.forEach(course => {
@@ -246,7 +246,7 @@ async function renderCertificatesReal(){
             <button class="btn btn-primary" style="flex:1" onclick="window.location.href='view_certificate.html?course=' + encodeURIComponent('${course.name}') + '&id=SM-2026-${course.code}-0041'">View / Print</button>
             <button class="btn btn-outline" style="flex:1" onclick="navigator.clipboard.writeText(window.location.origin+'/view_certificate.html?course='+encodeURIComponent('${course.name}')); alert('Share link copied!')">Share</button>
           </div>
-          <div class="cert-id">ID: SM-2026-${course.code}-0041 · Supabase verified</div>
+          <div class="cert-id">ID: SM-2026-${course.code}-0041 · Verified</div>
         </div>
       </div>`;
   });
@@ -257,5 +257,6 @@ async function renderCertificatesReal(){
 renderCertificatesReal();
 </script>
 <script src="softmarc-common.js"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3c981a5ede53fa9',t:'MTc4OTY2Mjc0MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
