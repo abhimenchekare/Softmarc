@@ -590,24 +590,41 @@ app.delete('/api/progress', async (req, res) => {
 // FILE UPLOAD
 // =============================================================
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 200 * 1024 * 1024 } });
+const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB) || 1024; // default 1 GB
+const pickFolder = type => (type === 'video' ? 'videos' : type === 'pdf' ? 'pdfs' : 'images');
 
-app.post('/api/upload', upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  
-  const type = req.body.type || 'image';
-  const folder = type === 'video' ? 'videos' : type === 'pdf' ? 'pdfs' : 'images';
-  const timestamp = Date.now();
-  const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const filePath = `${folder}/${timestamp}_${safeName}`;
-  const fullPath = path.join(DATA_DIR, filePath);
-  
-  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-  fs.writeFileSync(fullPath, req.file.buffer);
-  
-  const url = `${req.protocol}://${req.get('host')}/${filePath}`;
-  res.json({ url, path: filePath, size: req.file.size });
+// Stream uploads straight to disk (no whole-file RAM buffering) —
+// this is what makes multi-hundred-MB videos safe on shared hosting.
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = path.join(DATA_DIR, pickFolder(req.body.type));
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '');
+    cb(null, `${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safe || 'file'}`);
+  }
+});
+const upload = multer({ storage, limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024 } });
+
+app.post('/api/upload', (req, res) => {
+  upload.single('file')(req, res, err => {
+    if (err) {
+      const tooBig = err.code === 'LIMIT_FILE_SIZE';
+      // never leave partial files behind on failed uploads
+      try { if (req.file && req.file.path) fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(tooBig ? 413 : 400).json({
+        error: tooBig
+          ? `File is larger than the ${MAX_UPLOAD_MB} MB limit. Tip: compress it (HandBrake) or place it via File Manager in data/videos/, then type the path here.`
+          : ('Upload failed: ' + (err.message || 'bad request'))
+      });
+    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const filePath = `${pickFolder(req.body.type)}/${req.file.filename}`;
+    const url = `${req.protocol}://${req.get('host')}/${filePath}`;
+    res.json({ url, path: filePath, size: req.file.size });
+  });
 });
 
 // =============================================================
