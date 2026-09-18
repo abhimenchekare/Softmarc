@@ -29,6 +29,21 @@ for (const sub of ['videos','pdfs','images']) {
 }
 console.log('[Storage] Persistent file dir:', DATA_DIR);
 
+// =============================================================
+// SECURITY — never serve backend/config files over HTTP
+// (express.static would happily expose server.js, *.sql, .env…)
+// =============================================================
+app.use((req, res, next) => {
+  const p = (req.path || '').split('/').pop().toLowerCase();
+  const blocked =
+    ['server.js','server-local.js','seed.js','index.js','package.json','package-lock.json','.gitignore','.npmrc','.htaccess']
+      .includes(p)
+    || p.endsWith('.sql') || p.endsWith('.log') || p.endsWith('.sh') || p.endsWith('.bat')
+    || p.startsWith('.env');
+  if (blocked) return res.status(403).send('Forbidden');
+  next();
+});
+
 app.use('/videos', express.static(path.join(DATA_DIR, 'videos')), express.static(path.join(__dirname, 'videos')));
 app.use('/pdfs', express.static(path.join(DATA_DIR, 'pdfs')));
 app.use('/images', express.static(path.join(DATA_DIR, 'images')));
