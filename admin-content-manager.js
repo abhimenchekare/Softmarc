@@ -6,6 +6,7 @@
   const esc = s => String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const getCourses = () => SoftmarcContent.getCourses();
   let selectedCourseId = null;
+  let creatingNewCourse = false;
   let selectedSubtopicId = null;
   let activeContentTab = 'topics';
 
@@ -103,6 +104,7 @@
   let selectedSubtopicDatabaseId = null;
 
   function selectedCourse(){
+    if(creatingNewCourse) return null;
     const cs=getCoursesForAdmin();
     if(!selectedCourseId && cs[0]) { selectedCourseId=cs[0].id; selectedCourseDatabaseId=cs[0]._database_id; }
     const c = cs.find(c=>c.id===selectedCourseId) || cs[0] || null;
@@ -181,8 +183,8 @@
     const el=$('cmPanelTopics'); if(!el) return;
     const cs=getCoursesForAdmin(); const c=selectedCourse();
     el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmNewCourseTop">+ Add Main Topic</button><button class="cm-btn" id="cmSaveCourseTop">Save Main Topic</button><button class="cm-btn" id="cmRefreshFromDb">Refresh from Database</button></div><div class="cm-grid"><div class="cm-card"><h3>Main Topics / Courses</h3><div class="cm-list">'+(cs.map(x=>'<div class="cm-item '+(x.id===selectedCourseId?'active':'')+'" data-course="'+esc(x.id)+'"><div class="cm-thumb" style="background-image:url(\''+esc(x.image)+'\')"></div><div><strong>'+esc(x.title)+'</strong><span>'+esc(x.tag)+' - '+(x.subtopics||[]).length+' subtopics - '+x.duration_hours+' hrs '+(x._database_id?'Synced':'Local')+'</span></div></div>').join('')||'<p class="cm-help">No courses yet. Click "+ Add Main Topic" to create one.</p>')+'</div></div><div class="cm-card"><h3>'+(c ? 'Edit' : 'Add New')+' Main Topic</h3><div class="cm-preview" id="cmPreview" style="background-image:url(\''+esc(c?.image||'')+'\')"></div><div class="cm-two"><div class="cm-field"><label>Topic title</label><input id="cmTitle" value="'+esc(c?.title||'')+'" placeholder="Enter topic title"></div><div class="cm-field"><label>Tag / category</label><input id="cmTag" value="'+esc(c?.tag||'')+'" placeholder="e.g. CATIA, CAD"></div></div><div class="cm-two"><div class="cm-field"><label>Duration hours</label><input id="cmHours" type="number" value="'+esc(c?.duration_hours||10)+'"></div><div class="cm-field"><label>Level</label><select id="cmLevel"><option '+(c?.level==='Beginner'?'selected':'')+'>Beginner</option><option '+(c?.level==='Intermediate'?'selected':'')+'>Intermediate</option><option '+(c?.level==='Advanced'?'selected':'')+'>Advanced</option></select></div></div><div class="cm-field"><label>Course description</label><textarea id="cmDesc" placeholder="Brief description">'+esc(c?.short_description||'')+'</textarea></div><div class="cm-field"><label>Preview image URL</label><input id="cmImage" value="'+esc(c?.image||'')+'" placeholder="Paste image URL"></div><div class="cm-field"><label>Upload preview image</label><input id="cmImageFile" type="file" accept="image/*"></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveCourse">Save to Database</button><button class="cm-btn danger" id="cmDeleteCourse">Delete from Database</button></div><p class="cm-help">This saves to Database so ALL students see it.</p></div></div>';
-    el.querySelectorAll('[data-course]').forEach(i=>i.onclick=()=>{selectedCourseId=i.dataset.course; selectedSubtopicId=null; renderAll();});
-    const newCourse=()=>{selectedCourseId=null; selectedCourseDatabaseId=null; renderTopics(); setTimeout(()=>$('cmTitle')&&$('cmTitle').focus(),0);};
+    el.querySelectorAll('[data-course]').forEach(i=>i.onclick=()=>{creatingNewCourse=false; selectedCourseId=i.dataset.course; selectedSubtopicId=null; renderAll();});
+    const newCourse=()=>{creatingNewCourse=true; selectedCourseId=null; selectedCourseDatabaseId=null; selectedSubtopicId=null; renderAll(); setTimeout(()=>$('cmTitle')&&$('cmTitle').focus(),0);};
     $('cmNewCourseTop').onclick=newCourse;
     $('cmSaveCourseTop').onclick=saveCourse;
     $('cmRefreshFromDb').onclick=async()=>{showStatus('Refreshing...'); await loadDatabaseCourses(); await renderAll(); showStatus('Refreshed!');};
@@ -206,12 +208,14 @@
     };
     try {
       showStatus('Saving to Database...');
-      if(selectedCourseDatabaseId){
+      if(!creatingNewCourse && selectedCourseDatabaseId){
         await dbUpdateCourse(selectedCourseDatabaseId, fields);
         showStatus('Course updated in Database!');
       } else {
         const result = await dbCreateCourse(fields);
+        creatingNewCourse = false;
         selectedCourseDatabaseId = result.id;
+        selectedCourseId = result.slug || SoftmarcContent.slug(fields.title);
         showStatus('New course created in Database!');
       }
       await renderAll();
@@ -242,7 +246,7 @@
     const el=$('cmPanelSubtopics'); if(!el) return;
     const c=selectedCourse();
     el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmAddSubtopicTop">+ Add Subtopic</button><button class="cm-btn danger" id="cmDeleteSubtopicTop">Delete Selected Subtopic</button></div><div class="cm-grid"><div class="cm-card"><h3>Select Main Topic</h3><div class="cm-field"><label>Course</label><select id="cmSubCourseSelect">'+courseOptions()+'</select></div><div class="cm-list">'+((c?.subtopics||[]).map((s,i)=>'<div class="cm-item '+(s.id===selectedSubtopicId?'active':'')+'" data-sub="'+esc(s.id)+'"><div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--surface);border:1px solid var(--border);font-weight:900">'+(i+1)+'</div><div><strong>'+esc(s.title)+'</strong><span>'+esc(s.dur||'15 min')+' - '+esc(s.description||'No description')+' '+(s._database_id?'Synced':'Local')+'</span></div></div>').join('')||'<p class="cm-help">No subtopics yet.</p>')+'</div></div><div class="cm-card"><h3>Add Subtopic</h3><div class="cm-field"><label>Subtopic title</label><input id="cmSubTitle" placeholder="Enter subtopic title"></div><div class="cm-two"><div class="cm-field"><label>Duration</label><input id="cmSubDur" placeholder="20 min"></div><div class="cm-field"><label>Display order</label><input id="cmSubOrder" type="number" value="'+((c?.subtopics||[]).length+1)+'"></div></div><div class="cm-field"><label>Subtopic description</label><textarea id="cmSubDesc" placeholder="Brief description"></textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmAddSubtopic">Add to Database</button><button class="cm-btn danger" id="cmDeleteSubtopic">Delete from Database</button></div></div></div>';
-    $('cmSubCourseSelect').onchange=e=>{selectedCourseId=e.target.value;selectedSubtopicId=null;selectedSubtopicDatabaseId=null;renderAll();};
+    $('cmSubCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;selectedSubtopicDatabaseId=null;renderAll();};
     el.querySelectorAll('[data-sub]').forEach(i=>i.onclick=()=>{selectedSubtopicId=i.dataset.sub; selectedSubtopicDatabaseId=null; renderAll();});
     $('cmAddSubtopicTop').onclick=()=>{ if($('cmSubTitle') && $('cmSubTitle').value.trim()) addSubtopic(); else $('cmSubTitle')&&$('cmSubTitle').focus(); };
     $('cmDeleteSubtopicTop').onclick=deleteSubtopic;
@@ -292,7 +296,7 @@
     const el=$('cmPanelResources'); if(!el) return;
     const c=selectedCourse(); const st=selectedSubtopic();
     el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">Save PDF</button><button class="cm-btn primary" id="cmSaveExerciseTop">Save Exercise</button></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box"><b>Video</b><span>'+esc(st.videoUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>PDF</b><span>'+esc(st.pdfUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>Exercise</b><span>'+(st.exercise?'Added':'Not added')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"></div><div class="cm-field"><label>PDF URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdf/notes.pdf"></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">Save Video</button><button class="cm-btn primary" id="cmSavePdf">Save PDF</button><button class="cm-btn primary" id="cmSaveExercise">Save Exercise</button></div>':'<p class="cm-help">Add/select a subtopic first.</p>')+'</div>';
-    $('cmResCourseSelect').onchange=e=>{selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
+    $('cmResCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
     const subSel=$('cmResSubSelect'); if(subSel) subSel.onchange=e=>{selectedSubtopicId=e.target.value;renderAll();};
     ['cmSaveVideoTop','cmSaveVideo'].forEach(id=>{const b=$(id); if(b) b.onclick=()=>saveResources('video');});
     ['cmSavePdfTop','cmSavePdf'].forEach(id=>{const b=$(id); if(b) b.onclick=()=>saveResources('pdf');});
