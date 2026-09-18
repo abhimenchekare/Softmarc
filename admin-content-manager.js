@@ -54,6 +54,21 @@
     return res.json();
   }
 
+  // Upload a file to the server (videos/ or pdfs/ or images/). Returns saved path.
+  async function uploadFile(kind, file){
+    const fd = new FormData();
+    fd.append('type', kind);
+    fd.append('file', file);
+    const res = await fetch(`${API_HOST}/upload`, { method:'POST', body: fd });
+    if(!res.ok){
+      let msg = 'Upload failed ('+res.status+')';
+      try{ const e = await res.json(); if(e && e.error) msg = e.error; }catch(_){ }
+      throw new Error(msg);
+    }
+    const data = await res.json();
+    return data.path; // relative, e.g. videos/1710000_name.mp4
+  }
+
   let databaseCourses = [];
   async function loadDatabaseCourses(){
     try{
@@ -188,7 +203,7 @@
     $('cmNewCourseTop').onclick=newCourse;
     $('cmSaveCourseTop').onclick=saveCourse;
     $('cmRefreshFromDb').onclick=async()=>{showStatus('Refreshing...'); await loadDatabaseCourses(); await renderAll(); showStatus('Refreshed!');};
-    $('cmImageFile').onchange=e=>{const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{$('cmImage').value=r.result; $('cmPreview').style.backgroundImage='url("'+r.result+'")'; showStatus('Image uploaded.');}; r.readAsDataURL(f);};
+    $('cmImageFile').onchange=async e=>{const f=e.target.files[0]; if(!f) return; try{ showStatus('Uploading image...'); const p=await uploadFile('image',f); $('cmImage').value=p; $('cmPreview').style.backgroundImage='url("'+p+'")'; showStatus('✅ Image uploaded: '+p);}catch(err){ showError('Image upload failed: '+err.message);} e.target.value='';};
     $('cmImage').oninput=e=>$('cmPreview').style.backgroundImage='url("'+e.target.value+'")';
     $('cmSaveCourse').onclick=saveCourse;
     $('cmDeleteCourse').onclick=deleteCourse;
@@ -295,8 +310,32 @@
   function renderResources(){
     const el=$('cmPanelResources'); if(!el) return;
     const c=selectedCourse(); const st=selectedSubtopic();
-    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">Save PDF</button><button class="cm-btn primary" id="cmSaveExerciseTop">Save Exercise</button></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box"><b>Video</b><span>'+esc(st.videoUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>PDF</b><span>'+esc(st.pdfUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>Exercise</b><span>'+(st.exercise?'Added':'Not added')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"></div><div class="cm-field"><label>PDF URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdf/notes.pdf"></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">Save Video</button><button class="cm-btn primary" id="cmSavePdf">Save PDF</button><button class="cm-btn primary" id="cmSaveExercise">Save Exercise</button></div>':'<p class="cm-help">Add/select a subtopic first.</p>')+'</div>';
+    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">Save PDF</button><button class="cm-btn primary" id="cmSaveExerciseTop">Save Exercise</button></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box"><b>Video</b><span>'+esc(st.videoUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>PDF</b><span>'+esc(st.pdfUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>Exercise</b><span>'+(st.exercise?'Added':'Not added')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"><div class="cm-upload-row" style="margin-top:8px"><div><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin-bottom:4px">Or upload video file (up to 200 MB)</label><input id="cmVideoFile" type="file" accept="video/*,.mp4,.webm,.ogg,.mov"></div></div></div><div class="cm-field"><label>PDF URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdfs/notes.pdf"><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin:8px 0 4px">Or upload PDF file</label><input id="cmPdfFile" type="file" accept="application/pdf,.pdf"></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">Save Video</button><button class="cm-btn primary" id="cmSavePdf">Save PDF</button><button class="cm-btn primary" id="cmSaveExercise">Save Exercise</button></div>':'<p class="cm-help">Add/select a subtopic first.</p>')+'</div>';
     $('cmResCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
+    const vf=$('cmVideoFile');
+    if(vf) vf.onchange=async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      try{
+        showStatus('Uploading video ('+Math.round(f.size/1048576)+' MB)... this can take a while...');
+        const p=await uploadFile('video',f);
+        $('cmVideoUrl').value=p;
+        await saveResources('video');
+        showStatus('✅ Video uploaded & saved to this subtopic!');
+      }catch(err){ showError('Video upload failed: '+err.message); }
+      e.target.value='';
+    };
+    const pf=$('cmPdfFile');
+    if(pf) pf.onchange=async e=>{
+      const f=e.target.files[0]; if(!f) return;
+      try{
+        showStatus('Uploading PDF...');
+        const p=await uploadFile('pdf',f);
+        $('cmPdfUrl').value=p;
+        await saveResources('pdf');
+        showStatus('✅ PDF uploaded & saved to this subtopic!');
+      }catch(err){ showError('PDF upload failed: '+err.message); }
+      e.target.value='';
+    };
     const subSel=$('cmResSubSelect'); if(subSel) subSel.onchange=e=>{selectedSubtopicId=e.target.value;renderAll();};
     ['cmSaveVideoTop','cmSaveVideo'].forEach(id=>{const b=$(id); if(b) b.onclick=()=>saveResources('video');});
     ['cmSavePdfTop','cmSavePdf'].forEach(id=>{const b=$(id); if(b) b.onclick=()=>saveResources('pdf');});
