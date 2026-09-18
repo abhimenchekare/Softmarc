@@ -69,6 +69,38 @@
     return data.path; // relative, e.g. videos/1710000_name.mp4
   }
 
+  // Upload state: kind -> Promise while in flight. Prevents the
+  // "clicked Save while still uploading -> everything disappears" race.
+  const uploading = {};
+
+  function startUpload(kind, urlInputId){
+    return e => {
+      const f = e.target.files[0];
+      if(!f) return;
+      const mb = Math.round((f.size/1048576)*10)/10;
+      const pr = (async()=>{
+        try{
+          showStatus('Uploading '+kind+' ('+mb+' MB)… keep this page open until it finishes…');
+          const p = await uploadFile(kind, f);
+          const inp = $(urlInputId); if(inp) inp.value = p;
+          if(kind==='image'){ const pv=$('cmPreview'); if(pv) pv.style.backgroundImage='url("'+p+'")'; }
+          if(kind==='video' || kind==='pdf'){
+            await saveResources(kind, p); // pass path directly — survives re-renders
+            showStatus('✅ '+kind.toUpperCase()+' uploaded & saved to this subtopic!');
+          } else {
+            showStatus('✅ Image uploaded — press "Save to Database" to apply it');
+          }
+        }catch(err){
+          showError(kind[0].toUpperCase()+kind.slice(1)+' failed: '+err.message);
+        }finally{
+          delete uploading[kind];
+          e.target.value='';
+        }
+      })();
+      uploading[kind] = pr;
+    };
+  }
+
   let databaseCourses = [];
   async function loadDatabaseCourses(){
     try{
@@ -203,7 +235,7 @@
     $('cmNewCourseTop').onclick=newCourse;
     $('cmSaveCourseTop').onclick=saveCourse;
     $('cmRefreshFromDb').onclick=async()=>{showStatus('Refreshing...'); await loadDatabaseCourses(); await renderAll(); showStatus('Refreshed!');};
-    $('cmImageFile').onchange=async e=>{const f=e.target.files[0]; if(!f) return; try{ showStatus('Uploading image...'); const p=await uploadFile('image',f); $('cmImage').value=p; $('cmPreview').style.backgroundImage='url("'+p+'")'; showStatus('✅ Image uploaded: '+p);}catch(err){ showError('Image upload failed: '+err.message);} e.target.value='';};
+    $('cmImageFile').onchange=startUpload('image','cmImage');
     $('cmImage').oninput=e=>$('cmPreview').style.backgroundImage='url("'+e.target.value+'")';
     $('cmSaveCourse').onclick=saveCourse;
     $('cmDeleteCourse').onclick=deleteCourse;
@@ -222,6 +254,7 @@
       display_order: getCoursesForAdmin().length
     };
     try {
+      if(uploading.image){ showStatus('⏳ Waiting for image upload to finish…'); try{ await uploading.image; }catch(e){} }
       showStatus('Saving to Database...');
       if(!creatingNewCourse && selectedCourseDatabaseId){
         await dbUpdateCourse(selectedCourseDatabaseId, fields);
@@ -312,43 +345,23 @@
     const c=selectedCourse(); const st=selectedSubtopic();
     el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">Save PDF</button><button class="cm-btn primary" id="cmSaveExerciseTop">Save Exercise</button></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box"><b>Video</b><span>'+esc(st.videoUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>PDF</b><span>'+esc(st.pdfUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>Exercise</b><span>'+(st.exercise?'Added':'Not added')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"><div class="cm-upload-row" style="margin-top:8px"><div><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin-bottom:4px">Or upload video file (up to 1 GB — needs a minute for big files, keep the page open)</label><input id="cmVideoFile" type="file" accept="video/*,.mp4,.webm,.ogg,.mov"></div></div></div><div class="cm-field"><label>PDF URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdfs/notes.pdf"><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin:8px 0 4px">Or upload PDF file (up to 1 GB)</label><input id="cmPdfFile" type="file" accept="application/pdf,.pdf"></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">Save Video</button><button class="cm-btn primary" id="cmSavePdf">Save PDF</button><button class="cm-btn primary" id="cmSaveExercise">Save Exercise</button></div>':'<p class="cm-help">Add/select a subtopic first.</p>')+'</div>';
     $('cmResCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
-    const vf=$('cmVideoFile');
-    if(vf) vf.onchange=async e=>{
-      const f=e.target.files[0]; if(!f) return;
-      try{
-        showStatus('Uploading video ('+Math.round(f.size/1048576)+' MB)... this can take a while...');
-        const p=await uploadFile('video',f);
-        $('cmVideoUrl').value=p;
-        await saveResources('video');
-        showStatus('✅ Video uploaded & saved to this subtopic!');
-      }catch(err){ showError('Video upload failed: '+err.message); }
-      e.target.value='';
-    };
-    const pf=$('cmPdfFile');
-    if(pf) pf.onchange=async e=>{
-      const f=e.target.files[0]; if(!f) return;
-      try{
-        showStatus('Uploading PDF...');
-        const p=await uploadFile('pdf',f);
-        $('cmPdfUrl').value=p;
-        await saveResources('pdf');
-        showStatus('✅ PDF uploaded & saved to this subtopic!');
-      }catch(err){ showError('PDF upload failed: '+err.message); }
-      e.target.value='';
-    };
+    const vf=$('cmVideoFile'); if(vf) vf.onchange=startUpload('video','cmVideoUrl');
+    const pf=$('cmPdfFile'); if(pf) pf.onchange=startUpload('pdf','cmPdfUrl');
     const subSel=$('cmResSubSelect'); if(subSel) subSel.onchange=e=>{selectedSubtopicId=e.target.value;renderAll();};
     ['cmSaveVideoTop','cmSaveVideo'].forEach(id=>{const b=$(id); if(b) b.onclick=()=>saveResources('video');});
     ['cmSavePdfTop','cmSavePdf'].forEach(id=>{const b=$(id); if(b) b.onclick=()=>saveResources('pdf');});
     ['cmSaveExerciseTop','cmSaveExercise'].forEach(id=>{const b=$(id); if(b) b.onclick=()=>saveResources('exercise');});
   }
 
-  async function saveResources(type){
+  async function saveResources(type, forcedVal){
     const st=selectedSubtopic();
     if(!st) return alert('Select a subtopic first');
+    if(type!=='exercise' && uploading[type]){ showStatus('⏳ '+type+' upload is still running — it will auto-save the moment it finishes. No need to press Save.'); return; }
     const fields = {};
-    if(type==='video') fields.video_url = $('cmVideoUrl').value.trim();
-    if(type==='pdf') fields.pdf_url = $('cmPdfUrl').value.trim();
-    if(type==='exercise') fields.exercise = $('cmExercise').value.trim();
+    const readVal = id => { const el=$(id); return el ? el.value.trim() : ''; };
+    if(type==='video') fields.video_url = (forcedVal !== undefined ? forcedVal : readVal('cmVideoUrl'));
+    if(type==='pdf') fields.pdf_url = (forcedVal !== undefined ? forcedVal : readVal('cmPdfUrl'));
+    if(type==='exercise') fields.exercise = readVal('cmExercise');
     try {
       showStatus('Saving...');
       if(st._database_id){
