@@ -12,6 +12,26 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// =============================================================
+// PERSISTENT FILE STORAGE (survives redeploys!)
+// Hostinger "hbuilds" runs the app from versions/<uuid>/nodejs --
+// that folder is replaced on every deploy. So uploads are stored
+// OUTSIDE it at domains/<site>/data/ (auto-detected; overridable
+// with DATA_DIR env var). Locally it just uses ./data
+// =============================================================
+const isHBuild = __dirname.includes(path.sep + 'hbuilds' + path.sep);
+const DATA_DIR = process.env.DATA_DIR || (isHBuild
+  ? path.resolve(__dirname, '../../../../data')
+  : path.join(__dirname, 'data'));
+for (const sub of ['videos','pdfs','images']) {
+  try { fs.mkdirSync(path.join(DATA_DIR, sub), { recursive: true }); } catch(e){ console.error('[Storage] mkdir failed:', e.message); }
+}
+console.log('[Storage] Persistent file dir:', DATA_DIR);
+
+app.use('/videos', express.static(path.join(DATA_DIR, 'videos')), express.static(path.join(__dirname, 'videos')));
+app.use('/pdfs', express.static(path.join(DATA_DIR, 'pdfs')));
+app.use('/images', express.static(path.join(DATA_DIR, 'images')));
 app.use(express.static(__dirname));
 
 // =============================================================
@@ -581,7 +601,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   const timestamp = Date.now();
   const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
   const filePath = `${folder}/${timestamp}_${safeName}`;
-  const fullPath = path.join(__dirname, filePath);
+  const fullPath = path.join(DATA_DIR, filePath);
   
   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
   fs.writeFileSync(fullPath, req.file.buffer);
