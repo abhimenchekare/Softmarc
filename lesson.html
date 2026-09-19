@@ -1170,6 +1170,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function $(id){return document.getElementById(id);}
   if(typeof modules==='undefined'||!modules||!modules.length)return;
   var doc=null,pageNum=1,totalPages=0,scale=1,rot=0,maxSeen=0,fitMode='width',busy=false,tok=0,bound=false;
+  var renderTask=null,lastRenderErr=false;
   function req(){return (window.LP&&window.LP.cfg&&window.LP.cfg.pdf_req_pct)||90;}
   function toast(m,t){try{showToast(m,t||'');}catch(e){console.log('[PV]',m);}}
   function cur(){return (typeof currentMod!=='undefined'&&currentMod)||{};}
@@ -1282,20 +1283,35 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function loadSaved(){try{return JSON.parse(localStorage.getItem('lp_pdf_'+gkey())||'null');}catch(e){return null;}}
 
   async function renderPage(n){
-    if(!doc)return; busy=true;
+    if(!doc)return;
+    /* one render at a time on the main canvas — cancel any in-flight task first */
+    if(renderTask){ try{ renderTask.cancel(); }catch(e){} renderTask=null; }
+    busy=true;
     if(n)pageNum=Math.max(1,Math.min(totalPages,Math.round(n)));
     maxSeen=Math.max(maxSeen,pageNum);
+    var pg=null,task=null;
     try{
-      var pg=await doc.getPage(pageNum);
+      pg=await doc.getPage(pageNum);
+      if(renderTask)return; /* superseded while we awaited the page */
       var vp=pg.getViewport({scale:scale,rotation:(((pg.rotate||0)+rot)%360+360)%360});
       var c=$('pvCanvas');
       var dpr=Math.min(2,window.devicePixelRatio||1);
       c.width=Math.floor(vp.width*dpr); c.height=Math.floor(vp.height*dpr);
       c.style.width=Math.round(vp.width)+'px'; c.style.height=Math.round(vp.height)+'px';
       var ctx=null; try{ctx=c.getContext&&c.getContext('2d');}catch(e){}
-      if(ctx){ await pg.render({canvasContext:ctx,viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:undefined}).promise; }
+      if(ctx){
+        task=pg.render({canvasContext:ctx,viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:undefined});
+        renderTask=task;
+        try{ await task.promise; }
+        finally{ if(renderTask===task)renderTask=null; }
+      }
+      if(lastRenderErr){ lastRenderErr=false; clearStatus(); }
     }catch(e){
-      if(!/Not implemented/i.test(String(e&&e.message||e)))status('Page could not be rendered',String(e&&e.message||e));
+      var es=String((e&&e.name)||'')+' '+String((e&&e.message)||e);
+      if(/RenderingCancelled|cancel/i.test(es))return; /* superseded by a newer render — nothing to report */
+      if(/Not implemented/i.test(es))return;
+      lastRenderErr=true;
+      status('Page could not be rendered',es.replace(/^Error: /,''));
     }
     busy=false; syncUI(); save();
   }
@@ -1328,7 +1344,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
           b.onclick=function(){goPage(n);};
           box.appendChild(b);
           var ctx=null; try{ctx=c.getContext&&c.getContext('2d');}catch(e){}
-          if(ctx){ try{ pg.render({canvasContext:ctx,viewport:pg.getViewport({scale:sc,rotation:((pg.rotate||0)+rot)%360})}); }catch(e){} }
+          if(ctx){ try{ var tt=pg.render({canvasContext:ctx,viewport:pg.getViewport({scale:sc,rotation:((pg.rotate||0)+rot)%360})}); if(tt&&tt.promise&&tt.promise.catch)tt.promise.catch(function(){}); }catch(e){} }
         }).catch(function(){});
       })(n);
     }
@@ -1434,8 +1450,10 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
       else{var el=$('pvViewer');(el.requestFullscreen||el.webkitRequestFullscreen).call(el);}
     }catch(e){} };
-    ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){document.addEventListener(ev,function(){ if(doc&&fitMode==='width')applyFit(); });});
-    var rz; window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){ if(doc&&PV.classList.contains('active')&&fitMode==='width')applyFit(); },200);});
+    var rz;
+    function scheduleRefit(){ clearTimeout(rz); rz=setTimeout(function(){ if(doc&&PV.classList.contains('active')&&fitMode==='width')applyFit(); },220); }
+    ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){document.addEventListener(ev,scheduleRefit);});
+    window.addEventListener('resize',scheduleRefit);
     $('pvScroll').addEventListener('contextmenu',function(e){e.preventDefault();});
     $('pvGoBtn').onclick=function(){
       if(window.LP&&window.LP.stepDone(moduleIdx,'pdf'))return;
@@ -1792,5 +1810,5 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
 })();
 </script>
 <script src="softmarc-common.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3dadd08bba884b9',t:'MTc4OTg0NDc0Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
