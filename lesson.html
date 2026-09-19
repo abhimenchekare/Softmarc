@@ -336,6 +336,12 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
 #pvGoBtn.ready{background:var(--lv-green);border-color:var(--lv-green);box-shadow:0 8px 20px rgba(22,163,74,.28)}
 .pv-note{font-size:11px;color:var(--text-400);margin-top:7px;line-height:1.5}
 .pv-note.ok{color:var(--lv-green);font-weight:700}
+.pv-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none;z-index:3}
+.pv-viewer.ppt .pv-frame{display:block}
+.pv-viewer.ppt .pv-canvas-wrap{display:none}
+.pv-viewer.ppt .pv-scroll{background:#0F172A;padding:0;display:block}
+.pv-viewer.ppt .pv-rail{display:none}
+.pv-viewer.ppt .pv-status{display:none}
 #pvMarkBtn.pv-done{background:var(--lv-green);border-color:var(--lv-green);color:#fff;box-shadow:0 8px 20px rgba(22,163,74,.25)}
 @media (max-width:1180px){
   .pv-viewer .pv-rail{box-shadow:none}
@@ -570,6 +576,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
                 </div>
                 <div class="pv-scroll" id="pvScroll">
                   <div class="pv-canvas-wrap" id="pvWrap"><canvas id="pvCanvas"></canvas></div>
+                  <iframe id="pvFrame" class="pv-frame" title="Slides (view only)" loading="lazy" referrerpolicy="no-referrer"></iframe>
                   <div class="pv-status" id="pvStatus">
                     <div class="sp" id="pvSpin"></div>
                     <div class="t1" id="pvStatusT1">Loading document…</div>
@@ -593,7 +600,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
               <div class="lv-card lv-info">
                 <h3 id="pvInfoTitle">PDF Lesson</h3>
                 <div class="lv-chips">
-                  <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> <b>PDF</b></span>
+                  <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> <b id="pvKindChip">PDF</b></span>
                   <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> <b id="pvInfoOf">Lesson 1 of 1</b></span>
                   <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h9"/><path d="m16 21 5-5"/></svg> <b id="pvInfoSize">—</b></span>
                   <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5"/></svg> <b id="pvInfoRead">— min read</b></span>
@@ -1168,6 +1175,21 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function cur(){return (typeof currentMod!=='undefined'&&currentMod)||{};}
   function docUrl(){return (cur().pdfUrl||'').trim();}
   function gkey(){return encodeURIComponent(courseName)+'_'+moduleIdx;}
+  var pptMode=false, viewSecs=0, viewTimer=null, timeOk=false;
+  function minView(){var v=+window.PV_MIN_VIEW; return isFinite(v)&&v>=0?v:15;}
+  function fileKind(u){ u=String(u||'').split('?')[0].toLowerCase(); var mm=u.match(/\.([a-z0-9]+)$/); var e=mm?mm[1]:'';
+    if(e==='pdf')return 'pdf';
+    if(['ppt','pptx','pps','ppsx'].indexOf(e)>-1)return 'ppt';
+    if(['doc','docx','xls','xlsx','odp','odt'].indexOf(e)>-1)return 'office';
+    if(!e)return 'none';
+    return 'other'; }
+  function absUrl(u){ if(/^https?:\/\//i.test(u))return u; return location.origin+'/'+String(u).replace(/^\/+/,''); }
+  function setTools(on){ ['pvPrev','pvNext','pvZoomIn','pvZoomOut','pvFit','pvRot'].forEach(function(id){var b=$(id);if(b)b.disabled=!on;}); var rh=$('pvRailHide'); if(rh)rh.style.display=on?'':'none'; }
+  function startTimer(){ if(viewTimer)return; viewTimer=setInterval(function(){
+      if(!pptMode||!PV.classList.contains('active'))return;
+      try{ if(document.hidden)return; }catch(e){}
+      viewSecs++; if(!timeOk&&viewSecs>=minView())timeOk=true; syncUI();
+    },1000); }
   function ensureLib(){
     return new Promise(function(res,rej){
       if(window.pdfjsLib){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';}catch(e){} return res();}
@@ -1203,6 +1225,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     $('pvInfoOf').textContent='Lesson '+(moduleIdx+1)+' of '+modules.length;
     $('pvInfoCourse').textContent=courseName||'';
     $('pvInfoRead').textContent=readMinutes()+' min read';
+    var kd=$('pvKindChip'); if(kd){ var kk=fileKind(docUrl()); kd.textContent=(kk==='pdf'||kk==='none')?'PDF':(kk==='ppt'?'PowerPoint':(kk==='office'?'Office Document':'Document')); }
     var ul=$('pvObjList');
     if(ul){
       var objs=(window.LP&&window.LP.objectives)?window.LP.objectives():['Read the document fully','Note the key tools and settings','Apply it in the practice exercise'];
@@ -1216,11 +1239,13 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     }
   }
   function syncUI(){
-    var pct=totalPages?Math.min(100,Math.round(maxSeen/totalPages*100)):0;
     var doneStep=!!(window.LP&&window.LP.stepDone(moduleIdx,'pdf'));
-    $('pvPage').textContent=doc?(pageNum+' / '+totalPages):'— / —';
-    $('pvPrev').disabled=!(doc&&pageNum>1);
-    $('pvNext').disabled=!(doc&&pageNum<totalPages);
+    var pct=pptMode?(timeOk?100:Math.min(99,Math.round(viewSecs/Math.max(1,minView())*100))):(totalPages?Math.min(100,Math.round(maxSeen/totalPages*100)):0);
+    if(!pptMode){
+      $('pvPage').textContent=doc?(pageNum+' / '+totalPages):'— / —';
+      $('pvPrev').disabled=!(doc&&pageNum>1);
+      $('pvNext').disabled=!(doc&&pageNum<totalPages);
+    }
     $('pvZoomPct').textContent=Math.round(scale*100)+'%';
     $('pvBarFill').style.width=pct+'%';
     $('pvDocBarFill').style.width=pct+'%';
@@ -1230,12 +1255,16 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     if(doneStep){
       go.textContent='✓ PDF Completed'; go.className='lv-btn ready'; go.disabled=true;
       note.textContent=totalPages?('You read all '+totalPages+' pages — MCQ is now unlocked.'):''; note.className='pv-note ok';
-    }else if(doc&&totalPages&&maxSeen>=totalPages){
+    }else if(pptMode&&timeOk){
+      go.textContent='✓ Complete the slides'; go.className='lv-btn ready'; go.disabled=false;
+      note.textContent='Mark the deck complete to unlock the MCQ.'; note.className='pv-note';
+    }else if(!pptMode&&doc&&totalPages&&maxSeen>=totalPages){
       go.textContent='✓ Complete the PDF'; go.className='lv-btn ready'; go.disabled=false;
       note.textContent='You reached the last page — mark it complete to unlock the MCQ.'; note.className='pv-note';
     }else{
-      go.textContent='Continue Reading →'; go.className='lv-btn'; go.disabled=!doc;
-      note.textContent=doc?('Keep reading — reach page '+totalPages+' to unlock completion. (required: '+req()+'%)'):'Waiting for the document…';
+      go.textContent='Continue Reading →'; go.className='lv-btn'; go.disabled=!(pptMode||doc);
+      note.textContent=pptMode?('Keep the slides open — '+Math.max(0,minView()-viewSecs)+'s to go (view-only).')
+        :(doc?('Keep reading — reach page '+totalPages+' to unlock completion. (required: '+req()+'%)'):'Waiting for the document…');
       note.className='pv-note';
     }
     mk.innerHTML=doneStep?'✓ Completed':'✓ Mark as Complete';
@@ -1306,19 +1335,36 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   }
   async function loadDoc(){
     tok++; var myTok=tok;
-    doc=null; totalPages=0; pageNum=1; maxSeen=0; rot=0;
+    doc=null; totalPages=0; pageNum=1; maxSeen=0; rot=0; pptMode=false; viewSecs=0; timeOk=false;
+    try{ $('pvViewer').classList.remove('ppt'); }catch(e){}
+    try{ $('pvFrame').src='about:blank'; }catch(e){}
     $('pvThumbs').innerHTML='';
-    var url=docUrl();
     $('pvFileSize').textContent='—'; $('pvInfoSize').textContent='—';
-    if(!url){
-      status('PDF will appear here','Your trainer hasn\u2019t attached a document to this lesson yet. This step auto-completes when no PDF is required.',false);
-      syncUI(); return;
+    var url=docUrl(); var kind=fileKind(url);
+    if(kind==='none'){
+      status('Document will appear here','Your trainer hasn\u2019t attached a PDF or PowerPoint to this lesson yet. This step auto-completes when nothing is required.',false);
+      setTools(false); syncUI(); return;
     }
-    var nm=decodeURIComponent(url.split('/').pop().split('?')[0]).replace(/\.pdf$/i,'');
-    $('pvFileName').textContent=nm+'.pdf';
-    status('Loading document…','Rendering '+nm+'.pdf — view-only inside the portal.',true);
+    var nm=decodeURIComponent(url.split('/').pop().split('?')[0]);
+    $('pvFileName').textContent=nm;
+    $('pvInfoRead').textContent=readMinutes()+' min read';
+    try{ var r0=await fetch(url,{method:'HEAD'}); var n0=r0.headers&&r0.headers.get&&r0.headers.get('content-length'); if(n0&&myTok===tok){ var s0=fmtSize(+n0); $('pvFileSize').textContent=s0; $('pvInfoSize').textContent=s0; } }catch(e){}
+    if(kind==='ppt'||kind==='office'){
+      pptMode=true;
+      try{ $('pvViewer').classList.add('ppt'); }catch(e){}
+      setTools(false);
+      $('pvPage').textContent=(kind==='ppt'?'Slides · PowerPoint':'Slides · Office');
+      try{ $('pvFrame').src='https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(absUrl(url)); }catch(e){}
+      clearStatus(); startTimer(); syncUI(); return;
+    }
+    if(kind!=='pdf'){
+      status('This file type cannot be previewed','Only PDF and PowerPoint (PPT/PPTX) documents open inside the portal. Ask the trainer to re-save it as a PDF.',false);
+      setTools(false); syncUI(); return;
+    }
+    status('Loading document…','Rendering '+nm+' — view-only inside the portal.',true);
+    setTools(true);
     try{ await ensureLib(); }
-    catch(e){ status('Viewer could not start','The built-in reader (vendor/pdf.min.js) failed to load. Ask the admin to confirm the vendor/ folder was uploaded.',false); syncUI(); return; }
+    catch(e){ status('Viewer could not start','The PDF engine is missing on the server: upload vendor/pdf.min.js and vendor/pdf.worker.min.js into a vendor/ folder next to lesson.html, then redeploy.',false); syncUI(); return; }
     if(myTok!==tok)return;
     try{
       doc=await window.pdfjsLib.getDocument({url:encodeURI(url),isEvalSupported:false}).promise;
@@ -1331,25 +1377,22 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     var saved=loadSaved();
     var start=(saved&&saved.p>1&&saved.p<=totalPages)?saved.p:1;
     maxSeen=(saved&&saved.m)?Math.max(saved.m,start):start;
-    $('pvInfoRead').textContent=readMinutes()+' min read';
+    $('pvPage').textContent='1 / '+totalPages;
     try{ $('pvScroll').scrollTop=0; }catch(e){}
     await applyFit();
     if(myTok!==tok)return;
     if(start>1)await renderPage(start);
     buildThumbs(myTok);
     clearStatus(); syncUI();
-    try{
-      var r=await fetch(url,{method:'HEAD'});
-      var n=r.headers&&r.headers.get&&r.headers.get('content-length');
-      if(n&&myTok===tok){ var s=fmtSize(+n); $('pvFileSize').textContent=s; $('pvInfoSize').textContent=s; }
-    }catch(e){}
-    if(doc&&doc._pdfInfo&&doc._pdfInfo.numPages!==undefined&&totalPages!==doc._pdfInfo.numPages){totalPages=doc._pdfInfo.numPages;syncUI();}
   }
-
   function markComplete(){
     if(window.LP&&window.LP.stepDone(moduleIdx,'pdf'))return;
-    if(!doc){toast('Load the document first.');return;}
-    if(maxSeen<totalPages){toast('🔒 Read to the last page first — you\u2019re on page '+maxSeen+' of '+totalPages+'.');return;}
+    if(pptMode){
+      if(!timeOk){toast('🔒 Spend at least '+minView()+' seconds with the slides before completing.');return;}
+    }else{
+      if(!doc){toast('Load the document first.');return;}
+      if(maxSeen<totalPages){toast('🔒 Read to the last page first — you\u2019re on page '+maxSeen+' of '+totalPages+'.');return;}
+    }
     if(window.LP){ window.LP.complete('pdf',100); }
     else if(typeof saveProgress==='function'){ saveProgress(moduleIdx); }
     syncUI();
@@ -1396,6 +1439,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     $('pvScroll').addEventListener('contextmenu',function(e){e.preventDefault();});
     $('pvGoBtn').onclick=function(){
       if(window.LP&&window.LP.stepDone(moduleIdx,'pdf'))return;
+      if(pptMode){ markComplete(); return; }
       if(doc&&totalPages&&maxSeen>=totalPages){ markComplete(); }
       else if(doc){ goPage(Math.min(totalPages,(maxSeen||0)+1)); }
     };
@@ -1748,5 +1792,5 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
 })();
 </script>
 <script src="softmarc-common.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3da8d3a5fcf4713',t:'MTc4OTg0MTQ3Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
