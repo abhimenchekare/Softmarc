@@ -643,13 +643,125 @@ app.post('/api/upload', (req, res) => {
 });
 
 // =============================================================
+// LESSON STEPS — sequential unlock (video → pdf → mcq → ex)
+// Enforces the learning order server-side, not just in CSS.
+// =============================================================
+const STEP_ORDER = ['video', 'pdf', 'mcq', 'ex'];
+const STEP_CONFIG_FILE = path.join(DATA_DIR, 'lesson_config.json');
+
+function readStepConfig() {
+  let c = {};
+  try { c = JSON.parse(fs.readFileSync(STEP_CONFIG_FILE, 'utf8')); } catch (e) {}
+  const clamp = (v, d) => { v = parseInt(v, 10); return (isFinite(v) && v >= 50 && v <= 100) ? v : d; };
+  return { video_req_pct: clamp(c.video_req_pct, 90), pdf_req_pct: clamp(c.pdf_req_pct, 90) };
+}
+
+async function ensureStepsTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS lesson_steps (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    student_id    INT NOT NULL,
+    course_name   VARCHAR(500) NOT NULL,
+    module_index  INT NOT NULL,
+    step          VARCHAR(16) NOT NULL,
+    pct           INT NOT NULL DEFAULT 100,
+    completed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_step (student_id, course_name, module_index, step)
+  )`);
+}
+
+app.get('/api/config', (req, res) => {
+  res.json(readStepConfig());
+});
+
+app.post('/api/config', (req, res) => {
+  try {
+    const b = req.body || {};
+    const clamp = (v, d) => { v = parseInt(v, 10); return (isFinite(v) && v >= 50 && v <= 100) ? v : d; };
+    const cur = readStepConfig();
+    const next = {
+      video_req_pct: clamp(b.video_req_pct, cur.video_req_pct),
+      pdf_req_pct:   clamp(b.pdf_req_pct,   cur.pdf_req_pct),
+    };
+    try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(STEP_CONFIG_FILE, JSON.stringify(next, null, 2)); } catch (e) { console.warn('config persist failed:', e.message); }
+    res.json({ saved: true, config: next });
+  } catch (e) {
+    console.error('config save failed:', e);
+    res.status(500).json({ error: 'Failed to save config' });
+  }
+});
+
+app.get('/api/steps', async (req, res) => {
+  try {
+    const student_id = parseInt(req.query.student_id, 10);
+    if (!student_id) return res.status(400).json({ error: 'student_id required' });
+    await ensureStepsTable();
+    let sql = 'SELECT module_index, step, pct, completed_at FROM lesson_steps WHERE student_id=?';
+    const args = [student_id];
+    if (req.query.course_name) { sql += ' AND course_name=?'; args.push(req.query.course_name); }
+    sql += ' ORDER BY module_index, step';
+    const [rows] = await pool.query(sql, args);
+    res.json(rows);
+  } catch (e) {
+    console.error('steps fetch failed:', e);
+    res.status(500).json({ error: 'Failed to fetch steps' });
+  }
+});
+
+app.post('/api/steps', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const student_id = parseInt(b.student_id, 10);
+    const module_index = parseInt(b.module_index, 10);
+    const course_name = b.course_name, step = b.step;
+    if (!student_id || !course_name || isNaN(module_index) || !STEP_ORDER.includes(step)) {
+      return res.status(400).json({ error: 'student_id, course_name, module_index and a valid step (video|pdf|mcq|ex) are required' });
+    }
+    const pct = Math.max(0, Math.min(100, parseInt(b.pct, 10) || 100));
+    await ensureStepsTable();
+    const cfg = readStepConfig();
+    const [rows] = await pool.query(
+      'SELECT step, pct FROM lesson_steps WHERE student_id=? AND course_name=? AND module_index=?',
+      [student_id, course_name, module_index]
+    );
+    const have = {}; rows.forEach(r => { have[r.step] = r.pct; });
+    const videoOk = (have.video || 0) >= cfg.video_req_pct;
+    const pdfOk   = (have.pdf   || 0) >= cfg.pdf_req_pct;
+    if (step === 'video' && pct < cfg.video_req_pct)
+      return res.status(403).json({ error: 'Watch at least ' + cfg.video_req_pct + '% of the video before it counts as complete' });
+    if (step === 'pdf') {
+      if (!videoOk) return res.status(403).json({ error: 'Complete the lesson video before recording PDF completion' });
+      if (pct < cfg.pdf_req_pct) return res.status(403).json({ error: 'Read at least ' + cfg.pdf_req_pct + '% of the document (reach the last page)' });
+    }
+    if (step === 'mcq' && !pdfOk)
+      return res.status(403).json({ error: 'Complete the PDF before recording an MCQ pass' });
+    if (step === 'ex' && !(have.mcq != null))
+      return res.status(403).json({ error: 'Pass the MCQ before marking the exercise done' });
+    await pool.query(
+      `INSERT INTO lesson_steps (student_id, course_name, module_index, step, pct)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE pct=GREATEST(pct, VALUES(pct)), completed_at=NOW()`,
+      [student_id, course_name, module_index, step, pct]
+    );
+    const [after] = await pool.query(
+      'SELECT module_index, step, pct FROM lesson_steps WHERE student_id=? AND course_name=? AND module_index=?',
+      [student_id, course_name, module_index]
+    );
+    res.status(201).json({ saved: true, steps: after });
+  } catch (e) {
+    console.error('steps save failed:', e);
+    res.status(500).json({ error: 'Failed to save step' });
+  }
+});
+
+// =============================================================
 // START SERVER
 // =============================================================
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n🚀 Softmarc API running on port ${PORT}`);
   console.log(`📍 Health: http://localhost:${PORT}/health\n`);
+  try { await ensureStepsTable(); console.log('[DB] lesson_steps table ready'); } catch (e) { console.warn('[DB] lesson_steps ensure failed (retries on first use):', e.message); }
 });
 
 module.exports = app;

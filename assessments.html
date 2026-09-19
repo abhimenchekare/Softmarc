@@ -295,6 +295,20 @@ document.getElementById('assessmentHeading').textContent='Assessments — '+firs
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function normaliseQuiz(q){return {...q,title:q.title||q.quiz_title||'Assessment',course_name:q.course_name||q.course||'Softmarc Course'};}
 function quizDoneKey(q){return 'assessment_done_'+(user.id||'local')+'_'+q.id;}
+/* LP v7 — record MCQ pass as a lesson step so the exercise unlocks (backend-enforced order) */
+function lpMarkMcq(){
+  try{
+    const p=new URLSearchParams(location.search);
+    const c=p.get('course'); const m=parseInt(p.get('module')||'-1',10);
+    if(!c||isNaN(m)||m<0)return;
+    const key='lp_steps_'+encodeURIComponent(c);
+    let o={}; try{o=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
+    o[m]=o[m]||{}; o[m].mcq=1;
+    localStorage.setItem(key,JSON.stringify(o));
+    fetch('/api/steps.php',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({student_id:user.id||0,course_name:c,module_index:m,step:'mcq',pct:100})}).catch(()=>{});
+  }catch(e){console.warn('lp',e);}
+}
 async function loadQuizzes(){
   const list=document.getElementById('assessmentGrid'),empty=document.getElementById('emptyState');
   list.innerHTML='<div class="empty" style="margin:0;">Loading assessments…</div>'; empty.style.display='none';
@@ -372,6 +386,7 @@ document.getElementById('submitQuiz').onclick=async()=>{
   if(!activeQuiz.local){try{await fetch(API_HOST+'/quizzes.php/'+activeQuiz.id+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:user.id,student_name:user.full_name||user.email||'Student',quiz_title:activeQuiz.title,answers})});}catch(e){console.warn(e);}}
   const box=document.getElementById('resultBox');
   if(pct===100){
+    lpMarkMcq();
     box.textContent='Perfect score! Opening congratulations...'; box.style.display='block';
     setTimeout(()=>showCongrats(pct),650);
   }else{
@@ -389,5 +404,5 @@ document.getElementById('assessmentSearch').addEventListener('input',renderAsses
 loadQuizzes();
 </script>
 <script src="softmarc-common.js"></script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3da7ba648614454',t:'MTc4OTg0MDc1Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

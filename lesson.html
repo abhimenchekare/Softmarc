@@ -255,6 +255,109 @@ html[data-theme="dark"] #markDoneBtn.lv-mark.current .lv-lt{color:#fff}
   .lv-btn{padding:12px 14px}
 }
 </style>
+<style id="pv-style">
+/* ===== LP v7 — sequential learning path + PDF screen (scoped) ===== */
+.big-btn{position:relative}
+.big-btn.locked{opacity:.55;cursor:not-allowed}
+.big-btn.locked::after{content:'🔒 Locked';position:absolute;top:10px;right:10px;z-index:2;font:800 9.5px var(--font-body);letter-spacing:.4px;background:#0F172A;color:#fff;padding:4px 9px;border-radius:999px;box-shadow:0 4px 12px rgba(2,6,23,.3)}
+#bigGrid .big-btn .complete-badge{display:none}
+#bigGrid .big-btn.completed .complete-badge{display:inline-flex}
+/* — learning path panel — */
+.lp-sum{padding:12px 14px;border-bottom:1px solid var(--border)}
+.lp-sum-row{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;font-weight:800;color:var(--text-700)}
+.lp-sum-row b{font-size:12.5px}
+.lp-sum .lv-bar{max-width:none;margin-top:8px}
+.lp-sec{padding:10px 14px 3px;font-size:9.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-400)}
+.lp-steps{padding:0 6px 6px}
+.lp-step{width:100%;display:flex;gap:9px;align-items:center;padding:9px 8px;border-radius:10px;border:1px solid transparent;background:none;text-align:left;cursor:pointer;transition:background .15s;font-family:var(--font-body);position:relative}
+.lp-step:hover{background:var(--surface-2)}
+.lp-step.current{background:var(--lv-accent-soft);border-color:rgba(29,111,232,.30);box-shadow:inset 3px 0 0 var(--lv-accent)}
+.lp-step.locked{opacity:.55;cursor:not-allowed}
+.lp-step.locked:hover{background:none}
+.lp-n{width:16px;font:800 10px var(--font-mono);color:var(--text-400);text-align:right;flex-shrink:0;margin-top:1px}
+.lp-ico{width:26px;height:26px;border-radius:7px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
+.lp-step.locked .lp-ico{filter:grayscale(.7)}
+.lp-main{flex:1;min-width:0}
+.lp-k{display:block;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--text-400)}
+.lp-t{display:block;font-size:11.5px;font-weight:700;color:var(--text-700);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.lp-step.current .lp-t{color:var(--lv-accent)}
+.lp-pill{font-size:9px;font-weight:800;padding:3px 8px;border-radius:999px;flex-shrink:0;white-space:nowrap}
+.lp-pill.pc{background:#DCFCE7;color:var(--lv-green)}
+.lp-pill.pi{background:var(--lv-accent-soft);color:var(--lv-accent)}
+.lp-pill.pl{background:#EEF1F6;color:#64748B}
+.lp-pill.pa{background:#FEF9C3;color:#A16207}
+[data-tip]{position:relative}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;right:8px;top:calc(100% + 6px);z-index:70;max-width:230px;width:max-content;background:#0F172A;color:#fff;font:600 10.5px/1.45 var(--font-body);padding:7px 10px;border-radius:8px;box-shadow:0 8px 24px rgba(2,6,23,.35);pointer-events:none}
+.lv-lesson .lv-lock{font-size:10px;color:#94A3B8}
+.lv-lesson.locked{opacity:.5;cursor:not-allowed}
+.lv-lesson.locked:hover{background:none}
+/* — PDF viewer — */
+.pv-mode .pv-thumbimg{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='82'%3E%3Crect width='120' height='82' fill='%23EFF6FF'/%3E%3Crect x='34' y='14' width='52' height='56' rx='4' fill='%23fff' stroke='%231D6FE8' stroke-width='2'/%3E%3Cpath d='M42 28h36M42 38h36M42 48h24' stroke='%2393C5FD' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E")}
+.pv-viewer{display:flex;min-height:520px;height:clamp(520px,68vh,780px);overflow:hidden;border-radius:16px;position:relative}
+.pv-rail{width:122px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface-2);display:flex;flex-direction:column;transition:margin .25s ease}
+.pv-rail.hidden{margin-left:-122px}
+.pv-rail-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);font-size:10px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--text-500)}
+.pv-rail-head button{border:none;background:none;cursor:pointer;color:var(--text-400);font-size:12px;padding:2px 6px;border-radius:5px}
+.pv-rail-head button:hover{background:var(--surface);color:var(--text-700)}
+.pv-thumbs{overflow-y:auto;padding:10px 8px;display:flex;flex-direction:column;gap:8px}
+.pv-thumb{border:2px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;padding:0;line-height:0;overflow:hidden;position:relative;transition:border-color .15s,box-shadow .15s;aspect-ratio:3/4;flex-shrink:0}
+.pv-thumb canvas{width:100%;height:100%;display:block}
+.pv-thumb.current{border-color:var(--lv-accent);box-shadow:0 0 0 2px rgba(29,111,232,.25)}
+.pv-thumb i{position:absolute;bottom:2px;right:3px;font:700 8.5px var(--font-mono);font-style:normal;color:var(--text-500);background:rgba(255,255,255,.85);padding:1px 4px;border-radius:4px;line-height:1.3}
+.pv-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.pv-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
+.pv-file{display:flex;align-items:center;gap:8px;min-width:0;font-size:13px}
+.pv-file b{font-size:12.5px;font-weight:700;color:var(--lv-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:250px}
+.pv-file em{font-style:normal;font-size:10.5px;font-weight:700;color:var(--text-400);background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;flex-shrink:0}
+.pv-tools{display:flex;align-items:center;gap:5px;margin-left:auto;flex-wrap:wrap}
+.pv-btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;min-width:28px;height:28px;padding:0 7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font:700 12px var(--font-body);color:var(--text-700);transition:.15s}
+.pv-btn:hover:not(:disabled){background:var(--surface-2);border-color:var(--border-strong)}
+.pv-btn:disabled{opacity:.4;cursor:default}
+.pv-page{font:700 11.5px var(--font-mono);color:var(--text-500);white-space:nowrap;padding:0 2px}
+.pv-zoom{font:800 11.5px var(--font-body);color:var(--lv-accent);min-width:42px;text-align:center}
+.pv-sep{width:1px;height:18px;background:var(--border);margin:0 3px}
+.pv-scroll{flex:1;overflow:auto;background:#414B5B;padding:18px;display:flex;justify-content:center;align-items:flex-start;position:relative}
+html[data-theme="dark"] .pv-scroll{background:#1A2334}
+.pv-canvas-wrap{background:#fff;box-shadow:0 10px 34px rgba(2,6,23,.45);position:relative;flex-shrink:0}
+.pv-canvas-wrap canvas{display:block}
+.pv-status{position:absolute;inset:0;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;text-align:center;background:rgba(23,31,44,.92);z-index:4;padding:24px}
+.pv-status[hidden]{display:none}
+.pv-status .sp{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,.22);border-top-color:#fff;animation:pvspin .8s linear infinite;margin-bottom:8px}
+@keyframes pvspin{to{transform:rotate(360deg)}}
+.pv-status .t1{font-size:13.5px;font-weight:700;color:rgba(255,255,255,.93);font-family:var(--font-display)}
+.pv-status .t2{font-size:12px;color:rgba(255,255,255,.55);max-width:440px;line-height:1.55}
+.pv-doc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;padding:13px 20px}
+.pv-doc-mid{min-width:0}
+.pv-doc-row{display:flex;align-items:center;gap:10px;margin-top:8px}
+.pv-doc-row .lv-bar{max-width:none;flex:1;height:6px}
+.pv-doc .lv-btn{flex-shrink:0}
+#pvGoBtn{background:var(--lv-accent);border-color:var(--lv-accent);color:#fff;min-width:172px;justify-content:center;font-size:13px;padding:11px 18px}
+#pvGoBtn:disabled{opacity:.5}
+#pvGoBtn.ready{background:var(--lv-green);border-color:var(--lv-green);box-shadow:0 8px 20px rgba(22,163,74,.28)}
+.pv-note{font-size:11px;color:var(--text-400);margin-top:7px;line-height:1.5}
+.pv-note.ok{color:var(--lv-green);font-weight:700}
+#pvMarkBtn.pv-done{background:var(--lv-green);border-color:var(--lv-green);color:#fff;box-shadow:0 8px 20px rgba(22,163,74,.25)}
+@media (max-width:1180px){
+  .pv-viewer .pv-rail{box-shadow:none}
+}
+@media (max-width:960px){
+  .pv-viewer{flex-direction:column;height:clamp(500px,74vh,760px)}
+  .pv-rail{width:100%;border-right:none;border-bottom:1px solid var(--border)}
+  .pv-rail.hidden{margin-left:0;margin-bottom:-45px}
+  .pv-thumbs{flex-direction:row;overflow-x:auto;padding:8px}
+  .pv-thumb{width:52px}
+  .pv-rail.hidden .pv-thumbs{display:none}
+}
+@media (max-width:640px){
+  .pv-file b{max-width:130px}
+  .pv-file em{display:none}
+  .pv-bar{padding:8px 10px;gap:5px}
+  .pv-tools{margin-left:0;width:100%}
+  .pv-scroll{padding:10px}
+  .pv-doc{grid-template-columns:1fr}
+  #pvGoBtn{width:100%}
+}
+</style>
 
 </head>
 <body>
@@ -303,7 +406,7 @@ html[data-theme="dark"] #markDoneBtn.lv-mark.current .lv-lt{color:#fff}
       <button class="big-btn video" id="videoResourceBtn" onclick="openResource('video')">
         <div class="big-icon">🎥</div>
         <div class="big-content">
-          <div class="big-title">Videos</div>
+          <div class="big-title">Video</div>
           <div class="big-desc">Only this subtopic's uploaded video</div>
           <div class="big-meta"><span id="videoDurMeta">15 min</span> • MP4 HD</div>
           <span class="complete-badge">✓ Complete</span>
@@ -318,20 +421,22 @@ html[data-theme="dark"] #markDoneBtn.lv-mark.current .lv-lt{color:#fff}
           <span class="complete-badge">✓ Complete</span>
         </div>
       </button>
-      <button class="big-btn mcq" onclick="openResource('mcq')">
-        <div class="big-icon">❓</div>
+      <button class="big-btn mcq" id="mcqResourceBtn" onclick="openResource('mcq')">
+        <div class="big-icon">📝</div>
         <div class="big-content">
           <div class="big-title">MCQ</div>
           <div class="big-desc">Quiz for this subtopic</div>
-          <div class="big-meta">70% to pass</div>
+          <div class="big-meta">Pass to unlock exercise</div>
+          <span class="complete-badge">✓ Complete</span>
         </div>
       </button>
-      <button class="big-btn ex" onclick="openResource('exercise')">
+      <button class="big-btn ex" id="exResourceBtn" onclick="openResource('exercise')">
         <div class="big-icon">🛠️</div>
         <div class="big-content">
           <div class="big-title">Exercises</div>
           <div class="big-desc">Hands-on CATIA task</div>
-          <div class="big-meta">Real tracking</div>
+          <div class="big-meta">Completes the lesson</div>
+          <span class="complete-badge">✓ Complete</span>
         </div>
       </button>
     </div>
@@ -348,7 +453,7 @@ html[data-theme="dark"] #markDoneBtn.lv-mark.current .lv-lt{color:#fff}
             <div class="lv-hprog"><div class="lv-bar"><i id="lvBarFill"></i></div><span class="lv-pct" id="lvPct">0% Complete</span></div>
           </div>
           <div class="lv-head-right">
-            <button class="lv-btn lv-mini" id="lvPanelToggle">☰ Course Content</button>
+            <button class="lv-btn lv-mini" id="lvPanelToggle">☰ Course Progress</button>
             <button class="lv-btn" onclick="showBigButtons()">← Back to Subtopics</button>
           </div>
         </div>
@@ -406,12 +511,15 @@ html[data-theme="dark"] #markDoneBtn.lv-mark.current .lv-lt{color:#fff}
             </div>
           </div>
 
-          <aside class="lv-card lv-panel" id="lvPanel" aria-label="Course content">
-            <div class="lv-panel-head"><b>Course Content</b><span class="lv-count" id="lvPanelCount"></span><button class="lv-x" id="lvPanelClose" aria-label="Close panel">✕</button></div>
+          <aside class="lv-card lv-panel" id="lvPanel" aria-label="Course progress">
+            <div class="lv-panel-head"><b>Course Progress</b><span class="lv-count" data-lp="count"></span><button class="lv-x" id="lvPanelClose" aria-label="Close panel">✕</button></div>
             <div class="lv-panel-body">
-              <div class="lv-grp open" style="cursor:default"><span class="gv">▾</span><b id="lvGrpNow">Course</b><span class="gn" id="lvGrpNowCount"></span></div>
-              <div class="lv-lessons" id="lvLessons"></div>
-              <div id="lvGroups"></div>
+              <div data-lp="sum"></div>
+              <div class="lp-sec">This lesson — required order</div>
+              <div class="lp-steps" data-lp="steps"></div>
+              <div class="lv-grp" style="cursor:default"><span class="gv">▾</span><b data-lp="course">Course</b><span class="gn" data-lp="allcount"></span></div>
+              <div class="lv-lessons" data-lp="lessons"></div>
+              <div data-lp="groups"></div>
             </div>
           </aside>
         </div><!-- /lv-cols -->
@@ -420,16 +528,113 @@ html[data-theme="dark"] #markDoneBtn.lv-mark.current .lv-lt{color:#fff}
         <svg class="lv-watermark" viewBox="0 0 200 60" fill="none" stroke="#0F172A" stroke-width="1.4"><path d="M8 46c6-2 10-10 22-12 14-2 24-14 44-16 16-2 30 4 42 10 10 5 24 6 34 8 8 2 14 6 18 10"/><path d="M52 34c4-8 12-12 24-12 14 0 26 4 36 10 6 4 14 6 24 6"/><circle cx="56" cy="46" r="8"/><circle cx="150" cy="46" r="8"/><path d="M6 46h18m34 0h32m40 0h28"/></svg>
       </div>
     </div>
+    <!-- ============ PDF Learning Screen v2 (view-only, pdf.js) ============ -->
     <div class="content-view" id="pdfView">
-      <div class="view-head"><h3 id="pdfViewTitle">PDF — Only this subtopic</h3><button class="btn btn-secondary" onclick="showBigButtons()">✕ Close</button></div>
-      <div class="view-body"><iframe id="pdfViewer" class="pdf-viewer" src=""></iframe>
-        <div class="lesson-nav">
-          <button class="btn btn-secondary" onclick="showBigButtons()">← Back to resources</button>
-          <button class="btn btn-primary" id="pdfMarkDoneBtn">✓ Mark PDF complete</button>
+      <div class="lv-wrap pv-mode">
+        <div class="lv-card lv-head">
+          <span class="lv-thumb pv-thumbimg" id="pvThumb" aria-hidden="true"></span>
+          <div class="lv-head-mid">
+            <div class="lv-kicker" id="pvKicker">Main Topic</div>
+            <h2 class="lv-sub" id="pvTitle">PDF Lesson</h2>
+            <p class="lv-desc" id="pvDesc"></p>
+            <div class="lv-hprog"><div class="lv-bar"><i id="pvBarFill"></i></div><span class="lv-pct" id="pvPct">0% Complete</span></div>
+          </div>
+          <div class="lv-head-right">
+            <button class="lv-btn lv-mini" id="pvPanelToggle">☰ Course Progress</button>
+            <button class="lv-btn" onclick="showBigButtons()">← Back to Subtopics</button>
+          </div>
         </div>
+
+        <div class="lv-cols">
+          <div class="lv-main">
+            <div class="lv-card pv-viewer" id="pvViewer">
+              <aside class="pv-rail" id="pvRail" aria-label="Page thumbnails">
+                <div class="pv-rail-head"><span>Pages</span><button id="pvRailHide" aria-label="Collapse thumbnails" title="Collapse thumbnails">⇱</button></div>
+                <div class="pv-thumbs" id="pvThumbs"></div>
+              </aside>
+              <div class="pv-main">
+                <div class="pv-bar">
+                  <span class="pv-file">📄 <b id="pvFileName">document.pdf</b> <em id="pvFileSize">—</em></span>
+                  <div class="pv-tools">
+                    <button class="pv-btn" id="pvPrev" aria-label="Previous page" title="Previous page">‹</button>
+                    <span class="pv-page" id="pvPage">— / —</span>
+                    <button class="pv-btn" id="pvNext" aria-label="Next page" title="Next page">›</button>
+                    <span class="pv-sep"></span>
+                    <button class="pv-btn" id="pvZoomOut" aria-label="Zoom out" title="Zoom out">−</button>
+                    <span class="pv-zoom" id="pvZoomPct">100%</span>
+                    <button class="pv-btn" id="pvZoomIn" aria-label="Zoom in" title="Zoom in">+</button>
+                    <button class="pv-btn" id="pvFit" aria-label="Fit to page" title="Fit to page">⤢</button>
+                    <button class="pv-btn" id="pvRot" aria-label="Rotate 90°" title="Rotate 90°">⟳</button>
+                    <button class="pv-btn" id="pvFs" aria-label="Fullscreen" title="Fullscreen">⛶</button>
+                  </div>
+                </div>
+                <div class="pv-scroll" id="pvScroll">
+                  <div class="pv-canvas-wrap" id="pvWrap"><canvas id="pvCanvas"></canvas></div>
+                  <div class="pv-status" id="pvStatus">
+                    <div class="sp" id="pvSpin"></div>
+                    <div class="t1" id="pvStatusT1">Loading document…</div>
+                    <div class="t2" id="pvStatusT2"></div>
+                  </div>
+                </div>
+                <button class="pv-btn" id="pvRailShow" style="display:none;position:absolute;top:9px;left:9px;z-index:6" aria-label="Show page thumbnails" title="Show page thumbnails">☰</button>
+              </div>
+            </div>
+
+            <div class="lv-card pv-doc">
+              <div class="pv-doc-mid">
+                <div class="lv-lprog-head" style="margin:0;padding:0;border:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg> Document Progress</div>
+                <div class="pv-doc-row"><div class="lv-bar"><i id="pvDocBarFill"></i></div><span class="lv-info-pct" id="pvDocPct">0%</span></div>
+                <div class="pv-note" id="pvDocNote">Read to the last page to unlock completion.</div>
+              </div>
+              <button class="lv-btn" id="pvGoBtn" disabled>Continue Reading →</button>
+            </div>
+
+            <div class="lv-info-row">
+              <div class="lv-card lv-info">
+                <h3 id="pvInfoTitle">PDF Lesson</h3>
+                <div class="lv-chips">
+                  <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> <b>PDF</b></span>
+                  <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> <b id="pvInfoOf">Lesson 1 of 1</b></span>
+                  <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15V6a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h9"/><path d="m16 21 5-5"/></svg> <b id="pvInfoSize">—</b></span>
+                  <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5"/></svg> <b id="pvInfoRead">— min read</b></span>
+                  <span class="lv-chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z"/></svg> <b id="pvInfoCourse"></b></span>
+                </div>
+                <p class="lv-desc2" id="pvInfoDesc"></p>
+                <div class="lv-lprog">
+                  <div class="lv-lprog-head"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg> Lesson Progress</div>
+                  <div class="lv-bar"><i id="pvLessonBarFill"></i></div>
+                  <div class="lv-lprog-foot"><span class="lv-status" id="pvStatus2">Reading</span><span class="lv-info-pct" id="pvLessonPct">0%</span></div>
+                </div>
+              </div>
+              <div class="lv-card lv-obj">
+                <div class="lv-obj-head"><span class="lv-obj-ico">✓</span> Learning Objectives</div>
+                <ul id="pvObjList"></ul>
+              </div>
+            </div>
+
+            <div class="lv-nav">
+              <button class="lv-btn" id="pvPrevStep">← Previous</button>
+              <button class="lv-btn lv-mark" id="pvMarkBtn">✓ Mark as Complete</button>
+              <button class="lv-btn next" id="pvNextStep">Next →</button>
+            </div>
+          </div>
+
+          <aside class="lv-card lv-panel" id="pvPanel" aria-label="Course progress">
+            <div class="lv-panel-head"><b>Course Progress</b><span class="lv-count" data-lp="count"></span><button class="lv-x" id="pvPanelClose" aria-label="Close panel">✕</button></div>
+            <div class="lv-panel-body">
+              <div data-lp="sum"></div>
+              <div class="lp-sec">This lesson — required order</div>
+              <div class="lp-steps" data-lp="steps"></div>
+              <div class="lv-grp" style="cursor:default"><span class="gv">▾</span><b data-lp="course">Course</b><span class="gn" data-lp="allcount"></span></div>
+              <div class="lv-lessons" data-lp="lessons"></div>
+              <div data-lp="groups"></div>
+            </div>
+          </aside>
+        </div><!-- /pv lv-cols -->
+
+        <div class="lv-pscrim" id="pvPscrim"></div>
       </div>
     </div>
-
     <div class="content-view" id="exView">
       <div class="view-head"><h3 id="exViewTitle">Exercise — Only this subtopic</h3><button class="btn btn-secondary" onclick="showBigButtons()">✕ Close</button></div>
       <div class="view-body"><div class="ex-content" id="exContent"></div>
@@ -751,7 +956,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   }
   /* ---------- progress UI ---------- */
   function syncProgressUI(){
-    var d=isDone();
+    var d=(window.LP&&window.LP.ready)?window.LP.stepDone(moduleIdx,'video'):isDone();
     var pct=d?100:Math.min(100,Math.round((ratio||0)*100));
     var f=$('lvBarFill'); if(f)f.style.width=pct+'%';
     var f2=$('lvInfoBarFill'); if(f2)f2.style.width=pct+'%';
@@ -761,49 +966,20 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     if(s){ s.textContent=d?'Completed':(pct>2?'Continue watching — you\u2019ve got this':'Not started yet'); s.className='lv-status'+(d?' ok':''); }
     var btn=$('markDoneBtn');
     if(btn){ btn.classList.toggle('btn-secondary',!d); btn.classList.toggle('btn-primary',d); btn.innerHTML=d?'✓ Completed':'✓ Mark as Complete'; }
-    var nb=$('nextBtn'); if(nb)nb.innerHTML=(moduleIdx>=modules.length-1)?'Finish →':'Next Lesson →';
+    var nb=$('nextBtn');
+    if(nb){
+      var ltxt='Next Lesson →';
+      if(moduleIdx>=modules.length-1) ltxt=(window.LP&&window.LP.ready&&window.LP.lessonComplete(moduleIdx))?'Finish →':'Next →';
+      else if(window.LP&&window.LP.ready){ var nxs=window.LP.nextStepIn(moduleIdx); if(nxs&&nxs!=='video')ltxt='Next → '+({pdf:'PDF',mcq:'MCQ',ex:'Exercise'}[nxs]); }
+      nb.innerHTML=ltxt;
+    }
     var pb=$('prevBtn'); if(pb)pb.disabled=(moduleIdx<=0);
   }
+  window.lvSyncProgress=syncProgressUI;
   /* ---------- course content panel ---------- */
   var ICON_V='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none"/></svg>';
   var ICON_P='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
-  function buildPanel(){
-    var list=$('lvLessons'); if(!list) return;
-    var html='';
-    for(var i=0;i<modules.length;i++){
-      var m=modules[i],cur=i===moduleIdx,dn=false;
-      try{dn=done.has(i);}catch(e){}
-      var ico=((m.videoUrl||'').trim()?ICON_V:(m.pdfUrl||'').trim()?ICON_P:'');
-      html+='<button class="lv-lesson'+(cur?' current':'')+(dn?' done':'')+'" data-i="'+i+'">'
-        +'<span class="lv-st">'+(dn?'✓':(cur?'▶':''))+'</span>'
-        +'<span class="lv-lico">'+(ico||'·')+'</span>'
-        +'<span class="lv-lmain"><span class="lv-lt">'+((i+1)+'. '+esc(m.title))+'</span>'
-        +'<span class="lv-lm">'+esc(m.dur||'15 min')+'</span></span>'
-        +(dn?'<span class="lv-lpill pc">Completed</span>':(cur?'<span class="lv-lpill pi">In Progress</span>':''))
-        +'</button>';
-    }
-    list.innerHTML=html;
-    var doneN=0; try{doneN=modules.filter(function(m,i){return done.has(i);}).length;}catch(e){}
-    var cnt=$('lvPanelCount'); if(cnt)cnt.textContent=doneN+'/'+modules.length+' done';
-    var gc=$('lvGrpNowCount'); if(gc)gc.textContent=modules.length+' Lessons';
-    var gn=$('lvGrpNow'); if(gn)gn.textContent=courseName||'Course';
-    list.querySelectorAll('.lv-lesson').forEach(function(b){b.onclick=function(){
-      var i=+b.getAttribute('data-i');
-      closePanel();
-      if(i===moduleIdx||isNaN(i))return;
-      location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+i+(typeof typeParam==='string'&&typeParam?'&type='+typeParam:'');
-    };});
-    var others=[];
-    try{ if(window.SoftmarcContent&&SoftmarcContent.getCourses){ others=SoftmarcContent.getCourses().filter(function(c){return c&&c.title&&c.title!==courseName;}); } }catch(e){}
-    var g=$('lvGroups');
-    if(g){
-      g.innerHTML=others.map(function(c){
-        var k=(c.subtopics&&c.subtopics.length)||(c.lessons&&c.lessons.length)||0;
-        return '<button class="lv-grp" data-c="'+esc(c.title)+'"><span class="gv">▸</span><b>'+esc(c.title)+'</b><span class="gn">'+(k?k+' Lessons':'Course')+'</span></button>';
-      }).join('');
-      g.querySelectorAll('button.lv-grp').forEach(function(b){b.addEventListener('click',function(){location.href='courses.html?course='+encodeURIComponent(b.getAttribute('data-c'));});});
-    }
-  }
+  function buildPanel(){ if(window.LP&&window.LP.ready){window.LP.renderPanel(V);} }
   function openPanel(){V.classList.add('lv-panel-open');var sc=$('lvPscrim');if(sc)sc.classList.add('show');}
   function closePanel(){V.classList.remove('lv-panel-open');var sc=$('lvPscrim');if(sc)sc.classList.remove('show');}
   /* ---------- player ---------- */
@@ -860,7 +1036,10 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       syncProgressUI();
       var now=Date.now();
       if(now-lastSave>5000){lastSave=now;try{localStorage.setItem(watchKey,String(t));}catch(e){}}
-      if(ratio>=0.9&&!isDone()&&!autoDoneSent){
+      if(window.LP&&window.LP.ready){
+        window.LP.markWatch(Math.round(ratio*100));
+        if(now-lastSave>2500){buildPanel();}
+      }else if(ratio>=0.9&&!isDone()&&!autoDoneSent){
         autoDoneSent=true;
         if(typeof saveProgress==='function')saveProgress(moduleIdx);
         if(typeof showToast==='function')showToast('Lesson auto-marked complete — you\u2019re 90% through ✓','success');
@@ -925,6 +1104,30 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       w.__lvWrap=true;
       window.saveProgress=w;
     }
+    /* gated Mark-complete + step-aware Next (replaces the old free handlers) */
+    var mk=$('markDoneBtn');
+    if(mk&&!mk.__lpg){
+      var mkc=mk.cloneNode(true); mk.parentNode.replaceChild(mkc,mk); mkc.__lpg=1;
+      mkc.addEventListener('click',function(){
+        if(window.LP&&window.LP.ready&&window.LP.stepDone(moduleIdx,'video')){ if(typeof showToast==='function')showToast('✓ Video already completed — continue to the next step.','success'); return; }
+        var pct=Math.round((ratio||0)*100), reqP=(window.LP&&window.LP.cfg.video_req_pct)||90;
+        if(pct>=reqP){ if(window.LP){window.LP.complete('video',pct);} else if(typeof saveProgress==='function'){saveProgress(moduleIdx);} buildPanel(); }
+        else if(typeof showToast==='function'){showToast('🔒 Watch at least '+reqP+'% of the video first — you\u2019re at '+pct+'%.');}
+      });
+    }
+    var nb2=$('nextBtn');
+    if(nb2&&!nb2.__lpg){
+      var nbc=nb2.cloneNode(true); nb2.parentNode.replaceChild(nbc,nb2); nbc.__lpg=1;
+      nbc.addEventListener('click',function(){
+        if(window.LP&&window.LP.ready&&!window.LP.lessonComplete(moduleIdx)){
+          var nxs2=window.LP.nextStepIn(moduleIdx);
+          if(nxs2){ if(typeof showToast==='function')showToast('One step at a time — opening the '+({video:'video',pdf:'PDF',mcq:'MCQ',ex:'Exercise'}[nxs2])+' step now.'); openResource(nxs2==='ex'?'exercise':nxs2); return; }
+        }
+        if(typeof saveProgress==='function')saveProgress(moduleIdx);
+        if(moduleIdx>=modules.length-1){ location.href='certificates.html'; }
+        else{ location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+(moduleIdx+1); }
+      });
+    }
   }
   /* ---------- open / close ---------- */
   window.openVideoScreen=function(){
@@ -938,6 +1141,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     buildPanel();
     bind();
     syncProgressUI();
+    if(window.LP)window.LP.refresh();
     try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}
   };
   var _sbb=window.showBigButtons;
@@ -952,6 +1156,597 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   }
 })();
 </script>
+<script id="pv-script">
+/* ============ PV v7 — PDF Learning Screen: view-only pdf.js player with page/zoom/rotate/thumbs ============ */
+(function(){
+  var PV=document.getElementById('pdfView'); if(!PV)return;
+  function $(id){return document.getElementById(id);}
+  if(typeof modules==='undefined'||!modules||!modules.length)return;
+  var doc=null,pageNum=1,totalPages=0,scale=1,rot=0,maxSeen=0,fitMode='width',busy=false,tok=0,bound=false;
+  function req(){return (window.LP&&window.LP.cfg&&window.LP.cfg.pdf_req_pct)||90;}
+  function toast(m,t){try{showToast(m,t||'');}catch(e){console.log('[PV]',m);}}
+  function cur(){return (typeof currentMod!=='undefined'&&currentMod)||{};}
+  function docUrl(){return (cur().pdfUrl||'').trim();}
+  function gkey(){return encodeURIComponent(courseName)+'_'+moduleIdx;}
+  function ensureLib(){
+    return new Promise(function(res,rej){
+      if(window.pdfjsLib){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';}catch(e){} return res();}
+      var s=document.createElement('script'); s.src='vendor/pdf.min.js';
+      s.onload=function(){ window.pdfjsLib?(window.pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js',res()):rej(new Error('pdf.js failed to initialise')); };
+      s.onerror=function(){ rej(new Error('vendor/pdf.min.js could not be loaded')); };
+      document.head.appendChild(s);
+      setTimeout(function(){ if(!window.pdfjsLib)rej(new Error('pdf.js timed out')); },15000);
+    });
+  }
+  function fmtSize(b){ if(!isFinite(b)||b<=0)return '—'; if(b<1024)return b+' B'; if(b<1048576)return Math.round(b/1024)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+  function status(t1,t2,spin){
+    var s=$('pvStatus'); if(!s)return; s.hidden=false;
+    $('pvStatusT1').textContent=t1||''; $('pvStatusT2').textContent=t2||'';
+    var sp=$('pvSpin'); if(sp)sp.style.display=spin?'':'none';
+    var w=$('pvWrap'); if(w)w.style.visibility='hidden';
+  }
+  function clearStatus(){ var s=$('pvStatus'); if(s)s.hidden=true; var w=$('pvWrap'); if(w)w.style.visibility=''; }
+
+  function readMinutes(){
+    var m=cur(); var byDur=parseInt(m.dur)||0;
+    var byPages=totalPages?Math.max(5,Math.round(totalPages*1.4)):0;
+    return Math.max(byDur,byPages,10);
+  }
+  function buildHead(){
+    var m=cur();
+    $('pvKicker').textContent=courseName||'Main Topic';
+    $('pvTitle').textContent=(m.title||'Lesson')+' — PDF';
+    $('pvInfoTitle').textContent=m.title||'PDF Lesson';
+    var desc=m.description||m.summary||'';
+    $('pvDesc').textContent=desc;
+    var d2=$('pvInfoDesc'); if(d2){ d2.textContent=desc; d2.style.display=desc?'':'none'; }
+    $('pvInfoOf').textContent='Lesson '+(moduleIdx+1)+' of '+modules.length;
+    $('pvInfoCourse').textContent=courseName||'';
+    $('pvInfoRead').textContent=readMinutes()+' min read';
+    var ul=$('pvObjList');
+    if(ul){
+      var objs=(window.LP&&window.LP.objectives)?window.LP.objectives():['Read the document fully','Note the key tools and settings','Apply it in the practice exercise'];
+      ul.innerHTML='';
+      objs.forEach(function(o){
+        var li=document.createElement('li');
+        li.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>';
+        li.appendChild(document.createTextNode(o));
+        ul.appendChild(li);
+      });
+    }
+  }
+  function syncUI(){
+    var pct=totalPages?Math.min(100,Math.round(maxSeen/totalPages*100)):0;
+    var doneStep=!!(window.LP&&window.LP.stepDone(moduleIdx,'pdf'));
+    $('pvPage').textContent=doc?(pageNum+' / '+totalPages):'— / —';
+    $('pvPrev').disabled=!(doc&&pageNum>1);
+    $('pvNext').disabled=!(doc&&pageNum<totalPages);
+    $('pvZoomPct').textContent=Math.round(scale*100)+'%';
+    $('pvBarFill').style.width=pct+'%';
+    $('pvDocBarFill').style.width=pct+'%';
+    $('pvPct').textContent=(doneStep?100:pct)+'% Complete';
+    $('pvDocPct').textContent=pct+'%';
+    var go=$('pvGoBtn'), note=$('pvDocNote'), mk=$('pvMarkBtn');
+    if(doneStep){
+      go.textContent='✓ PDF Completed'; go.className='lv-btn ready'; go.disabled=true;
+      note.textContent=totalPages?('You read all '+totalPages+' pages — MCQ is now unlocked.'):''; note.className='pv-note ok';
+    }else if(doc&&totalPages&&maxSeen>=totalPages){
+      go.textContent='✓ Complete the PDF'; go.className='lv-btn ready'; go.disabled=false;
+      note.textContent='You reached the last page — mark it complete to unlock the MCQ.'; note.className='pv-note';
+    }else{
+      go.textContent='Continue Reading →'; go.className='lv-btn'; go.disabled=!doc;
+      note.textContent=doc?('Keep reading — reach page '+totalPages+' to unlock completion. (required: '+req()+'%)'):'Waiting for the document…';
+      note.className='pv-note';
+    }
+    mk.innerHTML=doneStep?'✓ Completed':'✓ Mark as Complete';
+    mk.classList.toggle('pv-done',doneStep);
+    $('pvNextStep').disabled=!doneStep;
+    var lp=window.LP?window.LP.lessonPct(moduleIdx):pct;
+    $('pvLessonBarFill').style.width=lp+'%';
+    $('pvLessonPct').textContent=lp+'%';
+    var st2=$('pvStatus2');
+    st2.textContent=(window.LP&&window.LP.lessonComplete(moduleIdx))?'Lesson complete':(doneStep?'PDF done — continue to MCQ':'Reading — '+pct+'% of document');
+    st2.className='lv-status'+((window.LP&&window.LP.lessonComplete(moduleIdx))?' ok':'');
+    if(doc){var th=$('pvThumbs').children;for(var i=0;i<th.length;i++){th[i].classList.toggle('current',(i+1)===pageNum);}}
+  }
+  function save(){try{localStorage.setItem('lp_pdf_'+gkey(),JSON.stringify({p:pageNum,m:maxSeen}));}catch(e){}}
+  function loadSaved(){try{return JSON.parse(localStorage.getItem('lp_pdf_'+gkey())||'null');}catch(e){return null;}}
+
+  async function renderPage(n){
+    if(!doc)return; busy=true;
+    if(n)pageNum=Math.max(1,Math.min(totalPages,Math.round(n)));
+    maxSeen=Math.max(maxSeen,pageNum);
+    try{
+      var pg=await doc.getPage(pageNum);
+      var vp=pg.getViewport({scale:scale,rotation:(((pg.rotate||0)+rot)%360+360)%360});
+      var c=$('pvCanvas');
+      var dpr=Math.min(2,window.devicePixelRatio||1);
+      c.width=Math.floor(vp.width*dpr); c.height=Math.floor(vp.height*dpr);
+      c.style.width=Math.round(vp.width)+'px'; c.style.height=Math.round(vp.height)+'px';
+      var ctx=null; try{ctx=c.getContext&&c.getContext('2d');}catch(e){}
+      if(ctx){ await pg.render({canvasContext:ctx,viewport:vp,transform:dpr!==1?[dpr,0,0,dpr,0,0]:undefined}).promise; }
+    }catch(e){
+      if(!/Not implemented/i.test(String(e&&e.message||e)))status('Page could not be rendered',String(e&&e.message||e));
+    }
+    busy=false; syncUI(); save();
+  }
+  async function applyFit(){
+    if(!doc)return;
+    try{
+      var pg=await doc.getPage(pageNum);
+      var vp=pg.getViewport({scale:1,rotation:(((pg.rotate||0)+rot)%360+360)%360});
+      var host=$('pvScroll');
+      var availW=(host&&host.clientWidth?host.clientWidth:720)-36;
+      var s=availW/Math.max(1,vp.width);
+      if(fitMode==='page'){ var availH=(host&&host.clientHeight?host.clientHeight:520)-36; s=Math.min(s,availH/Math.max(1,vp.height)); }
+      scale=Math.max(.25,Math.min(4,s));
+    }catch(e){ scale=1.15; }
+    await renderPage();
+  }
+  function goPage(n){ renderPage(n); }
+  async function buildThumbs(myTok){
+    var box=$('pvThumbs'); if(!box)return; box.innerHTML='';
+    for(var n=1;n<=totalPages;n++){
+      (function(n){
+        doc.getPage(n).then(function(pg){
+          if(myTok!==tok||!doc)return;
+          var base=pg.getViewport({scale:1,rotation:((pg.rotate||0)+rot)%360});
+          var sc=92/Math.max(1,base.width);
+          var b=document.createElement('button'); b.className='pv-thumb'+(n===pageNum?' current':''); b.setAttribute('aria-label','Go to page '+n);
+          var c=document.createElement('canvas'); c.width=Math.max(1,Math.round(base.width*sc)); c.height=Math.max(1,Math.round(base.height*sc));
+          b.appendChild(c);
+          var lab=document.createElement('i'); lab.textContent=n; b.appendChild(lab);
+          b.onclick=function(){goPage(n);};
+          box.appendChild(b);
+          var ctx=null; try{ctx=c.getContext&&c.getContext('2d');}catch(e){}
+          if(ctx){ try{ pg.render({canvasContext:ctx,viewport:pg.getViewport({scale:sc,rotation:((pg.rotate||0)+rot)%360})}); }catch(e){} }
+        }).catch(function(){});
+      })(n);
+    }
+  }
+  async function loadDoc(){
+    tok++; var myTok=tok;
+    doc=null; totalPages=0; pageNum=1; maxSeen=0; rot=0;
+    $('pvThumbs').innerHTML='';
+    var url=docUrl();
+    $('pvFileSize').textContent='—'; $('pvInfoSize').textContent='—';
+    if(!url){
+      status('PDF will appear here','Your trainer hasn\u2019t attached a document to this lesson yet. This step auto-completes when no PDF is required.',false);
+      syncUI(); return;
+    }
+    var nm=decodeURIComponent(url.split('/').pop().split('?')[0]).replace(/\.pdf$/i,'');
+    $('pvFileName').textContent=nm+'.pdf';
+    status('Loading document…','Rendering '+nm+'.pdf — view-only inside the portal.',true);
+    try{ await ensureLib(); }
+    catch(e){ status('Viewer could not start','The built-in reader (vendor/pdf.min.js) failed to load. Ask the admin to confirm the vendor/ folder was uploaded.',false); syncUI(); return; }
+    if(myTok!==tok)return;
+    try{
+      doc=await window.pdfjsLib.getDocument({url:encodeURI(url),isEvalSupported:false}).promise;
+    }catch(e){
+      doc=null; status('This PDF could not be opened','The file may still be uploading, or was moved. Ask your trainer to re-save the lesson.',false);
+      syncUI(); return;
+    }
+    if(myTok!==tok)return;
+    totalPages=(doc&&doc.numPages)||0;
+    var saved=loadSaved();
+    var start=(saved&&saved.p>1&&saved.p<=totalPages)?saved.p:1;
+    maxSeen=(saved&&saved.m)?Math.max(saved.m,start):start;
+    $('pvInfoRead').textContent=readMinutes()+' min read';
+    try{ $('pvScroll').scrollTop=0; }catch(e){}
+    await applyFit();
+    if(myTok!==tok)return;
+    if(start>1)await renderPage(start);
+    buildThumbs(myTok);
+    clearStatus(); syncUI();
+    try{
+      var r=await fetch(url,{method:'HEAD'});
+      var n=r.headers&&r.headers.get&&r.headers.get('content-length');
+      if(n&&myTok===tok){ var s=fmtSize(+n); $('pvFileSize').textContent=s; $('pvInfoSize').textContent=s; }
+    }catch(e){}
+    if(doc&&doc._pdfInfo&&doc._pdfInfo.numPages!==undefined&&totalPages!==doc._pdfInfo.numPages){totalPages=doc._pdfInfo.numPages;syncUI();}
+  }
+
+  function markComplete(){
+    if(window.LP&&window.LP.stepDone(moduleIdx,'pdf'))return;
+    if(!doc){toast('Load the document first.');return;}
+    if(maxSeen<totalPages){toast('🔒 Read to the last page first — you\u2019re on page '+maxSeen+' of '+totalPages+'.');return;}
+    if(window.LP){ window.LP.complete('pdf',100); }
+    else if(typeof saveProgress==='function'){ saveProgress(moduleIdx); }
+    syncUI();
+  }
+
+  function openPdfScreen(){
+    var g=$('bigGrid'); if(g)g.style.display='none';
+    document.querySelectorAll('.content-view').forEach(function(v){v.classList.remove('active');});
+    var vv=$('videoView'); if(vv){vv.classList.remove('active','lv-panel-open');var lvp=$('lvPscrim');if(lvp)lvp.classList.remove('show');try{var vp=$('realVideoPlayer');if(vp&&!vp.paused)vp.pause();}catch(e){}}
+    document.body.classList.remove('lv-video-mode');
+    if(window.LP)window.LP.setCrumb(true,(cur().title)||'');
+    PV.classList.add('active');
+    buildHead(); bindOnce(); loadDoc();
+    if(window.LP)window.LP.refresh();
+    try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){}
+  }
+  window.openPdfScreen=openPdfScreen;
+  window.pvOnLPChange=function(){ if(PV.classList.contains('active'))syncUI(); };
+
+  /* intercept the old pdf branch (its iframe no longer exists) */
+  var _orx=window.openResource;
+  if(_orx&&!window.__pvWrap){
+    var wv=function(t){
+      if(t==='pdf'){ openPdfScreen(); return; }
+      return _orx.apply(this,arguments);
+    };
+    window.openResource=wv; window.__pvWrap=true;
+  }
+
+  function bindOnce(){
+    if(bound)return; bound=true;
+    $('pvPrev').onclick=function(){goPage(pageNum-1);};
+    $('pvNext').onclick=function(){goPage(pageNum+1);};
+    $('pvZoomIn').onclick=function(){scale=Math.min(4,Math.round(scale*1.15*100)/100);renderPage();};
+    $('pvZoomOut').onclick=function(){scale=Math.max(.25,Math.round(scale*0.87*100)/100);renderPage();};
+    $('pvFit').onclick=function(){fitMode=fitMode==='width'?'page':'width';toast(fitMode==='width'?'Fitting to width':'Fitting page');applyFit();};
+    $('pvRot').onclick=function(){rot=(rot+90)%360;renderPage();if(doc)buildThumbs(tok);};
+    $('pvFs').onclick=function(){ try{
+      if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
+      else{var el=$('pvViewer');(el.requestFullscreen||el.webkitRequestFullscreen).call(el);}
+    }catch(e){} };
+    ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){document.addEventListener(ev,function(){ if(doc&&fitMode==='width')applyFit(); });});
+    var rz; window.addEventListener('resize',function(){clearTimeout(rz);rz=setTimeout(function(){ if(doc&&PV.classList.contains('active')&&fitMode==='width')applyFit(); },200);});
+    $('pvScroll').addEventListener('contextmenu',function(e){e.preventDefault();});
+    $('pvGoBtn').onclick=function(){
+      if(window.LP&&window.LP.stepDone(moduleIdx,'pdf'))return;
+      if(doc&&totalPages&&maxSeen>=totalPages){ markComplete(); }
+      else if(doc){ goPage(Math.min(totalPages,(maxSeen||0)+1)); }
+    };
+    $('pvMarkBtn').onclick=markComplete;
+    $('pvPrevStep').onclick=function(){
+      var m=cur();
+      if((m.videoUrl||'').trim()&&typeof openResource==='function')openResource('video');
+      else{ try{showBigButtons();}catch(e){} }
+    };
+    $('pvNextStep').onclick=function(){
+      if(window.LP&&!window.LP.stepDone(moduleIdx,'pdf')){toast('🔒 Finish the PDF first — read to page '+totalPages+' and mark it complete.');return;}
+      var nx=window.LP?window.LP.nextStepIn(moduleIdx):null;
+      if(nx){ if(typeof openResource==='function')openResource(nx==='ex'?'exercise':nx); return; }
+      if(moduleIdx<modules.length-1)location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+(moduleIdx+1);
+      else location.href='certificates.html';
+    };
+    $('pvPanelToggle').onclick=function(){PV.classList.add('lv-panel-open');var s=$('pvPscrim');if(s)s.classList.add('show');};
+    $('pvPanelClose').onclick=function(){PV.classList.remove('lv-panel-open');var s=$('pvPscrim');if(s)s.classList.remove('show');};
+    $('pvPscrim').onclick=function(){PV.classList.remove('lv-panel-open');this.classList.remove('show');};
+    $('pvRailHide').onclick=function(){$('pvRail').classList.add('hidden');$('pvRailShow').style.display='';};
+    $('pvRailShow').onclick=function(){$('pvRail').classList.remove('hidden');this.style.display='none';};
+    document.addEventListener('keydown',function(ev){
+      if(!PV.classList.contains('active'))return;
+      var tag=(ev.target&&ev.target.tagName)||'';
+      if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA')return;
+      if(ev.key==='ArrowRight'){ev.preventDefault();goPage(pageNum+1);}
+      else if(ev.key==='ArrowLeft'){ev.preventDefault();goPage(pageNum-1);}
+    });
+  }
+})();
+</script>
+<script id="lp-script">
+/* ============ LP v7 — sequential Learning Path engine: video → PDF → MCQ → Exercise → next ============ */
+(function(){
+  if(typeof modules==='undefined'||!modules||!modules.length||typeof moduleIdx==='undefined') return;
+  var V=document.getElementById('videoView'), PV=document.getElementById('pdfView');
+  function $(id){return document.getElementById(id);}
+  function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
+  var STEPS=[
+    {k:'video', icon:'🎥', name:'Video',    type:'video'},
+    {k:'pdf',   icon:'📄', name:'PDF',      type:'pdf'},
+    {k:'mcq',   icon:'📝', name:'MCQ',      type:'mcq'},
+    {k:'ex',    icon:'🛠️', name:'Exercise', type:'exercise'}
+  ];
+  var cfg={video_req_pct:90,pdf_req_pct:90};
+  var map={}, ready=false, hasMcq=true, waiting=[], gateOff=false;
+
+  function LKEY(){return 'lp_steps_'+encodeURIComponent(courseName);}
+  function loadLocal(){try{map=JSON.parse(localStorage.getItem(LKEY())||'{}');}catch(e){map={};}}
+  function saveLocal(){try{localStorage.setItem(LKEY(),JSON.stringify(map));}catch(e){}}
+  function st(i){if(!map[i])map[i]={};return map[i];}
+  function legacyDone(i){
+    try{if(typeof done!=='undefined'&&done.has(i))return true;}catch(e){}
+    try{return (JSON.parse(localStorage.getItem('done_'+courseName)||'[]')).indexOf(i)>-1;}catch(e){return false;}
+  }
+  function required(i){var m=modules[i]||{};return {video:!!(m.videoUrl||'').trim(),pdf:!!(m.pdfUrl||'').trim(),mcq:true,ex:!!(m.exercise||'').trim()};}
+  function stepDone(i,k){
+    if(!required(i)[k])return true;
+    if(legacyDone(i))return true;
+    var s=map[i]||{};
+    if(k==='video')return (s.video||0)>=cfg.video_req_pct;
+    if(k==='pdf')return (s.pdf||0)>=cfg.pdf_req_pct;
+    if(k==='mcq'&&!hasMcq)return stepDone(i,'pdf'); /* course has no quiz yet — nothing to pass */
+    return !!s[k];
+  }
+  function stepPct(i,k){var s=map[i]||{};return (k==='video'||k==='pdf')?Math.max(0,Math.min(100,s[k]||0)):(s[k]?100:0);}
+  function lessonComplete(i){for(var j=0;j<STEPS.length;j++){if(!stepDone(i,STEPS[j].k))return false;}return true;}
+  function lessonPct(i){var d=0;for(var j=0;j<STEPS.length;j++){if(stepDone(i,STEPS[j].k))d++;}return Math.round(d/STEPS.length*100);}
+  function nextStepIn(i){for(var j=0;j<STEPS.length;j++){if(!stepDone(i,STEPS[j].k))return STEPS[j].k;}return null;}
+  function unlocked(i){return i<=0||lessonComplete(i-1);}
+  function firstIncomplete(){for(var i=0;i<modules.length;i++){if(!lessonComplete(i))return i;}return -1;}
+  function blockReason(i,k){
+    if(!unlocked(i)){var p=modules[i-1];return 'Finish \u201C'+((p&&p.title)||('lesson '+i))+'\u201D first.';}
+    for(var j=0;j<STEPS.length;j++){
+      if(STEPS[j].k===k)break;
+      if(!stepDone(i,STEPS[j].k))return 'Complete the '+STEPS[j].name+' step to unlock this.';
+    }
+    return '';
+  }
+  function toast(m,type){try{showToast(m,type||'');}catch(e){console.log('[LP]',m);}}
+
+  /* ---------- objectives (shared by the PDF screen) ---------- */
+  function objectives(){
+    var t=((typeof currentMod!=='undefined'&&currentMod&&currentMod.title)||'').toLowerCase();
+    var mp=[['sketch','sketcher & constraint tools'],['constraint','constraint strategy'],['pad','solid feature tools'],['pocket','solid feature tools'],['shaft','rotational feature tools'],['groove','rotational feature tools'],['hole','hole & thread specifications'],['thread','hole & thread specifications'],['fillet','dress-up feature tools'],['chamfer','dress-up feature tools'],['pattern','pattern & mirror tools'],['mirror','pattern & mirror tools'],['draft','draft & manufacturability checks'],['shell','draft & manufacturability checks'],['boolean','boolean body operations'],['surface','surface-modelling tools'],['assembly','assembly structure & constraints'],['kinematic','kinematic joints & commands'],['sheet metal','sheet-metal parameters'],['bend','bend & fold tools'],['flat','flat pattern & DXF export'],['drawing','drafting standards'],['gd','GD&T & dimensioning'],['bom','BOM & balloons'],['exploded','exploded views & scenes'],['render','photoreal visualisation']];
+    var topic=null;
+    for(var i=0;i<mp.length;i++){if(t.indexOf(mp[i][0])>-1){topic=mp[i][1];break;}}
+    var nm=(typeof currentMod!=='undefined'&&currentMod&&currentMod.title)||'this lesson';
+    return ['Understand the core concepts behind '+nm,
+            'Identify the important '+(topic?topic:'tools and settings')+' and when to use each one',
+            'Follow the worked example in this document step by step',
+            'Apply the knowledge in the practical exercise'];
+  }
+
+  /* ---------- breadcrumb segment ---------- */
+  function setCrumb(on,title){
+    var bc=$('breadcrumb'); if(!bc)return;
+    var s=$('lvSubCrumb');
+    if(on){
+      if(!s){s=document.createElement('span');s.id='lvSubCrumb';s.style.whiteSpace='nowrap';s.innerHTML=' / <b id="lvSubCrumbT"></b>';bc.appendChild(s);}
+      var t=$('lvSubCrumbT'); if(t)t.textContent=title||'';
+    }else if(s&&s.parentNode){s.parentNode.removeChild(s);}
+  }
+
+  /* ---------- persistence ---------- */
+  function post(k,pct){
+    try{
+      fetch('/api/steps.php',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({student_id:(_user&&_user.id)||0,course_name:courseName,module_index:moduleIdx,step:k,pct:pct})})
+      .then(function(r){ if(!r.ok){return r.json().then(function(j){ if(j&&j.error)console.warn('[LP] server refused:',j.error); });} })
+      .catch(function(){});
+    }catch(e){}
+  }
+  function complete(k,pct){
+    pct=Math.max(0,Math.min(100,Math.round(pct==null?100:pct)));
+    var s=st(moduleIdx);
+    if(k==='video'||k==='pdf'){s[k]=Math.max(s[k]||0,pct);}else{s[k]=1;}
+    saveLocal(); post(k,pct);
+    var msgs={video:'Video completed — PDF unlocked',pdf:'PDF completed — MCQ unlocked',mcq:'MCQ passed — Exercise unlocked',ex:'Exercise completed'};
+    if(k==='ex'&&!lessonComplete(moduleIdx))msgs.ex='Exercise recorded';
+    if(msgs[k])toast('✓ '+msgs[k],'success');
+    refresh();
+    if(lessonComplete(moduleIdx)&&!legacyDone(moduleIdx)){
+      gateOff=true; try{ if(typeof saveProgress==='function')saveProgress(moduleIdx); }finally{gateOff=false;}
+    }
+  }
+  var lastWatchToast=-1;
+  function markWatch(pct){
+    if(!ready)return; pct=Math.min(100,Math.round(pct||0));
+    var s=st(moduleIdx);
+    if((s.video||0)<pct){s.video=pct;saveLocal();}
+    if(pct>=cfg.video_req_pct&&s.video!==-1){
+      if(!s.__sent){ s.__sent=1; saveLocal(); complete('video',pct); }
+    }else if(pct>=cfg.video_req_pct){ /* already sent */ }
+  }
+
+  /* ---------- gate legacy saveProgress (module completion = whole lesson) ---------- */
+  var _sp=window.saveProgress;
+  if(typeof _sp==='function'&&!_sp.__lp){
+    var wg=function(idx){
+      if(!gateOff&&ready&&idx===moduleIdx&&!lessonComplete(idx)){
+        toast('🔒 Finish every step (video → PDF → MCQ → exercise) before this lesson counts as complete.');
+        return Promise.resolve(false);
+      }
+      var p=_sp.apply(this,arguments);
+      Promise.resolve(p).then(function(){refresh();}).catch(function(){});
+      return p;
+    };
+    wg.__lp=true; window.saveProgress=wg;
+  }
+
+  /* ---------- gate openResource (URL bypass impossible) ---------- */
+  function guardType(t){
+    var k=t==='pdf'?'pdf':(t==='mcq'?'mcq':(t==='exercise'?'ex':null));
+    if(!k)return '';
+    if(k==='pdf'&&!required(moduleIdx).pdf)return '__none';
+    return blockReason(moduleIdx,k);
+  }
+  var _or=window.openResource;
+  if(typeof _or==='function'&&!_or.__lp){
+    var wgo=function(t){
+      if(!ready){waiting.push(t);return;}
+      var why=guardType(t);
+      if(why==='__none'){toast('No PDF is attached to this lesson yet.');return;}
+      if(why){
+        toast('🔒 Locked — '+why);
+        var g=$('bigGrid'); if(g)g.style.display='grid';
+        document.querySelectorAll('.content-view').forEach(function(v){v.classList.remove('active');});
+        return;
+      }
+      return _or.apply(this,arguments);
+    };
+    wgo.__lp=true; window.openResource=wgo;
+  }
+
+  /* ---------- big-grid lock badges ---------- */
+  var BTN={video:'videoResourceBtn',pdf:'pdfResourceBtn',mcq:'mcqResourceBtn',ex:'exResourceBtn'};
+  function applyLocks(){
+    if(typeof document==='undefined')return;
+    Object.keys(BTN).forEach(function(k){
+      var b=$(BTN[k]); if(!b)return;
+      var lock=k==='video'?'':blockReason(moduleIdx,k);
+      if(k==='pdf'&&!required(moduleIdx).pdf)lock='No PDF attached to this lesson yet.';
+      b.classList.toggle('locked',!!lock);
+      if(lock)b.setAttribute('data-tip',lock);else b.removeAttribute('data-tip');
+      b.classList.toggle('completed',stepDone(moduleIdx,k));
+    });
+  }
+
+  /* ---------- shared panel ---------- */
+  function renderPanel(root){
+    if(!root||!ready)return;
+    var q=function(sel){return root.querySelector(sel);};
+    var act=(PV&&PV.classList.contains('active'))?'pdf':((V&&V.classList.contains('active'))?'video':null);
+    var reqd=required(moduleIdx);
+    var rows=STEPS.map(function(s,ix){return {n:ix+1,icon:s.icon,kicker:s.name,k:s.k,type:s.k==='ex'?'exercise':s.k,title:(typeof currentMod!=='undefined'&&currentMod&&currentMod.title)||''};});
+    var nx=modules[moduleIdx+1];
+    rows.push({n:5,icon:nx?'➜':'🎓',kicker:nx?'Next Subtopic':'Course Finish',k:'__next',type:null,title:nx?nx.title:'Certificate & feedback'});
+    var doneN=0,html='';
+    rows.forEach(function(r){
+      var cur=r.k===act,dn=false,lock='';
+      if(r.k==='__next'){lock=lessonComplete(moduleIdx)?'':'Locked';}
+      else{dn=stepDone(moduleIdx,r.k);lock=dn?'':blockReason(moduleIdx,r.k);}
+      if(dn)doneN++;
+      if(r.k==='__next'&&!lock)doneN++;
+      var mcqAuto=(r.k==='mcq'&&dn&&!hasMcq&&!(map[moduleIdx]&&map[moduleIdx].mcq));
+      var pill=r.k==='__next'
+        ? (lock?'<span class="lp-pill pl">🔒 Locked</span>':'<span class="lp-pill pa">'+(nx?'Open →':'Continue →')+'</span>')
+        : (dn?(mcqAuto?'<span class="lp-pill pl">No quiz yet</span>':'<span class="lp-pill pc">✓ Completed</span>')
+          :(lock?'<span class="lp-pill pl">🔒 Locked</span>'
+            :(cur?'<span class="lp-pill pi">In Progress</span>'
+              :(reqd[r.k]?'<span class="lp-pill pa">🔓 Available</span>':'<span class="lp-pill pl">Not required</span>'))));
+      var meta=(r.k==='video'&&reqd.video&&!dn&&stepPct(moduleIdx,'video')>2)?'<span class="lp-k" style="letter-spacing:0;text-transform:none;color:var(--lv-accent)">'+stepPct(moduleIdx,'video')+'% watched</span>':'';
+      html+='<button class="lp-step'+(cur?' current':'')+(dn?' done':'')+(lock?' locked':'')+'" data-step="'+r.k+'"'+(lock?' data-tip="'+esc(lock)+'"':'')+'>'
+        +'<span class="lp-n">'+(r.n<10?'0':'')+r.n+'</span>'
+        +'<span class="lp-ico">'+(r.k==='__next'?r.icon:(lock?'🔒':(dn?'✓':r.icon)))+'</span>'
+        +'<span class="lp-main"><span class="lp-k">'+esc(r.kicker)+'</span><span class="lp-t">'+esc(r.title)+'</span>'+meta+'</span>'
+        +pill+'</button>';
+    });
+    var sb=q('[data-lp="steps"]');
+    if(sb){
+      sb.innerHTML=html;
+      sb.querySelectorAll('.lp-step').forEach(function(b){
+        b.onclick=function(){
+          var k=b.getAttribute('data-step');
+          closeDrawer(root);
+          if(k==='__next'){
+            if(!lessonComplete(moduleIdx)){toast('🔒 Locked — complete every step of this lesson first.');return;}
+            if(nx)location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+(moduleIdx+1);
+            else location.href='certificates.html';
+            return;
+          }
+          var why=blockReason(moduleIdx,k);
+          if(why){toast('🔒 Locked — '+why);return;}
+          var s=STEPS.filter(function(x){return x.k===k;})[0];
+          if(s&&k!==act)openResource(s.type);
+        };
+      });
+    }
+    var tot=rows.length, pct=Math.round(doneN/tot*100);
+    var sum=q('[data-lp="sum"]');
+    if(sum)sum.innerHTML='<div class="lp-sum"><div class="lp-sum-row"><span><b>'+doneN+'</b> / '+tot+' Completed</span><span>'+pct+'%</span></div><div class="lv-bar"><i style="width:'+pct+'%"></i></div></div>';
+    var cnt=q('[data-lp="count"]'); if(cnt)cnt.textContent=doneN+'/'+tot;
+    /* all lessons with locks */
+    var lh='';
+    for(var i=0;i<modules.length;i++){
+      var m=modules[i],dnL=lessonComplete(i),unL=unlocked(i),curL=i===moduleIdx;
+      var lr=unL?'':(blockReason(i,'video')||('Finish lesson '+i+' first.'));
+      lh+='<button class="lv-lesson'+(curL?' current':'')+(dnL?' done':'')+(unL?'':' locked')+'" data-i="'+i+'"'+(lr?' data-tip="'+esc(lr)+'"':'')+'>'
+        +'<span class="lv-st">'+(dnL?'✓':(unL?(curL?'▶':''):'🔒'))+'</span>'
+        +'<span class="lv-lico">'+((m.videoUrl||'').trim()?'🎥':((m.pdfUrl||'').trim()?'📄':'·'))+'</span>'
+        +'<span class="lv-lmain"><span class="lv-lt">'+((i+1)+'. '+esc(m.title))+'</span>'
+        +'<span class="lv-lm">'+(esc(m.dur||'15 min')+(dnL?' · complete':(unL?'':' · 🔒 locked')))+'</span></span>'
+        +(dnL?'<span class="lv-lpill pc">Completed</span>':(curL?'<span class="lv-lpill pi">In Progress</span>':''))
+        +'</button>';
+    }
+    var lb=q('[data-lp="lessons"]');
+    if(lb){
+      lb.innerHTML=lh;
+      lb.querySelectorAll('.lv-lesson').forEach(function(b){
+        b.onclick=function(){
+          var i=+b.getAttribute('data-i'); if(isNaN(i))return;
+          closeDrawer(root);
+          if(i===moduleIdx)return;
+          if(!unlocked(i)){toast('🔒 Lesson '+(i+1)+' is locked — '+ (blockReason(i,'video')||'finish earlier lessons first.'));return;}
+          location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+i;
+        };
+      });
+    }
+    var ac=q('[data-lp="allcount"]'); if(ac)ac.textContent=modules.length+' Lessons';
+    var co=q('[data-lp="course"]'); if(co)co.textContent=courseName||'Course';
+    var others=[];
+    try{ if(window.SoftmarcContent&&SoftmarcContent.getCourses){others=SoftmarcContent.getCourses().filter(function(c){return c&&c.title&&c.title!==courseName;});} }catch(e){}
+    var g=q('[data-lp="groups"]');
+    if(g){
+      g.innerHTML=others.map(function(c){
+        var k=(c.subtopics&&c.subtopics.length)||0;
+        return '<button class="lv-grp" data-c="'+esc(c.title)+'"><span class="gv">▸</span><b>'+esc(c.title)+'</b><span class="gn">'+(k?k+' Lessons':'Course')+'</span></button>';
+      }).join('');
+      g.querySelectorAll('button.lv-grp').forEach(function(b){b.onclick=function(){location.href='courses.html?course='+encodeURIComponent(b.getAttribute('data-c'));};});
+    }
+  }
+  function closeDrawer(root){
+    if(!root)return;
+    root.classList.remove('lv-panel-open');
+    var sc=root.querySelector('.lv-pscrim')||$('pvPscrim');
+    if(sc&&root===PV)sc.classList.remove('show');
+    if(root===V){var s2=$('lvPscrim');if(s2)s2.classList.remove('show');}
+  }
+  function refresh(){ applyLocks(); renderPanel(V); renderPanel(PV); try{ if(typeof window.pvOnLPChange==='function')window.pvOnLPChange(); }catch(e){} try{ if(typeof window.lvSyncProgress==='function')window.lvSyncProgress(); }catch(e){} }
+
+  /* ---------- exercise mark button (records the last step) ---------- */
+  var exb=$('exMarkDoneBtn');
+  if(exb&&!exb.__lp){
+    var exc=exb.cloneNode(true); exb.parentNode.replaceChild(exc,exb); exc.__lp=1;
+    exc.addEventListener('click',function(){
+      var why=blockReason(moduleIdx,'ex');
+      if(why){toast('🔒 Locked — '+why);return;}
+      if(required(moduleIdx).ex){ complete('ex',100); }
+      else if(!legacyDone(moduleIdx)){ gateOff=true; try{ if(typeof saveProgress==='function')saveProgress(moduleIdx);}finally{gateOff=false;} }
+      try{showBigButtons();}catch(e){}
+    });
+  }
+
+  /* ---------- boot ---------- */
+  async function boot(){
+    loadLocal();
+    try{
+      var c=await(await fetch('/api/config.php')).json();
+      if(c&&+c.video_req_pct>=50)cfg.video_req_pct=+c.video_req_pct;
+      if(c&&+c.pdf_req_pct>=50)cfg.pdf_req_pct=+c.pdf_req_pct;
+    }catch(e){}
+    try{
+      var rows=await(await fetch('/api/steps.php?student_id='+((_user&&_user.id)||0)+'&course_name='+encodeURIComponent(courseName))).json();
+      if(Array.isArray(rows)){
+        rows.forEach(function(r){
+          var s=st(r.module_index),v=Math.round(+r.pct||0);
+          if(r.step==='video'||r.step==='pdf'){ s[r.step]=Math.max(s[r.step]||0,v); if(v>=cfg.video_req_pct)s.__sent=1; }
+          else if(v>0){ s[r.step]=1; }
+        });
+        saveLocal();
+      }
+    }catch(e){}
+    try{
+      var qs=await(await fetch('/api/quizzes.php')).json();
+      if(Array.isArray(qs)){ hasMcq=qs.some(function(q){return (q.course_name||q.course)===courseName;}); }
+    }catch(e){}
+    ready=true;
+    var fi=firstIncomplete();
+    if(fi<0){ refresh(); }
+    else if(moduleIdx>fi){
+      window.__lpRedirect=fi;
+      toast('🔒 Lesson '+(moduleIdx+1)+' is locked — opening your next incomplete lesson ('+(fi+1)+') first.');
+      setTimeout(function(){location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+fi;},1500);
+    }
+    refresh();
+    var wq=waiting.slice(); waiting.length=0;
+    wq.forEach(function(t){ openResource(t); });
+  }
+
+  window.LP={
+    cfg:cfg, ready:function(){return ready;},
+    stepDone:stepDone, stepPct:stepPct, lessonComplete:lessonComplete, lessonPct:lessonPct,
+    nextStepIn:nextStepIn, blockReason:blockReason, unlocked:unlocked, required:required,
+    complete:complete, markWatch:markWatch, refresh:refresh, renderPanel:renderPanel, applyLocks:applyLocks,
+    setCrumb:setCrumb, objectives:objectives
+  };
+  if(typeof document!=='undefined'&&document.readyState==='complete')boot();
+  else window.addEventListener('load',function(){setTimeout(boot,0);});
+})();
+</script>
 <script src="softmarc-common.js"></script>
-<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3da304c78ae80a9',t:'MTc4OTgzNzY2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a3da8d3a5fcf4713',t:'MTc4OTg0MTQ3Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
