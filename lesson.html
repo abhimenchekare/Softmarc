@@ -908,7 +908,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function fmt(t){if(!isFinite(t)||t<0)t=0;var m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+(s<10?'0':'')+s;}
   function enc(){return encodeURIComponent((typeof courseName==='string'?courseName:'def'));}
   if(typeof moduleIdx==='undefined'||typeof modules==='undefined'||!modules||!modules.length) return;
-  var ratio=0, watchKey=null, autoDoneSent=false, lastSave=0, scrubbing=false;
+  var ratio=0, watchKey=null, autoDoneSent=false, lastSave=0, scrubbing=false, lastT=0, watchedSecs=0;
   function gkey(){return enc()+'_'+moduleIdx;}
   function isDone(){try{return typeof done!=='undefined'&&done.has(moduleIdx);}catch(e){return false;}}
 
@@ -999,7 +999,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function setupPlayer(){
     var m=currentMod||{};
     watchKey='lv_watch_'+gkey();
-    ratio=0; autoDoneSent=false;
+    ratio=0; autoDoneSent=false; lastT=0; watchedSecs=0; try{delete window.LV_EFF_PCT;}catch(e){}
     applyPoster();
     var sc=$('lvScrub'); sc.value=0; sc.max=0;
     $('lvTime').textContent='0:00 / 0:00';
@@ -1034,23 +1034,34 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       }catch(e){}
     });
     vp.addEventListener('timeupdate',function(){
-      if(!isFinite(vp.duration)||vp.duration<=0)return;
-      var t=vp.currentTime;
-      ratio=Math.min(1,t/vp.duration);
-      if(!scrubbing){var s=$('lvScrub');s.value=t;}
-      $('lvTime').textContent=fmt(t)+' / '+fmt(vp.duration);
+      var dur=isFinite(vp.duration)?vp.duration:0, t=vp.currentTime;
+      /* count real seconds spent watching while the playhead advances — survives broken duration metadata */
+      if(dur>0){ ratio=Math.min(1,t/dur); }
+      if(!vp.paused&&!vp.ended){ var dt=t-(lastT||t); if(dt>0&&dt<2) watchedSecs+=dt; }
+      lastT=t;
+      var effPct;
+      if(dur>0){ effPct=Math.round(Math.max(ratio,Math.min(1,watchedSecs/dur))*100); }
+      else{ effPct=Math.min(100,Math.round(watchedSecs/180*100)); } /* unknown duration: 3 min of real watching = complete */
+      if(effPct>0) window.LV_EFF_PCT=effPct;
+      if(!scrubbing){var sc=$('lvScrub');sc.max=dur||0;sc.value=t;}
+      $('lvTime').textContent=fmt(t)+' / '+fmt(dur||0);
       syncProgressUI();
       var now=Date.now();
       if(now-lastSave>5000){lastSave=now;try{localStorage.setItem(watchKey,String(t));}catch(e){}}
       if(window.LP&&window.LP.ready){
-        window.LP.markWatch(Math.round(ratio*100));
+        if(effPct>0) window.LP.markWatch(effPct);
         if(now-lastSave>2500){buildPanel();}
-      }else if(ratio>=0.9&&!isDone()&&!autoDoneSent){
+      }else if(effPct>=90&&!isDone()&&!autoDoneSent){
         autoDoneSent=true;
         if(typeof saveProgress==='function')saveProgress(moduleIdx);
         if(typeof showToast==='function')showToast('Lesson auto-marked complete — you\u2019re 90% through ✓','success');
         buildPanel();
       }
+    });
+    /* safety net: reached the true end of the video = watched it */
+    vp.addEventListener('ended',function(){
+      window.LV_EFF_PCT=100;
+      try{ if(window.LP&&window.LP.ready) window.LP.markWatch(100); }catch(e){}
     });
     vp.addEventListener('play',function(){playIcon(true);});
     vp.addEventListener('pause',function(){playIcon(false);});
@@ -1116,7 +1127,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       var mkc=mk.cloneNode(true); mk.parentNode.replaceChild(mkc,mk); mkc.__lpg=1;
       mkc.addEventListener('click',function(){
         if(window.LP&&window.LP.ready&&window.LP.stepDone(moduleIdx,'video')){ if(typeof showToast==='function')showToast('✓ Video already completed — continue to the next step.','success'); return; }
-        var pct=Math.round((ratio||0)*100), reqP=(window.LP&&window.LP.cfg.video_req_pct)||90;
+        var pct=Math.max(Math.round((ratio||0)*100), window.LV_EFF_PCT||0), reqP=(window.LP&&window.LP.cfg.video_req_pct)||90;
         if(pct>=reqP){ if(window.LP){window.LP.complete('video',pct);} else if(typeof saveProgress==='function'){saveProgress(moduleIdx);} buildPanel(); }
         else if(typeof showToast==='function'){showToast('🔒 Watch at least '+reqP+'% of the video first — you\u2019re at '+pct+'%.');}
       });
