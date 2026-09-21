@@ -55,8 +55,9 @@ app.use('/images', express.static(path.join(DATA_DIR, 'images'), { maxAge: ONE_D
 app.use(express.static(__dirname, {
   setHeaders(res, filePath) {
     const ext = path.extname(filePath).toLowerCase();
-    if (ext === '.html') res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-    else if (['.js', '.css', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.woff2'].includes(ext)) res.setHeader('Cache-Control', 'public, max-age=' + (ONE_DAY / 1000));
+    // HTML + JS + CSS: always revalidate (304 is free) so an upload is live instantly, no stale-cache surprises
+    if (['.html', '.js', '.css', '.mjs'].includes(ext)) res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    else if (['.png', '.jpg', '.jpeg', '.svg', '.webp', '.gif', '.ico', '.woff2', '.woff'].includes(ext)) res.setHeader('Cache-Control', 'public, max-age=' + (ONE_DAY / 1000));
   }
 }));
 // browsers auto-request /favicon.ico on every page — serve the logo instead of a 404
@@ -685,6 +686,74 @@ async function ensureStepsTable() {
   )`);
 }
 
+async function ensureTimeTable() {
+  await pool.query(`CREATE TABLE IF NOT EXISTS user_time (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    day        DATE NOT NULL,
+    seconds    INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_day (student_id, day)
+  )`);
+}
+
+// ---- Live time tracking: active seconds per student per day (powers dashboard "Hours logged") ----
+app.post('/api/time', async (req, res) => {
+  try {
+    const b = req.body || {};
+    const sid = Number(b.student_id);
+    let secs = Math.round(Number(b.seconds));
+    if (!sid || !isFinite(secs) || secs <= 0) return res.status(400).json({ error: 'student_id and positive seconds required' });
+    secs = Math.min(secs, 7200);
+    const sql = 'INSERT INTO user_time (student_id, day, seconds) VALUES (?, CURDATE(), ?) ON DUPLICATE KEY UPDATE seconds = seconds + VALUES(seconds)';
+    try { await pool.query(sql, [sid, secs]); }
+    catch (err) {
+      if (err.code === 'ER_NO_SUCH_TABLE') { await ensureTimeTable(); await pool.query(sql, [sid, secs]); }
+      else throw err;
+    }
+    res.status(201).json({ ok: true, added_seconds: secs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to log time' });
+  }
+});
+
+app.get('/api/time', async (req, res) => {
+  const sid = Number(req.query.student_id);
+  if (!sid) return res.status(400).json({ error: 'student_id required' });
+  try {
+    const [agg] = await pool.query(
+      `SELECT COALESCE(SUM(seconds),0) AS total_seconds,
+              COALESCE(SUM(CASE WHEN day >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) THEN seconds ELSE 0 END),0) AS week_seconds
+       FROM user_time WHERE student_id = ?`, [sid]);
+    const [days] = await pool.query(
+      `SELECT DATE_FORMAT(day, '%Y-%m-%d') AS d FROM user_time
+       WHERE student_id = ? AND seconds > 0 ORDER BY day DESC LIMIT 40`, [sid]);
+    let streak = 0;
+    if (days.length) {
+      const today = new Date(); today.setHours(12, 0, 0, 0);
+      let expect = today.getTime();
+      const first = new Date(days[0].d + 'T12:00:00').getTime();
+      if (first === expect - 86400000) expect = first; // no time logged yet today: yesterday starts a valid streak
+      for (const r of days) {
+        const d = new Date(r.d + 'T12:00:00').getTime();
+        if (d === expect) { streak++; expect -= 86400000; }
+        else if (d < expect) break;
+      }
+    }
+    res.json({
+      total_seconds: Number(agg[0] && agg[0].total_seconds) || 0,
+      week_seconds: Number(agg[0] && agg[0].week_seconds) || 0,
+      streak_days: streak,
+      recent_days: days.slice(0, 7).map(r => r.d)
+    });
+  } catch (err) {
+    if (err.code === 'ER_NO_SUCH_TABLE') return res.json({ total_seconds: 0, week_seconds: 0, streak_days: 0, recent_days: [] });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to read time' });
+  }
+});
+
 app.get('/api/config', (req, res) => {
   res.json(readStepConfig());
 });
@@ -778,6 +847,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n🚀 Softmarc API running on port ${PORT}`);
   console.log(`📍 Health: http://localhost:${PORT}/health\n`);
   try { await ensureStepsTable(); console.log('[DB] lesson_steps table ready'); } catch (e) { console.warn('[DB] lesson_steps ensure failed (retries on first use):', e.message); }
+  try { await ensureTimeTable(); console.log('[DB] user_time table ready'); } catch (e) { console.warn('[DB] user_time ensure failed (retries on first use):', e.message); }
 });
 
 module.exports = app;

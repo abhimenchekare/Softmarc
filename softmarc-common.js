@@ -108,3 +108,23 @@
     },true);
   }
 })();
+
+/* Live time tracking: counts seconds while the tab is visible and reports them to /api/time.
+   This is what powers the dashboard "Hours logged" stat — no manual action needed. */
+(function(){
+  var pending = 0, last = Date.now();
+  function whoami(){ try { return JSON.parse(localStorage.getItem('softmarc_user')||'null'); } catch(e){ return null; } }
+  function tick(){ var n = Date.now(); if (document.visibilityState !== 'hidden') pending += Math.round((n - last) / 1000); last = n; }
+  function flush(){
+    tick(); var secs = Math.min(pending, 120); pending = 0;
+    if (secs < 5) return;
+    var u = whoami(); if (!u || !u.id) return;
+    var body = JSON.stringify({ student_id: u.id, seconds: secs });
+    try { if (navigator.sendBeacon) { navigator.sendBeacon('/api/time', new Blob([body], {type:'application/json'})); return; } } catch(e){}
+    try { fetch('/api/time', { method:'POST', headers:{'Content-Type':'application/json'}, body: body, keepalive:true }).catch(function(){}); } catch(e){}
+  }
+  setInterval(tick, 5000);
+  setInterval(flush, 30000);
+  document.addEventListener('visibilitychange', function(){ last = Date.now(); if (document.visibilityState === 'hidden') flush(); });
+  window.addEventListener('pagehide', flush);
+})();

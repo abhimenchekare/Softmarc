@@ -119,3 +119,16 @@ CREATE TABLE IF NOT EXISTS lesson_steps (
   completed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY unique_step (student_id, course_name, module_index, step)
 );
+
+-- =============================================================
+-- v10 addition: live time tracking (dashboard "Hours logged" card)
+-- The Node server also creates this table automatically on boot.
+-- =============================================================
+CREATE TABLE IF NOT EXISTS user_time (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL,
+  day        DATE NOT NULL,
+  seconds    INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user_day (student_id, day)
+);

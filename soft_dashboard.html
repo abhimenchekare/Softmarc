@@ -356,9 +356,37 @@ const COURSE_DEFS = [
   { name: 'CATIA DMU Kinematics', tag: 'Simulation', modules: 6, hours: 9 },
   { name: 'CATIA Drafting & Annotations', tag: 'Drafting', modules: 7, hours: 10 }
 ];
-if(window.SoftmarcContent){
-  const __defs = SoftmarcContent.getCourseDefs(COURSE_DEFS);
-  COURSE_DEFS.splice(0, COURSE_DEFS.length, ...__defs);
+async function freshDefs(){
+  // Read courses LIVE from the Database (a stale local copy is what produced the NaN stats before).
+  try{
+    const res = await fetch(`${API_HOST}/courses`);
+    if(!res.ok) throw new Error('courses fetch failed');
+    const rows = await res.json();
+    if(Array.isArray(rows) && rows.length){
+      return rows.map((c,i)=>({
+        name: c.title,
+        tag: c.tag || 'Course',
+        modules: Array.isArray(c.subtopics) ? c.subtopics.length : 0,
+        hours: Number(c.duration_hours) || 0,
+        image: c.image || null,
+        display_order: Number(c.display_order) || i,
+        level: c.level || 'Beginner',
+        id: c.slug || c.title
+      })).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
+    }
+    throw new Error('no courses');
+  }catch(e){
+    console.warn('[Dashboard] live course fetch failed, using bundled list:', e.message);
+    return window.SoftmarcContent ? SoftmarcContent.getCourseDefs(COURSE_DEFS) : COURSE_DEFS;
+  }
+}
+async function liveTime(){
+  try{
+    const res = await fetch(`${API_HOST}/time?student_id=${user.id}`);
+    if(!res.ok) throw 0;
+    const d = await res.json();
+    return { total: Number(d.total_seconds)||0, week: Number(d.week_seconds)||0, streak: Number(d.streak_days)||0 };
+  }catch(e){ return { total:0, week:0, streak:0 }; }
 }
 
 async function loadDashboard(){
@@ -368,6 +396,8 @@ async function loadDashboard(){
   
   let progressMap = new Map(); // course_name -> Set(module_index)
   let useRealDB = true;
+  const defs = await freshDefs();
+  const timeInfo = await liveTime();
   
   try{
     const res = await fetch(`${API_HOST}/progress.php?student_id=${user.id}`);
@@ -394,17 +424,17 @@ async function loadDashboard(){
     });
   }
 
-  let totalCourses=COURSE_DEFS.length, completedCount=0, progressSum=0, totalHoursLogged=0;
+  let totalCourses=defs.length, completedCount=0, progressSum=0;
   let continueHtml='';
 
-  COURSE_DEFS.forEach(course=>{
+  defs.forEach(course=>{
     const doneSet = progressMap.get(course.name) || new Set();
-    const pct=Math.round((doneSet.size/course.modules)*100);
+    const modulesNum = Number(course.modules)||0;
+    const pct = modulesNum>0 ? Math.min(100, Math.round(Math.min(doneSet.size, modulesNum)/modulesNum*100)) : 0;
     progressSum+=pct;
     if(pct===100) completedCount++;
-    totalHoursLogged+=(pct/100)*course.hours;
     let nextIdx=0;
-    for(let i=0;i<course.modules;i++){ if(!doneSet.has(i)){nextIdx=i;break;} }
+    for(let i=0;i<modulesNum;i++){ if(!doneSet.has(i)){nextIdx=i;break;} }
     const isDone=pct===100, isActive=pct>0&&pct<100;
     const tagClass=isDone?'done':isActive?'active':'';
     const dotClass=isDone?'done':isActive?'active':'';
@@ -423,14 +453,19 @@ async function loadDashboard(){
           </div>
           <h3>${course.name}</h3>
           <div class="progress-wrap"><div class="progress-track"><div class="progress-fill ${fillClass}" style="width:${pct}%"></div></div></div>
-          <div class="progress-meta"><span>${pct}% ${useRealDB?'· Real DB':''}</span><span>${isDone?'Certified':`${doneSet.size}/${course.modules} subtopics done`}</span></div>
+          <div class="progress-meta"><span>${pct}% ${useRealDB?'· Real DB':''}</span><span>${isDone?'Certified':(modulesNum? `${doneSet.size}/${modulesNum} subtopics done` : 'No subtopics yet')}</span></div>
           <button class="course-action primary" onclick="event.stopPropagation(); ${actionFn}">${actionText} →</button>
         </div>
       </div>`;
   });
 
-  let avgProgress=Math.round(progressSum/totalCourses);
-  let finalHours=Math.round(totalHoursLogged);
+  let avgProgress = totalCourses>0 ? Math.round(progressSum/totalCourses) : 0;
+  if(!isFinite(avgProgress)) avgProgress = 0;
+  const hoursText = timeInfo.total >= 3600 ? (Math.round(timeInfo.total/360)/10)+'h'
+                  : (timeInfo.total > 0 ? Math.round(timeInfo.total/60)+'m' : '0h');
+  const streakText = timeInfo.streak > 1 ? `🔥 ${timeInfo.streak} day streak`
+                   : (timeInfo.streak === 1 ? '🔥 streak started today' : '🔥 no streak yet');
+  const weekText = timeInfo.week > 0 ? `↗ +${(Math.round(timeInfo.week/360)/10)}h this week` : '↗ fresh week';
 
   statsEl.innerHTML=`
     <div class="stat-card">
@@ -463,8 +498,8 @@ async function loadDashboard(){
         <div class="stat-icon hours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
       </div>
       <div class="stat-label">Hours logged</div>
-      <div class="stat-value">${finalHours}</div>
-      <div class="stat-meta"><span>🔥 12 day streak</span><span class="badge-trend up">↗ +3h</span></div>
+      <div class="stat-value">${hoursText}</div>
+      <div class="stat-meta"><span>${streakText}</span><span class="badge-trend up">${weekText}</span></div>
     </div>`;
 
   container.innerHTML=continueHtml;
@@ -474,6 +509,7 @@ function openLesson(course, module){ window.location.href='lesson.html?course='+
 function openSubtopics(courseName){ window.location.href='courses.html?course='+encodeURIComponent(courseName); }
 function viewCert(){ window.location.href='certificates.html'; }
 
+window.addEventListener('softmarc-courses-uploaded', ()=>loadDashboard());
 loadDashboard();
 </script>
 <script src="softmarc-common.js"></script>

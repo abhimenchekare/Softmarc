@@ -355,7 +355,7 @@ async function renderCoursesReal(){
   grid.innerHTML = '';
   COURSE_DEFS.forEach(course=>{
     const doneSet = progressMap.get(course.name) || new Set();
-    const pct = Math.round((doneSet.size / course.modules) * 100);
+    const pct = course.modules>0 ? Math.min(100, Math.round(Math.min(doneSet.size, course.modules) / course.modules * 100)) : 0;
     const cardHtml = `
       <div class="course-card" onclick="openSubtopics('${course.name}')">
         <div class="course-image" style="background-image:url('${course.image || (window.SoftmarcContent && SoftmarcContent.defaultImage(course.name, course.tag))}')"></div>
@@ -427,6 +427,7 @@ function openSubtopicResource(courseName, idx, type){
 // Check URL param ?course=...
 const urlParams = new URLSearchParams(window.location.search);
 const courseParam = urlParams.get('course');
+window.addEventListener('softmarc-courses-uploaded', ()=>{ renderCoursesReal(); });
 if(courseParam){
   // Need to wait for progress to load first
   renderCoursesReal().then(()=>{
