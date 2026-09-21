@@ -1,13 +1,13 @@
 (function(){
   // =============================================================
   // SoftmarcContent — Course Content Manager
-  // NOW WITH SUPABASE SUPPORT
-  // Priority: Supabase API → localStorage fallback → hardcoded
+  // NOW WITH DATABASE SUPPORT
+  // Priority: Database API → localStorage fallback → hardcoded
   // This ensures admin-added content is visible to ALL students.
   // =============================================================
 
   const KEY='softmarc_courses_v1';
-  const API_HOST=''; // Same origin on Vercel
+  const API_HOST='/api'; // Same origin on Vercel
   const API={};
 
   function slug(s){return String(s||'course').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||('course-'+Date.now());}
@@ -20,7 +20,7 @@
     return 'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));
   }
 
-  // Hardcoded fallback (only used if Supabase AND localStorage are empty)
+  // Hardcoded fallback (only used if Database AND localStorage are empty)
   const builtIn=[
     {id:'catia-v5-part-design',title:'CATIA V5 Part Design',tag:'Part Design',short_description:'Automotive solid modelling, sketches, dress-up features and capstone.',duration_hours:18,level:'Beginner',image:null,subtopics:[{id:'sketcher',title:'Sketcher Workbench & Constraints',dur:'20 min',description:'2D profiles and constraints',videoUrl:'videos/Your_First_Design_Project (1) 1.mp4',pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',exercise:'Create a fully constrained L-bracket sketch.'}],assessments:[]},
     {id:'catia-assembly-design',title:'CATIA Assembly Design',tag:'Assembly',short_description:'Product structure, constraints, clash checks and BOM workflow.',duration_hours:14,level:'Intermediate',image:null,subtopics:[{id:'assembly-overview',title:'Assembly Workbench Overview',dur:'15 min',description:'Assembly UI and product structure',videoUrl:'videos/Your_First_Design_Project (1) 1.mp4',pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',exercise:'Create a new Product with three parts.'}],assessments:[]}
@@ -53,8 +53,8 @@
     };
   }
 
-  // Convert Supabase row format to our internal format
-  function supabaseToInternal(courseRow){
+  // Convert Database row format to our internal format
+  function databaseToInternal(courseRow){
     const subs=(courseRow.subtopics||[]).map(s=>({
       id: s.slug || slug(s.title),
       title: s.title,
@@ -63,12 +63,12 @@
       videoUrl: s.video_url || '',
       pdfUrl: s.pdf_url || '',
       exercise: s.exercise || '',
-      // Keep Supabase IDs for updates
-      _supabase_id: s.id
+      // Keep Database IDs for updates
+      _database_id: s.id
     }));
     return {
       id: courseRow.slug || slug(courseRow.title),
-      _supabase_id: courseRow.id,
+      _database_id: courseRow.id,
       title: courseRow.title,
       slug: courseRow.slug,
       tag: courseRow.tag || 'Course',
@@ -95,13 +95,13 @@
   }
 
   // =============================================================
-  // MAIN: getCourses — NOW TRIES SUPABASE FIRST
+  // MAIN: getCourses — NOW TRIES DATABASE FIRST
   // =============================================================
   let _coursesCache = null;
   let _fetchPromise = null;
 
   API.getCourses = function(courseData, defs){
-    // If we already have cached courses from Supabase, return them
+    // If we already have cached courses from Database, return them
     if(_coursesCache && _coursesCache.length) return _coursesCache;
 
     // Try localStorage as immediate fallback (so page renders fast)
@@ -109,55 +109,55 @@
       const saved=JSON.parse(localStorage.getItem(KEY)||'null');
       if(Array.isArray(saved) && saved.length){
         _coursesCache = saved.map(normaliseCourse).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
-        // Still fetch from Supabase in background to get latest
-        API._fetchFromSupabase(courseData, defs);
+        // Still fetch from Database in background to get latest
+        API._fetchFromDatabase(courseData, defs);
         return _coursesCache;
       }
     }catch(e){}
 
     // Use hardcoded fallback
     _coursesCache = fallbackToCourses(courseData, defs);
-    // Fetch from Supabase in background
-    API._fetchFromSupabase(courseData, defs);
+    // Fetch from Database in background
+    API._fetchFromDatabase(courseData, defs);
     return _coursesCache;
   };
 
-  // Background fetch from Supabase — updates cache and localStorage
-  API._fetchFromSupabase = function(courseData, defs){
+  // Background fetch from Database — updates cache and localStorage
+  API._fetchFromDatabase = function(courseData, defs){
     if(_fetchPromise) return _fetchPromise;
 
-    _fetchPromise = fetch(`${API_HOST}/api/courses`)
+    _fetchPromise = fetch(`${API_HOST}/courses.php`)
       .then(res => {
         if(!res.ok) throw new Error('API failed');
         return res.json();
       })
       .then(courses => {
         if(Array.isArray(courses) && courses.length > 0){
-          // Convert Supabase format to internal format
-          _coursesCache = courses.map(supabaseToInternal).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
+          // Convert Database format to internal format
+          _coursesCache = courses.map(databaseToInternal).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
           // Update localStorage cache
           try{ localStorage.setItem(KEY, JSON.stringify(_coursesCache)); }catch(e){}
-          console.log(`[SoftmarcContent] Loaded ${_coursesCache.length} courses from Supabase`);
+          console.log(`[SoftmarcContent] Loaded ${_coursesCache.length} courses from Database`);
 
           // Dispatch event so pages can re-render
           window.dispatchEvent(new CustomEvent('softmarc-courses-uploaded', { detail: _coursesCache }));
         } else {
-          console.log('[SoftmarcContent] Supabase returned 0 courses, using fallback');
+          console.log('[SoftmarcContent] Database returned 0 courses, using fallback');
         }
       })
       .catch(err => {
-        console.warn('[SoftmarcContent] Supabase fetch failed, using cached/fallback:', err.message);
+        console.warn('[SoftmarcContent] Database fetch failed, using cached/fallback:', err.message);
       })
       .finally(() => {
         _fetchPromise = null;
       });
   };
 
-  // Force refresh from Supabase (call after admin saves)
-  API.refreshFromSupabase = function(){
+  // Force refresh from Database (call after admin saves)
+  API.refreshFromDatabase = function(){
     _fetchPromise = null;
     _coursesCache = null;
-    return API._fetchFromSupabase();
+    return API._fetchFromDatabase();
   };
 
   API.saveCourses = function(courses){

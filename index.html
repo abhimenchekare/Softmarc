@@ -375,8 +375,9 @@ form {
 <body>
 
 <!-- Fullscreen Background Video (100% Opacity) -->
-<video id="bgVideo" autoplay muted playsinline>
-  <source src="login_bg.mp4" type="video/mp4">
+<video id="bgVideo" preload="none" muted playsinline loop aria-hidden="true">
+  <!-- drop a login_bg.mp4 next to index.html and uncomment the line below to use your own video -->
+  <!-- <source src="login_bg.mp4" type="video/mp4"> -->
   <source src="https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4" type="video/mp4">
 </video>
 
@@ -473,6 +474,11 @@ toggleBtn.addEventListener('click', () => {
 });
 
 // Set source to our fallback mixkit driving loop so it plays flawlessly right away if local is missing!
+(function(){ /* perf: paint the login card first, then ease the background video in */
+  var v = document.getElementById('bgVideo'); if (!v) return;
+  function go(){ setTimeout(function(){ try{ v.load(); var p = v.play(); if (p && p.catch) p.catch(function(){}); }catch(e){} }, 450); }
+  if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
+})();
 const bgVideo = document.getElementById('bgVideo');
 if (bgVideo) {
   bgVideo.addEventListener('error', () => {

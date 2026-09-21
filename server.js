@@ -9,6 +9,10 @@ const multer = require('multer');
 const fs = require('fs');
 
 const app = express();
+app.disable('x-powered-by');
+let __compression = null;
+try { __compression = require('compression'); } catch (e) { console.warn('[Perf] compression package missing — responses sent uncompressed (run npm install)'); }
+if (__compression) app.use(__compression());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -44,10 +48,22 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/videos', express.static(path.join(DATA_DIR, 'videos')), express.static(path.join(__dirname, 'videos')));
-app.use('/pdfs', express.static(path.join(DATA_DIR, 'pdfs')));
-app.use('/images', express.static(path.join(DATA_DIR, 'images')));
-app.use(express.static(__dirname));
+const ONE_DAY = 24 * 60 * 60 * 1000;
+app.use('/videos', express.static(path.join(DATA_DIR, 'videos'), { maxAge: ONE_DAY }), express.static(path.join(__dirname, 'videos'), { maxAge: ONE_DAY }));
+app.use('/pdfs', express.static(path.join(DATA_DIR, 'pdfs'), { maxAge: ONE_DAY }));
+app.use('/images', express.static(path.join(DATA_DIR, 'images'), { maxAge: ONE_DAY }));
+app.use(express.static(__dirname, {
+  setHeaders(res, filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    if (ext === '.html') res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    else if (['.js', '.css', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.woff2'].includes(ext)) res.setHeader('Cache-Control', 'public, max-age=' + (ONE_DAY / 1000));
+  }
+}));
+// browsers auto-request /favicon.ico on every page — serve the logo instead of a 404
+app.get('/favicon.ico', (req, res) => {
+  const ico = path.join(__dirname, 'favicon.png');
+  if (fs.existsSync(ico)) { res.type('png'); res.sendFile(ico); } else res.status(404).end();
+});
 
 // =============================================================
 // MYSQL CONNECTION

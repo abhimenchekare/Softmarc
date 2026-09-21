@@ -104,3 +104,18 @@ ON DUPLICATE KEY UPDATE email=email;
 -- =============================================================
 -- DONE! All tables created.
 -- =============================================================
+
+-- =============================================================
+-- v7/v8 addition: learning-path step tracking (video → pdf → mcq → ex)
+-- The Node server also creates this table automatically on boot.
+-- =============================================================
+CREATE TABLE IF NOT EXISTS lesson_steps (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  student_id    INT NOT NULL,
+  course_name   VARCHAR(500) NOT NULL,
+  module_index  INT NOT NULL,
+  step          VARCHAR(16) NOT NULL,
+  pct           INT NOT NULL DEFAULT 100,
+  completed_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_step (student_id, course_name, module_index, step)
+);
