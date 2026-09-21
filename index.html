@@ -29,7 +29,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" href="logo.png">
+<link rel="icon" type="image/png" href="favicon.png?v=17">
 
 <style>
 :root{
@@ -375,10 +375,9 @@ form {
 <body>
 
 <!-- Fullscreen Background Video (100% Opacity) -->
-<video id="bgVideo" preload="none" muted playsinline loop aria-hidden="true">
-  <!-- drop a login_bg.mp4 next to index.html and uncomment the line below to use your own video -->
-  <!-- <source src="login_bg.mp4" type="video/mp4"> -->
-  <source src="login_bg.mp4" type="video/mp4">
+<video id="bgVideo" preload="none" muted playsinline loop aria-hidden="true" poster="logo.png">
+  <source src="brand-bg.mp4" type="video/mp4">
+  <!-- swap in your own clip any time: drop a file next to index.html and edit the src above -->
 </video>
 
 <!-- Beautiful Welcome Popup (shows after login) - Clickable only via button, no auto-redirect -->
@@ -473,20 +472,13 @@ toggleBtn.addEventListener('click', () => {
   toggleBtn.setAttribute('aria-pressed', String(isPass));
 });
 
-// Set source to our fallback mixkit driving loop so it plays flawlessly right away if local is missing!
-(function(){ /* perf: paint the login card first, then ease the background video in */
+/* background video: paint the login card first, then load+play the local brand loop; if the file is ever missing, fade the video out gracefully */
+(function(){
   var v = document.getElementById('bgVideo'); if (!v) return;
+  v.addEventListener('error', function(){ v.style.display = 'none'; }, true);
   function go(){ setTimeout(function(){ try{ v.load(); var p = v.play(); if (p && p.catch) p.catch(function(){}); }catch(e){} }, 450); }
   if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
 })();
-const bgVideo = document.getElementById('bgVideo');
-if (bgVideo) {
-  bgVideo.addEventListener('error', () => {
-    console.log("Local video not found yet, playing high-speed streaming backup loop.");
-    bgVideo.src = "https://assets.mixkit.co/videos/preview/mixkit-driving-in-a-futuristic-neon-city-34317-large.mp4";
-    bgVideo.load();
-  });
-}
 
 // ---------- Beautiful Welcome Modal Logic - NO AUTO REDIRECT, only button ----------
 function getGreeting(){
