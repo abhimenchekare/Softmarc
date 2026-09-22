@@ -1,10 +1,10 @@
-require('dotenv').config();
+// path must exist before dotenv uses it (the later `const path` was merged into this one)
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const express = require('express');
-const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const mysql = require('mysql2/promise');
-const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
 
@@ -13,9 +13,43 @@ app.disable('x-powered-by');
 let __compression = null;
 try { __compression = require('compression'); } catch (e) { console.warn('[Perf] compression package missing — responses sent uncompressed (run npm install)'); }
 if (__compression) app.use(__compression());
-app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Only the site itself (and, in development, localhost) may call the API.
+// '*' used to be sent here, which let any website's JavaScript hit these routes.
+const ALLOW_ORIGIN = (process.env.ALLOW_ORIGINS || '')
+  .split(',').map(x => x.trim()).filter(Boolean);
+const originAllowed = (o, req) => {
+  if (!o) return true;                                  // no Origin header: same-origin / curl
+  const norm = o.replace(/\/+$/, '');
+  if (norm === `${req.protocol}://${req.get('host')}`) return true;   // the site itself
+  if (ALLOW_ORIGIN.includes(norm)) return true;
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(norm); // local testing
+};
+app.use((req, res, next) => {
+  const o = req.get('Origin');
+  if (o && originAllowed(o, req)) { res.header('Access-Control-Allow-Origin', o); res.header('Vary', 'Origin'); }
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-auth');
+  res.header('Access-Control-Max-Age', '600');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
+
+// ---------- response hardening ----------
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');                 // no click-jacking / iframe embedding
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), interest-cohort=()');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
+  if (process.env.HTTPS !== '0' && (req.secure || req.get('X-Forwarded-Proto') === 'https')) {
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
+  next();
+});
+
 
 // =============================================================
 // PERSISTENT FILE STORAGE (survives redeploys!)
@@ -43,6 +77,9 @@ app.use((req, res, next) => {
     ['server.js','server-local.js','seed.js','index.js','package.json','package-lock.json','.gitignore','.npmrc','.htaccess']
       .includes(p)
     || p.endsWith('.sql') || p.endsWith('.log') || p.endsWith('.sh') || p.endsWith('.bat')
+    || p.endsWith('.md')            // setup guides mention default admin credentials
+    || /\.(db|db-wal|db-shm|sqlite3?|key|pem|authkey|conf|ini|bak|old)$/i.test(p)
+    || p.endsWith('.json')         // package.json, tsconfig, stray dumps
     || p.startsWith('.env');
   if (blocked) return res.status(403).send('Forbidden');
   next();
@@ -87,23 +124,119 @@ const pool = mysql.createPool({
 pool.query('SELECT 1').then(() => console.log('[DB] MySQL connected')).catch(e => console.error('[DB] Connection failed:', e.message));
 
 // =============================================================
+// DB CONFIG CHECK — never silently fall back to root@localhost
+// =============================================================
+const DB_CFG = {
+  host: process.env.DB_HOST || '',
+  port: Number(process.env.DB_PORT || 3306),
+  database: process.env.DB_NAME || '',
+  user: process.env.DB_USER || ''
+};
+const DB_MISSING = ['DB_HOST', 'DB_NAME', 'DB_USER'].filter(k => !process.env[k]);
+const ENV_FILE = path.join(__dirname, '.env');
+if (DB_MISSING.length) {
+  console.warn('[DB] NOT configured — missing env var(s): ' + DB_MISSING.join(', ') +
+    (fs.existsSync(ENV_FILE)
+      ? ` (a .env file WAS found at ${ENV_FILE} — it is there but does not define these keys; note that .env.local is NOT read)`
+      : ` (no .env file at ${ENV_FILE}; .env.local is ignored on purpose)`));
+} else {
+  console.log(`[DB] target ${DB_CFG.user}@${DB_CFG.host}:${DB_CFG.port}/${DB_CFG.database}`);
+}
+
+// =============================================================
 // CORS Headers
 // =============================================================
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
+// ---------- signed session tokens (no extra npm package, no DB table) ----------
+const crypto = require('crypto');
+const AUTH_KEY_FILE = path.join(DATA_DIR, '.authkey');
+function loadAuthSecret() {
+  if (process.env.AUTH_SECRET) return { secret: process.env.AUTH_SECRET, ephemeral: false };
+  try {
+    if (!fs.existsSync(AUTH_KEY_FILE)) {
+      fs.mkdirSync(path.dirname(AUTH_KEY_FILE), { recursive: true });
+      fs.writeFileSync(AUTH_KEY_FILE, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
+    }
+    return { secret: fs.readFileSync(AUTH_KEY_FILE, 'utf8').trim(), ephemeral: false };
+  } catch (e) {
+    // read-only DATA_DIR fallback: tokens simply die with the process
+    return { secret: 'ephemeral-' + crypto.randomBytes(24).toString('hex'), ephemeral: true };
+  }
+}
+const AUTH = loadAuthSecret();
+const TOKEN_TTL_MS = (Number(process.env.TOKEN_TTL_HOURS) || 12) * 3600e3;
+if (AUTH.ephemeral) console.warn('[Auth] Cannot persist signing key — sessions end when the app restarts');
+
+function signToken(user) {
+  const body = Buffer.from(JSON.stringify({
+    uid: user.id, role: user.role === 'admin' ? 'admin' : 'student', exp: Date.now() + TOKEN_TTL_MS
+  })).toString('base64url');
+  const sig = crypto.createHmac('sha256', AUTH.secret).update(body).digest('base64url');
+  return body + '.' + sig;
+}
+function verifyToken(t) {
+  if (typeof t !== 'string' || t.length > 2000) return null;
+  const i = t.lastIndexOf('.');
+  if (i < 8) return null;
+  const body = t.slice(0, i), sig = t.slice(i + 1);
+  const want = crypto.createHmac('sha256', AUTH.secret).update(body).digest('base64url');
+  const a = Buffer.from(sig), b = Buffer.from(want);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  let p; try { p = JSON.parse(Buffer.from(body, 'base64url').toString('utf8')); } catch (e) { return null; }
+  if (!p || !p.uid || !p.exp || p.exp < Date.now()) return null;
+  return p;
+}
+function authFrom(req) {
+  const t = req.get('x-auth') || req.query.token || '';
+  return t ? verifyToken(t) : null;
+}
+function needSignIn(req, res) {
+  res.status(401).json({ error: 'Please sign in again.', code: 'auth_required' });
+}
+// who may touch what
+const PUB = [[/^POST$/, /^\/login$/], [/^GET$/, /^\/(health|config)$/], [/^GET$/, /^\/courses(\/\d+)?$/], [/^GET$/, /^\/quizzes(\/\d+)(\/questions)?$/]];
+const ADMIN = [[/^GET$/, /^\/(users|submissions|analytics\/summary)$/], [/^POST$/, /^\/(config|upload|users|courses|quizzes)$/],
+  [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
+  [/^POST$/, /^\/quizzes\/\d+\/questions$/], [/^(PUT|DELETE)$/, /^\/questions\/\d+$/], [/^DELETE$/, /^\/users\/\d+$/]];
+const SCOPED = [/^\/(progress|time|steps)/, /^\/users\/\d+/, /^\/quizzes\/\d+\/submit$/];
+function claimedId(req) {
+  const rp = req.path.replace(/\.php/gi, '');
+  const m = rp.match(/^\/users\/(\d+)/);
+  if (m) return Number(m[1]);
+  const src = Object.assign({}, req.query, (req.body && typeof req.body === 'object') ? req.body : {});
+  const n = Number(src.student_id != null ? src.student_id : src.id);
+  return isFinite(n) && n > 0 ? n : 0;
+}
+app.use('/api', (req, res, next) => {
+  const p = req.path.replace(/\.php/gi, '');  // the .php alias rewrite runs later — normalise here (also mid-path: /users.php/7/avatar)   // the .php alias rewrite runs later — normalise here
+  if (PUB.some(r => r[0].test(req.method) && r[1].test(p))) return next();
+  const a = authFrom(req);
+  if (!a) return needSignIn(req, res);
+  req.auth = a;
+  const cid = claimedId(req);
+  // a learner may always act on their own /users/<id> row (profile, avatar, password, closing their account)
+  const selfRow = /^\/users\/\d+$/.test(p) && cid === a.uid;
+  if (ADMIN.some(r => r[0].test(req.method) && r[1].test(p)) && a.role !== 'admin' && !selfRow)
+    return res.status(403).json({ error: 'Admin access required.', code: 'admin_required' });
+  if (SCOPED.some(re => re.test(p)) && !selfRow) {
+    if (cid && cid !== a.uid && a.role !== 'admin')
+      return res.status(403).json({ error: 'That record belongs to another account.', code: 'forbidden' });
+  }
   next();
 });
+app.get('/api/auth/verify', (req, res) => {
+  const a = authFrom(req);
+  if (!a) return needSignIn(req, res);
+  res.json({ ok: true, id: a.uid, role: a.role, expires_at: new Date(a.exp).toISOString() });
+});
+app.post('/api/auth/logout', (req, res) => res.json({ ok: true, note: 'stateless token — discard it on the device' }));
 
 // =============================================================
 // .php ROUTE ALIASES (for frontend compatibility)
 // =============================================================
 app.use((req, res, next) => {
-  if (req.path.endsWith('.php')) {
-    req.url = req.url.replace('.php', '');
-  }
+  // strip the .php suffix wherever it appears in the path: the client mixes
+  // /api/users/7, /api/users.php/7 and /api/users.php/7/password — all must route the same.
+  if (req.path.indexOf('.php') !== -1) req.url = req.url.replace(/\.php/g, '');
   next();
 });
 
@@ -132,6 +265,7 @@ const healthHandler = async (req, res) => {
       courseCount = result[0].count;
     } catch (e) { courseCount = 'table_missing'; }
 
+    if (!authFrom(req) && process.env.HEALTH_VERBOSE !== '1') delete rows[0].time;
     res.json({
       status: 'ok',
       time: rows[0].time,
@@ -141,10 +275,23 @@ const healthHandler = async (req, res) => {
     });
   } catch (e) {
     console.error('[Health Check Failed]', e);
-    res.status(500).json({ 
-      status: 'error', 
-      error: e.message,
-      hint: 'Check DB environment variables'
+    const verbose = !!authFrom(req) || process.env.HEALTH_VERBOSE === '1';
+    let hint;
+    if (DB_MISSING.length) {
+      hint = `Database settings are not loaded by the Node app — missing: ${DB_MISSING.join(', ')} (DB_PASS optional). Fix: hPanel → Websites → Node.js configuration → Environment Variables, add them, press SAVE, then RESTART APP (a redeploy is not needed). Or create a file named exactly .env next to server.js with one KEY=value per line. Note: .env and .env* are gitignored, so a .env committed to GitHub will never reach the server.`;
+    } else if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|PROTOCOL_CONNECTION_LOST/.test(e.message || '')) {
+      hint = `Reached the database host but the connection failed. Expected target: ${DB_CFG.user}@${DB_CFG.host}:${DB_CFG.port}/${DB_CFG.database}. On Hostinger DB_HOST must be 127.0.0.1 (not localhost) and the MySQL user must be granted that database in hPanel → MySQL.`;
+    } else {
+      hint = `Connecting as ${DB_CFG.user || 'root'}@${DB_CFG.host || 'localhost'} to database ${DB_CFG.database || '(none)'}. ${e.message}`;
+    }
+    res.status(500).json({
+      status: 'error',
+      ...(verbose ? { error: e.message || e.sqlMessage || String(e) } : {}),
+      ...(verbose ? {
+        db_target: `${DB_CFG.user || 'root'}@${DB_CFG.host || 'localhost'}:${DB_CFG.port}/${DB_CFG.database || '(none)'}`,
+        missing_env: DB_MISSING,
+        hint
+      } : { hint: 'Database settings are not loaded by this app. On the hosting panel add DB_HOST, DB_NAME, DB_USER, DB_PASS to Environment Variables, Save, then Restart App. Set HEALTH_VERBOSE=1 temporarily for the full diagnostic.' })
     });
   }
 };
@@ -176,19 +323,43 @@ app.get('/api/users/:id', async (req, res) => {
   }
 });
 
+// sign-in throttling: 8 tries per 10 minutes per email+IP
+const TRY_WINDOW = 10 * 60e3, TRY_MAX = 8;
+const tries = new Map();
+function throttled(key) {
+  const now = Date.now();
+  const list = (tries.get(key) || []).filter(t => now - t < TRY_WINDOW);
+  tries.set(key, list);
+  return list.length >= TRY_MAX;
+}
+function noteTry(key) {
+  const now = Date.now();
+  const list = (tries.get(key) || []).filter(t => now - t < TRY_WINDOW);
+  list.push(now);
+  tries.set(key, list);
+  if (tries.size > 20000) tries.clear();
+}
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
+  const tkey = String(email).toLowerCase() + '|' + (req.ip || '');
+  if (throttled(tkey))
+    return res.status(429).json({ error: 'Too many sign-in attempts. Wait a few minutes and try again.', code: 'slow_down' });
+
   try {
     const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (rows.length === 0) return res.status(401).json({ error: 'Invalid email or password' });
+    if (rows.length === 0) { noteTry(tkey); return res.status(401).json({ error: 'Invalid email or password' }); }
 
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password_hash);
-    if (!match) return res.status(401).json({ error: 'Invalid email or password' });
+    if (!match) { noteTry(tkey); return res.status(401).json({ error: 'Invalid email or password' }); }
+    tries.delete(tkey);
+    const token = signToken(user);
 
     res.json({
+      token,
+      token_expires_at: new Date(Date.now() + TOKEN_TTL_MS).toISOString(),
       id: user.id,
       full_name: user.full_name,
       email: user.email,
@@ -638,7 +809,25 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}_${Math.random().toString(36).slice(2, 7)}_${safe || 'file'}`);
   }
 });
-const upload = multer({ storage, limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024 } });
+const ALLOW_EXT = {
+  videos: ['.mp4', '.webm', '.m4v', '.mov'],
+  pdfs:   ['.pdf', '.ppt', '.pptx'],
+  images: ['.png', '.jpg', '.jpeg', '.webp', '.gif']
+};
+const upload = multer({
+  storage,
+  limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const folder = pickFolder(req.body && req.body.type);
+    const name = (file.originalname || '').toLowerCase();
+    const okExt = ALLOW_EXT[folder].some(e => name.endsWith(e));
+    const okMime = /^(video\/|image\/(png|jpe?g|webp|gif)$|application\/(pdf|vnd\.ms-powerpoint|officedocument\.presentationml\.presentation)$)/.test(file.mimetype || '');
+    if (!okExt || !okMime) {
+      return cb(Object.assign(new Error('Only ' + ALLOW_EXT[folder].join(', ') + ' files can be uploaded here'), { code: 'BAD_TYPE' }));
+    }
+    cb(null, true);
+  }
+});
 
 app.post('/api/upload', (req, res) => {
   upload.single('file')(req, res, err => {
@@ -754,6 +943,176 @@ app.get('/api/time', async (req, res) => {
   }
 });
 
+// =============================================================
+// ADMIN ANALYTICS — learner intelligence for the training team.
+// All rollups are computed server-side; missing tables degrade to zeros.
+// =============================================================
+async function qa(sql, args) {
+  try { const [rows] = await pool.query(sql, args || []); return rows; }
+  catch (e) { if (e && e.code === 'ER_NO_SUCH_TABLE') return []; throw e; }
+}
+
+app.get('/api/analytics/summary', async (req, res) => {
+  try {
+    const days = Math.max(7, Math.min(90, parseInt(req.query.days, 10) || 30));
+    const R = await Promise.all([
+      qa(`SELECT id, full_name, email, created_at FROM users WHERE role = 'student' ORDER BY created_at DESC`),
+      qa(`SELECT student_id,
+                 COALESCE(SUM(seconds),0) AS total_s,
+                 MAX(day) AS last_day,
+                 COALESCE(SUM(CASE WHEN day >= DATE_SUB(CURDATE(), INTERVAL 6 DAY) THEN seconds ELSE 0 END),0) AS week_s
+          FROM user_time GROUP BY student_id`),
+      qa(`SELECT student_id, course_name, COUNT(DISTINCT module_index) AS done
+          FROM lesson_progress GROUP BY student_id, course_name`),
+      qa(`SELECT course_name, module_index, step, COUNT(DISTINCT student_id) AS cnt
+          FROM lesson_steps GROUP BY course_name, module_index, step`),
+      qa(`SELECT course_name, COUNT(DISTINCT student_id) AS enrolled
+          FROM lesson_steps GROUP BY course_name`),
+      qa(`SELECT course_name, step, COUNT(DISTINCT student_id) AS students
+          FROM lesson_steps GROUP BY course_name, step`),
+      qa(`SELECT student_id, course_name, COUNT(DISTINCT module_index) AS touched, MAX(module_index) AS furthest
+          FROM lesson_steps GROUP BY student_id, course_name`),
+      qa(`SELECT c.id, c.title,
+                 (SELECT COUNT(*) FROM subtopics s WHERE s.course_id = c.id) AS subtopic_count
+          FROM courses c WHERE c.status = 'active' ORDER BY c.display_order ASC, c.id ASC`),
+      qa(`SELECT student_id, AVG(score) AS avg_score, COUNT(*) AS attempts
+          FROM student_submissions GROUP BY student_id`),
+      qa(`SELECT COUNT(*) AS n, COALESCE(AVG(score),0) AS avg_score FROM student_submissions`),
+      qa(`SELECT DATE_FORMAT(day, '%Y-%m-%d') AS d, COUNT(DISTINCT student_id) AS active_students, SUM(seconds) AS seconds
+          FROM user_time WHERE day >= DATE_SUB(CURDATE(), INTERVAL ${days - 1} DAY) GROUP BY d ORDER BY d ASC`),
+      qa(`SELECT student_id, DATE_FORMAT(day, '%Y-%m-%d') AS d
+          FROM user_time WHERE seconds > 0 AND day >= DATE_SUB(CURDATE(), INTERVAL 45 DAY)
+          ORDER BY student_id ASC, day DESC LIMIT 20000`)
+    ]);
+    const [studentsRaw, timeRaw, progRaw, stepsRaw, enrollRaw, courseStepRaw, touchedRaw, coursesRaw, quizByStRaw, quizAllRaw, seriesRaw, streakRaw] = R;
+
+    const dstr = (x) => { if (!x) return null; const t = typeof x; if (t === 'string') return x.slice(0, 10); if (x instanceof Date || t === 'object') { try { return new Date(x).toISOString().slice(0, 10); } catch (e) { return String(x).slice(0, 10); } } return String(x).slice(0, 10); };
+    const today = new Date(); today.setHours(12, 0, 0, 0);
+    const DAY = 864e5;
+
+    // per-student current streak from day list
+    const streakMap = {};
+    { const bySt = {};
+      streakRaw.forEach(r => { (bySt[r.student_id] = bySt[r.student_id] || new Set()).add(r.d); });
+      Object.keys(bySt).forEach(sid => {
+        const set = bySt[sid]; let expect = today.getTime(); let st = 0;
+        if (!set.has(new Date(expect).toISOString().slice(0, 10))) expect -= DAY;
+        while (set.has(new Date(expect).toISOString().slice(0, 10))) { st++; expect -= DAY; }
+        streakMap[sid] = st;
+      });
+    }
+
+    const timeMap = {}; timeRaw.forEach(r => { timeMap[r.student_id] = r; });
+    const quizMap = {}; quizByStRaw.forEach(r => { quizMap[r.student_id] = { avg: Math.round((+r.avg_score) * 10) / 10, attempts: +r.attempts }; });
+
+    const subByTitle = {}; coursesRaw.forEach(c => { subByTitle[c.title] = Number(c.subtopic_count) || 0; });
+
+    // progress map (fully-completed modules per student per course) + engagement from steps
+    const doneMap = {}; const progCourses = {};
+    progRaw.forEach(r => {
+      (doneMap[r.student_id] = doneMap[r.student_id] || {})[r.course_name] = +r.done;
+      (progCourses[r.course_name] = progCourses[r.course_name] || new Set()).add(r.student_id);
+    });
+    const touchMap = {}; const touchCourses = {};
+    touchedRaw.forEach(r => {
+      const o = (touchMap[r.student_id] = touchMap[r.student_id] || {});
+      o[r.course_name] = { touched: +r.touched, furthest: +r.furthest };
+      (touchCourses[r.course_name] = touchCourses[r.course_name] || new Set()).add(r.student_id);
+    });
+    const enrollFromSteps = {}; enrollRaw.forEach(r => { enrollFromSteps[r.course_name] = +r.enrolled; });
+    const funnelByCourse = {};
+    courseStepRaw.forEach(r => { (funnelByCourse[r.course_name] = funnelByCourse[r.course_name] || {})[r.step] = +r.students; });
+
+    // per-module step matrix for stall detection
+    const stepMatrix = {};
+    stepsRaw.forEach(r => {
+      const c = (stepMatrix[r.course_name] = stepMatrix[r.course_name] || {});
+      const m = (c[r.module_index] = c[r.module_index] || {}); m[r.step] = +r.cnt;
+    });
+    function biggestStall(courseName, subCount) {
+      const cm = stepMatrix[courseName]; if (!cm) return null;
+      const mods = Object.keys(cm).map(Number).sort((a, b) => a - b);
+      const finished = mods.map(m => { const o = cm[m]; return o.ex != null ? o.ex : (o.mcq != null ? o.mcq : (o.pdf != null ? o.pdf : (o.video || 0))); });
+      let worst = 0, at = -1;
+      for (let i = 1; i < mods.length; i++) { const loss = finished[i - 1] - finished[i]; if (loss > worst) { worst = loss; at = i; } }
+      if (at < 0) return null;
+      return { module: mods[at] + 1, lost: worst, label: 'Subtopic ' + (mods[at] + 1) };
+    }
+
+    // learners rollup
+    const learners = studentsRaw.map(u => {
+      const t = timeMap[u.id] || {}; const dn = doneMap[u.id] || {}; const tc = touchMap[u.id] || {};
+      const courseNames = new Set([...Object.keys(dn), ...Object.keys(tc)]);
+      let pctSum = 0, pctN = 0, certified = 0;
+      courseNames.forEach(cn => {
+        const subs = subByTitle[cn] != null ? subByTitle[cn] : 0;
+        const p = subs > 0 ? Math.min(100, Math.round(((dn[cn] || 0) / subs) * 100)) : 0;
+        pctSum += p; pctN++; if (p >= 100) certified++;
+      });
+      const avgPct = pctN ? Math.round(pctSum / pctN) : 0;
+      const last = dstr(t.last_day);
+      const idle = last ? Math.floor((today.getTime() - Date.parse(last + 'T12:00:00')) / DAY) : 999;
+      const hours = Math.round(((+t.total_s || 0) / 3600) * 10) / 10;
+      const weekH = Math.round(((+t.week_s || 0) / 3600) * 10) / 10;
+      const q = quizMap[u.id] || null;
+      let status = 'not-started';
+      if (courseNames.size > 0 || +t.total_s > 0) {
+        if (!last) status = 'needs-nudge'; /* engaged but no time data yet — don't cry wolf */
+        else if (idle >= 7) status = 'at-risk';
+        else if (idle >= 3 || (pctN > 0 && avgPct < 40)) status = 'needs-nudge';
+        else status = 'on-track';
+      }
+      return { id: u.id, name: u.full_name || u.email || 'Learner #' + u.id, email: u.email || '',
+        courses: courseNames.size, avg_pct: avgPct, certified, hours, week_hours: weekH,
+        streak: streakMap[u.id] || 0, quiz_avg: q ? q.avg : null, quiz_attempts: q ? q.attempts : 0,
+        last_active: last, idle_days: idle > 3650 ? null : idle, status };
+    });
+
+    // courses rollup
+    const courses = coursesRaw.map(c => {
+      const enrolledSet = new Set([...(progCourses[c.title] || []), ...(touchCourses[c.title] || [])]);
+      let enrolled = Math.max(enrolledSet.size, enrollFromSteps[c.title] || 0);
+      let pctSum = 0, pctN = 0, certs = 0;
+      enrolledSet.forEach(sid => {
+        const subs = Number(c.subtopic_count) || 0;
+        const p = subs > 0 ? Math.min(100, Math.round(((doneMap[sid] && doneMap[sid][c.title]) || 0) / subs * 100)) : 0;
+        pctSum += p; pctN++; if (p >= 100) certs++;
+      });
+      return { title: c.title, subtopics: Number(c.subtopic_count) || 0, enrolled,
+        avg_pct: pctN ? Math.round(pctSum / pctN) : 0, certificates: certs,
+        funnel: funnelByCourse[c.title] || {}, stall: biggestStall(c.title, Number(c.subtopic_count) || 0) };
+    });
+
+    const globalFunnel = {}; ['video', 'pdf', 'mcq', 'ex'].forEach(k => { globalFunnel[k] = courses.reduce((a, c) => a + (c.funnel[k] || 0), 0); });
+    const nSub = learners.filter(l => l.status !== 'not-started').length;
+    const series = []; {
+      const byDay = {}; seriesRaw.forEach(r => { byDay[r.d] = r; });
+      for (let i = days - 1; i >= 0; i--) {
+        const d = new Date(today.getTime() - i * DAY).toISOString().slice(0, 10);
+        const row = byDay[d];
+        series.push({ d, active: row ? +row.active_students : 0, minutes: row ? Math.round((+row.seconds) / 60) : 0 });
+      }
+    }
+    const quizAll = quizAllRaw[0] || { n: 0, avg_score: 0 };
+    res.json({
+      ok: true, days, generated_at: new Date().toISOString(),
+      totals: {
+        learners: studentsRaw.length, engaged: nSub,
+        active_7d: timeRaw.filter(r => (+r.week_s || 0) > 0).length,
+        avg_completion: Math.round(learners.length ? learners.reduce((a, l) => a + l.avg_pct, 0) / Math.max(1, learners.length) : 0),
+        hours: Math.round((timeRaw.reduce((a, r) => a + (+r.total_s || 0), 0) / 3600) * 10) / 10,
+        certificates: learners.reduce((a, l) => a + l.certified, 0),
+        quiz_avg: Math.round((+quizAll.avg_score || 0) * 10) / 10, quiz_submissions: +quizAll.n || 0
+      },
+      funnel: globalFunnel, series, courses,
+      learners: learners.sort((a, b) => (a.idle_days - b.idle_days))
+    });
+  } catch (e) {
+    console.error('analytics failed:', e);
+    res.status(500).json({ error: 'Analytics unavailable', detail: e.message });
+  }
+});
+
 app.get('/api/config', (req, res) => {
   res.json(readStepConfig());
 });
@@ -843,6 +1202,16 @@ app.post('/api/steps', async (req, res) => {
 // =============================================================
 
 const PORT = process.env.PORT || 3000;
+if (DB_MISSING.length && require.main === module) {
+  console.error('\n[DB] Cannot start: ' + DB_MISSING.join(', ') + ' are not set.\n' +
+                '     → On your own PC, create this exact file: ' + ENV_FILE + '\n' +
+                '       with these lines (fill in YOUR local MySQL password), then start again:\n' +
+                '         DB_HOST=127.0.0.1\n         DB_PORT=3306\n         DB_NAME=softmarc\n         DB_USER=root\n         DB_PASS=yourmysqlpassword\n' +
+                '       (server.js reads only .env — your .env.local / DB_TYPE=sqlite / server-local.js options do NOT apply to it)\n' +
+                '     → No local MySQL at all? Use the built-in demo instead: npm run local\n' +
+                '     → Hosting (Hostinger): hPanel → Node.js app → Environment Variables → add them → Save → Restart App.\n');
+  process.exitCode = 1;
+}
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`\n🚀 Softmarc API running on port ${PORT}`);
   console.log(`📍 Health: http://localhost:${PORT}/health\n`);

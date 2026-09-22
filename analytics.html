@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmarc — Learner Analytics</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="favicon.png?v=17">
+<script src="softmarc-auth.js?v=23"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F7F8FA; --surface:#FFFFFF; --surface-hover:#F8FAFC; --surface-2:#F1F5F9;
+  --border:#E5E7EB; --border-strong:#D1D5DB;
+  --text-900:#0F172A; --text-700:#334155; --text-500:#64748B; --text-400:#94A3B8;
+  --navy-950:#050C1A; --navy-900:#0A1930; --cyan:#0EA5E9; --cyan-500:#00BFCe; --cyan-bg:#E0F2FE;
+  --success:#16A34A; --success-bg:#DCFCE7; --warn:#D97706; --warn-bg:#FEF3C7; --danger:#DC2626; --danger-bg:#FEE2E2;
+  --shadow-sm:0 1px 2px rgba(15,23,42,.05); --shadow:0 8px 24px rgba(15,23,42,.08);
+  --font-display:'Space Grotesk',sans-serif; --font-body:'Inter',sans-serif; --font-mono:'IBM Plex Mono',monospace;
+  --radius-lg:16px; --radius-md:12px; --sidebar-w:252px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text-900);display:flex;min-height:100vh;}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:linear-gradient(180deg,var(--navy-950),var(--navy-900));color:#fff;padding:0;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;}
+.main{flex:1;min-width:0;padding:22px 26px 46px;}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px;}
+.page-head h1{font-family:var(--font-display);font-size:23px;letter-spacing:-.4px;}
+.page-head p{font-size:12.5px;color:var(--text-500);margin-top:4px;}
+.head-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.ctl{border:1px solid var(--border);background:var(--surface);color:var(--text-700);border-radius:9px;padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;transition:all .15s;}
+.ctl:hover{border-color:var(--border-strong);background:var(--surface-hover);}
+.ctl.primary{background:var(--navy-900);color:#fff;border-color:var(--navy-900);}
+.ctl.primary:hover{background:#12294a;}
+select.ctl{padding:8px 9px;font-weight:600;}
+.updated{font-size:11px;color:var(--text-400);font-family:var(--font-mono);}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px;}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:15px 16px;box-shadow:var(--shadow-sm);}
+.kpi .lb{font-size:10.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--text-500);}
+.kpi .vl{font-family:var(--font-display);font-size:25px;font-weight:700;letter-spacing:-.6px;margin-top:6px;line-height:1;}
+.kpi .sb{font-size:11.5px;color:var(--text-500);margin-top:7px;}
+.kpi .sb b.up{color:var(--success);} .kpi .sb b.dn{color:var(--danger);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);margin-bottom:14px;overflow:hidden;}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.card-head h2{font-family:var(--font-display);font-size:15px;letter-spacing:-.2px;}
+.card-head .hint{font-size:11.5px;color:var(--text-400);}
+.card-body{padding:16px 18px;}
+.grid-2{display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px;}
+.grid-2 .card{margin-bottom:0;}
+.chart-wrap svg{width:100%;height:auto;display:block;}
+.legend{display:flex;gap:14px;font-size:11.5px;color:var(--text-500);align-items:center;}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px;}
+table{width:100%;border-collapse:collapse;font-size:12.5px;}
+th{ text-align:left;font-size:10.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--text-500);padding:9px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+th.sortable{cursor:pointer;user-select:none;} th.sortable:hover{color:var(--text-900);}
+th .arr{opacity:.45;font-size:9px;}
+td{padding:10px;border-bottom:1px solid var(--surface-2);vertical-align:middle;}
+tr:last-child td{border-bottom:0;}
+tbody tr:hover{background:var(--surface-hover);}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--cyan-bg);color:#075985;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;flex-shrink:0;}
+.who{display:flex;align-items:center;gap:9px;min-width:170px;}
+.who .nm{font-weight:600;} .who .em{font-size:10.5px;color:var(--text-400);font-family:var(--font-mono);}
+.chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3.5px 9px;font-size:10.5px;font-weight:800;white-space:nowrap;}
+.chip.ok{background:var(--success-bg);color:#166534;} .chip.nudge{background:var(--warn-bg);color:#92400E;} .chip.risk{background:var(--danger-bg);color:#991B1B;} .chip.idle{background:var(--surface-2);color:var(--text-500);}
+.bar{height:6px;background:var(--surface-2);border-radius:8px;overflow:hidden;min-width:74px;}
+.bar i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--cyan-500),#0EA5E9);}
+.bar i.full{background:var(--success);}
+.cellbar{display:flex;align-items:center;gap:8px;}
+.cellbar b{font-family:var(--font-display);font-size:12px;min-width:34px;text-align:right;}
+.funnel-row{display:grid;grid-template-columns:74px 1fr 92px;gap:10px;align-items:center;margin-bottom:10px;font-size:12.5px;}
+.funnel-row:last-child{margin-bottom:0;}
+.funnel-row .fbar{height:16px;border-radius:6px;background:var(--surface-2);overflow:hidden;}
+.funnel-row .fbar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#0A1930,#00BFCe);}
+.funnel-row .fv{text-align:right;font-family:var(--font-mono);font-size:11.5px;color:var(--text-500);}
+.stallchip{background:var(--warn-bg);color:#92400E;}
+.mini{display:flex;gap:4px;}
+.mini span{font-family:var(--font-mono);font-size:10.5px;color:var(--text-500);background:var(--surface-2);border-radius:6px;padding:2.5px 6px;white-space:nowrap;}
+.empty{padding:30px 14px;text-align:center;color:var(--text-500);font-size:13px;}
+.empty b{display:block;font-family:var(--font-display);font-size:15px;color:var(--text-700);margin-bottom:6px;}
+.err{padding:22px;text-align:center;color:var(--danger);font-size:13px;}
+.sk{position:relative;overflow:hidden;background:var(--surface-2);border-radius:8px;}
+.sk::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);animation:sh 1.15s infinite;}
+@keyframes sh{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.search{border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:12.5px;background:var(--surface);color:var(--text-900);min-width:190px;outline:none;}
+.search:focus{border-color:var(--cyan);}
+@media(max-width:1280px){.kpis{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:1100px){.grid-2{grid-template-columns:1fr;}}
+@media(max-width:900px){.sidebar{display:none;}.kpis{grid-template-columns:repeat(2,1fr);}.main{padding:18px 14px 40px;}}
+html[data-theme="dark"] body{background:#070D18;color:#E6EDF7;}
+html[data-theme="dark"] .kpi,html[data-theme="dark"] .card{background:#0D1524;border-color:#1D2A40;}
+html[data-theme="dark"] .card-head{border-color:#1D2A40;}
+html[data-theme="dark"] .kpi .lb,html[data-theme="dark"] .kpi .sb,html[data-theme="dark"] .card-head .hint,html[data-theme="dark"] th,html[data-theme="dark"] td,html[data-theme="dark"] .funnel-row .fv,html[data-theme="dark"] .mini span{color:#94A3B8;}
+html[data-theme="dark"] .page-head p{color:#94A3B8;}
+html[data-theme="dark"] .ctl{background:#0D1524;border-color:#1D2A40;color:#E6EDF7;}
+html[data-theme="dark"] .ctl.primary{background:#E6EDF7;color:#0A1930;border-color:#E6EDF7;}
+html[data-theme="dark"] .bar,html[data-theme="dark"] .funnel-row .fbar,html[data-theme="dark"] .mini span,html[data-theme="dark"] .sk{background:#16223a;}
+html[data-theme="dark"] td{border-color:#16223a;}
+html[data-theme="dark"] .search{background:#0D1524;border-color:#1D2A40;color:#E6EDF7;}
+html[data-theme="dark"] tbody tr:hover{background:#111c30;}
+html[data-theme="dark"] .who .em{color:#64748B;}
+</style>
+<link rel="stylesheet" href="softmarc-unified.css">
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-top"><a class="brand" href="soft_dashboard.html" aria-label="Softmarc dashboard"><img class="brand-full-logo" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB3aWR0aD0iMjE0IiBoZWlnaHQ9IjU2IiB2aWV3Qm94PSIwIDAgMjE0IDU2Ij48cmVjdCB4PSIxIiB5PSI3IiB3aWR0aD0iNDIiIGhlaWdodD0iNDIiIHJ4PSI4IiBmaWxsPSIjZmZmZmZmIi8+PGltYWdlIGhyZWY9ImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBRUFBQUFCQUNBWUFBQUNxYVhIZUFBQUtXMGxFUVZSNDJ1MmJlNHhkVlJYR2YydnZjKzVqT2dWS0RhSUdBa0Y4VEtORWl5Z2EwMVpCd0pnZ2tqdTBKVmdpaVRVYVh5VEVvdUM1Qit2ckQwR0NNZEFnQ2VMUU1wZkVLRm9ESmc0RlJhbkZkNnVDVlZOVXRGTDZzTk81NTdIMzhvOXo3OHk5dlhmb1RDVzFVN3FTazh3a2M4NCthKzF2cmZXdDcreUI0M2JjanR0eGV4R2JITlk5dFpwaDUxQng3eW1MZEU1NTNCajJ3R0c4Y3hRWmxrVEJpeE1CdFZGTFk5Z0JzQ3FxNElJM29tWXhvbWZoM1FJUUJaV2oyRTFGTUNnSENOMGE3bzczb0NxSTZDRjJ0T1ZVUXh5MTZIVEs1ZFhrL2dxTU9Zc2diUC9OSE5scUFlY2dUYjhDN0tGZUYrQjVBaEJGaGxnOEFGZmVkQjFpcnljSUY1Qm5rR2VLeTkwY1Fyb2lJcWhtU05qMTN0TUVJRExFc1dkVmRCSXV2SWV3OGg3U0NVZ21jc0FnWXFhLzl5Z05BQWlLNG5NNVJBQlVBR1VWSjVFSFA2UlVPWmZtZUlZUUlITE1GY0dndDhVTkc0YUdsQ2ZOZlZTcUxlY2w3Qk5UaitEblNBa29FQ0RrengrQTJxaWhNZXhZV2IrZXl1QzdhTzd2NTd5Q2VteGdDVUtEbUxsVEJQTThRQk16VFJ1TURNVEtWZEZwK1BEM1FBVjFVdHpaZGwwVk1VSllocno1Tk1vam9IOUZSZHR0NWFnTmdESGdmWlBjM1VvajN0L3l2YU1MMUJZSkRUeDU4QW5LNVFIU2lSdzZjMTRWWXdVeEtWbnlHY1N0NDk1NDN4eE9mKzFFUUZINGFsOGJKTmoxRkRaNEtkNHBZS2IrV0JSamMxeHlHZXZqalpNRWFlZFdZZWtjY2ZsaFlGT2M5OWFBZHU2WGQ1K0hLWjFLbG5tRWpseFJUNmxxU2NiWHNqN2VTQzBxMFlpelNYYTRhZTdDb0hCeTU5WUNDYzZmaHdrVXdYZmx2UWtzNmNST3F0V3ZFa1dHUmoyYk94UndKZ0dZS29sbjljd0hJcTZndmZvajd2clVmOWkyU0FydWYyeVk2UjVwWlNHcTlBNDJBckFWa0VtMEhGTUJtREpmK05wbmgxV1RZd1gyMDljQWVIYmFDVm5rekJlMkNha1FSWVlvTXYvUFVicWJDWHI5Yzg4dUt3YVhBZkpPYXFNV0dqclpOZy9ISWpYVUVVVGMxRE5pR0JzTFdMclVIV2t5MVYwRGxDZnd1YUFkcVNFWVhPWUl5Ni9DYkx1YVJzTlJpOExEV20xMDFCS0xSOFR4MkdOVnhuNTVCbzl1T1oyeHNZQmx5M0pFRk5VanlxMjdpZEFIdmp5Zlp2TXBUUEJTZks1VE5GZ1ZDUlRoUDZUTkN4bjkzTTlCaFNWMU8rMlROOVZkVnkwWkhiVU1EenNlK3VscnFjNi9GblVYa0x0VE1lS3h3UTdRQjlnN2NUUHZlZk0vVVRXSStDNXQ0bUY2QTNQS0ltVm9xeExIZXJpSWxCN1phK1ZOdDFPcXJpNm9jRWVLcUNvMkVKUTlpUHM0WjdsdkVjZCtodmxlT1BUUTQ4TU16djhHcGZJZ3pRT1F1K0lOZ2dDcUF6Qng0QjlNN0YvT0JXOTV0Q2NJTTVIdFlOYWk1NVNEUTF1TG14eTNraVhYdEJRVW5ReVNpT0J5eGRxVHNPVzdlVEw1SkN0djJvanlSeUJGdlNCR0VWSENVTWduZnN4SS9EZkd4Z0pFY2g3ZThuYkN5Z2J5WEdnMnM2NDV4SHNsU1J6VjZzc3BEenpBMkJQbkF0c25VYlA4ODYrbkZDd2lUejJxZ25yQldJL1A5MkpMTzBncmY2RXhQREVWakpxbDBYQ3pRMERualZmVWIyVmc4R045dFFEVllpNElRNE1KS0hnRFhheVp5anpZdi90YTd2M3NMWHp3anBBVnIxSjAvaFlHQnMvaHdIZytyYkRpTmVQRUUwUDI3ZjAyNzFqOFBxTFJFdkZ3eXNxYjdtZHd3ZVUweCtrYXY5VkRuaXJDRHNRK2dzZ0c3dm4wRDRxNXBtWnBOQTZKQnVsUmc2SzZzSDJ3aXAvWVRGZ2VJbTMyZitHMklOTGJ3bkxLMVlBMCtTUWpOOTRHd0ErZk9KK0J5bU1rVGQrUzA2WkxGY1VZVUUweCtka3NPZS9wUXBPTVJ3aXJWL1NrWmZINkZtTWhDTUY3OE83bmFCNHpFbjIvWTh6M015UkNyYUwxcmV2R2NlNHlYUDRQd25LQWF0WW5kQzFkVUd6ZlMvMVVZSXcvbDNKWjRSQTVMU0o0cjFTclpmTGdkUjM3SXYzWHdRS0tjNTUwd3BFbEhtUGZoQzEvajVWcmIyZEpWSUhZRjF4alprd1E0dGhUcTFudWk1OUUwd3Z4Ymp1VmdSQlZEK29PcTlvYU96Z0w1VVl4UmpFTXpMaVFDd2JFSW1MSVVrK2VPTXJWMVp3V1BNUjcxeXdzaW5YL0lQU1BUS1BocU5Vc0kvRTJrdjNua3lZYkNNdUdzR0pidU10Ymw1djJrczdpb0g4ckVERWp4aWRrbWFEeVRCZEZQL2o1aXU4dFFHMWtpcVc1UHlPc3ZwMkJlUTlRKzBxVjJyYSs2MCtmajQyR0swYmZMLzZia1J0V2tPVVhrK2NQSWlhalZBMG9WUVBDc2lVb2RWODJLQk9XTENybHFVUTFqekkrbm1HTjlIM3BUa2ZERWlUSk04aWVYMDlCVitkTlBydTlUaGdhakpWV0lGd2ZKSVUweHpQSzFmT3grMjh2TnJWaFpoNkFkanJRNHV6cmIzaVFrYzljakFuT0lVcytRcHJlUlpac0lrODNrNmVQVDE0dS95bEo4M0dRUHdCd3g1YUFaVy80Szk3ZHd3a0xUTjk2MGk2cnFqbno1eHZnVnBZdDI4L0pKN2M2a0d3bVN6Ymo4c2ZJazJLOUxQMHR6dTBpTEJYSVZIemZJQ1FIY2lyVjkzTmxmQm1OWVRmSkYvcDNnZWNqR2pYTDBKRE9tUHgwRGozMXVuREI1U2ZpL1NibW4vQTY5dXd1V0tLbzBDYmhJb2FURnhwMlBmc0RUdEJMV2J6WUlTMHBianE3NmdzTDhmNHRpSHdFRzF4Q2xtaExBWmV1YmhVRWdzdWVJdlRuY0hjOWFibXRzd3ZBd2JTMG00YjIweHVudWtwYk1YN3dKNmN3TUg4ZFllbFNncUJvVzBXUmhPWUI4TzVPM082UHNteFpzMXRsYnVldTlGdWtzQ3ZYZmhneHQxSFU2bTQxRzNXRVZVdmFYTUg2ejI1Z1NSUzB0Y0haZitrcEVPQm53NjhRVWFMSWNOSGJkZ0x2NVpIZkxDSFBMc0c1VndNNTF2NmVMUDB1eXhadjZRcll3ZTI1WnhHRldzT3djNnN3Y3NQWFdWbFBDQ3Qza25uWGFwRmRVRVIwRmJDQnBmaTJqbmxrNTNCVm1ReklkRE5Ea1E2emJiWENCKzhJV0xjNlkzbjlmc29EbDVOTnVCWlhhS1dZRWRUdFJmMHJXUjgvVzZCS2p1em9pVWpoM09pb1pXd3NZSFRVVHY3Y0huNE9UdzlRZGk4bzVnVDBTN2pjZzVHdUFIbnZzZUdKU0RCVTFMUmhjM2dwOEVMWThQQUwvMm05TWV3UVlFbjBLMTZSYmNlV3ppYnZrUGRGRlJPQWQyY0NqN1NQK015UkQzdXpLTkNiNGh5VnYyQU0zV1JNRkJIdzdwU1o4NEM1YTY1dll4S2hveTRjZ3dHSTQ5WlpKVDJ0YUljZHJWQmE0N09ZWGRPTG9uTWQvZ0IvK3R6WllGOU5uaW1DZEltNzNvUDZIWjA2NkxHRGdHMEV4TEZIL2JXRTViQ1ZCakxsdmhqeVpJTFEvcTVUQVp2ckNCQ2lTSGptNVpaMXExTld4cGRndzJ0SW0vNGdJdVN4b1NGTGY4RTNiL2g3Y1FDc29QUzlSMlJVanpROStsLzhiMU54ejhxMWwyTGtIdFNiZ3FoMlVXRXdWc0NQQUxRVVpuL2ttZUFMYmF1aUNxNThEcW9md3NqVkxVbXNPQkxYdWZ2R0NqNy9GMW41TlRUVzdHdTFoSTRVYUVOaWVmeG13dkJtOHJ5N2dCeHRzRzhmZWtyMVpWaC9CbUVKMGdsdHRicURkVTVIV0E1SjNZMDAxdXd0QmlISnU3dkF0a1hGVGNhY1FYbmdyWENBT1hINFNUMjRITklXNzVlZTJTS2pNaThrR2QvSXZkR2RoVkljUDg5QlNmRXBXZE8xVG9IYW96OEFIWG9nZlp3dlZVT1M1all5ZnhXb01GVHYrWUlVSEtTS3Q5UlhwZTlEajhaa21FNnVyd3lFWk1sdmtlemROT0xuaUREOXhKeGpoQWlwVG1vVVFXaXhvU0ZKN2lmYnRackdMYzkxdHIwWkJFQmJ5dXRjT1FzaEZoTUlOckFnNE5KdEpNMHZzUDdHa2E0Q1A0MEZQWkp5V0cxOWNEQkhQL3hWSVUvQisyY2cveGxlN3VQdjJYZllGRGNMeCtzNmVlTDlFRmxVdEpZVjBVdXd3VVhrZXZUekF4RUZ2dyt4VHlQWm54bnBPTFRaK1E4ZUx4cUxJdE9TdkdXMlFPcitmVWxrNTR6VGs4cDBYWStsbzN2SDdiZ2R0K04yeE95L1p4WElINU1jR0NZQUFBQUFTVVZPUks1Q1lJST0iIHg9IjYiIHk9IjEyIiB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHByZXNlcnZlQXNwZWN0UmF0aW89InhNaWRZTWlkIG1lZXQiLz48dGV4dCB4PSI1NiIgeT0iMjYiIGZvbnQtZmFtaWx5PSJJbnRlciwgQXJpYWwsIEhlbHZldGljYSwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxOCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+U29mdG1hcmM8L3RleHQ+PHRleHQgeD0iNTYiIHk9IjQyIiBmb250LWZhbWlseT0iSW50ZXIsIEFyaWFsLCBIZWx2ZXRpY2EsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTAiIGZvbnQtd2VpZ2h0PSI2MDAiIGxldHRlci1zcGFjaW5nPSIxLjU1IiBmaWxsPSIjOEZBNEJGIj5MRUFSTklORyBQT1JUQUw8L3RleHQ+PC9zdmc+" alt="Softmarc Learning Portal"></a></div>
+  <div class="sidebar-nav">
+    <div class="nav-section"><div class="nav-label">Admin</div><nav class="nav">
+      <a href="admin.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Content Manager</a>
+      <a href="analytics.html" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg> Analytics</a>
+    </nav></div>
+    <div class="nav-section"><div class="nav-label">Workspace</div><nav class="nav">
+      <a href="soft_dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Dashboard</a>
+      <a href="courses.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Courses</a>
+    </nav></div>
+  </div>
+  <div class="sidebar-bottom"><div class="user-mini"><div class="user-mini-avatar" id="sidebarAvatar">S</div><div class="user-mini-info"><div class="user-mini-name" id="sidebarName">Admin</div><div class="user-mini-role" style="text-transform:none;"><a href="#" id="logoutBtn" style="color:rgba(255,255,255,.55);text-decoration:underline;">Log out</a></div></div></div></div>
+</aside>
+
+<main class="main">
+  <div class="page-head">
+    <div>
+      <h1>Learner Analytics</h1>
+      <p id="subTitle">Engagement, completion and stall points — computed from real learning activity.</p>
+    </div>
+    <div class="head-actions">
+      <select class="ctl" id="rangeSel" aria-label="Date range">
+        <option value="7">Last 7 days</option><option value="14">Last 14 days</option>
+        <option value="30" selected>Last 30 days</option><option value="90">Last 90 days</option>
+      </select>
+      <button class="ctl" id="refreshBtn" title="Reload data">↻ Refresh</button>
+      <button class="ctl" id="exportBtn">⬇ CSV</button>
+      <span class="updated" id="updated"></span>
+    </div>
+  </div>
+
+  <div id="content"><div class="card"><div class="card-body">
+    <div class="sk" style="height:70px;margin-bottom:12px;"></div>
+    <div class="sk" style="height:220px;margin-bottom:12px;"></div>
+    <div class="sk" style="height:160px;"></div>
+  </div></div></div>
+</main>
+
+<script src="softmarc-content.js"></script>
+<script>
+/* admin-only guard with server re-verification */
+(function(){
+  var raw = localStorage.getItem('softmarc_user');
+  if(!raw){ window.location.href = 'index.html'; return; }
+  var u = {}; try{ u = JSON.parse(raw); }catch(e){}
+  if(u.role !== 'admin'){ window.location.href = 'soft_dashboard.html'; return; }
+  if(u.id) fetch('/api/users/'+encodeURIComponent(u.id)).then(function(r){return r.ok?r.json():null;})
+    .then(function(d){ if(d && d.role !== 'admin') window.location.href = 'soft_dashboard.html'; }).catch(function(){});
+})();
+</script>
+<script>
+(function(){
+  var DATA=null, sortKey='idle', sortAsc=true;
+  function $(id){return document.getElementById(id);}
+  function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
+  function agoLabel(d){ if(!d) return '—'; var n=Math.floor((Date.now()-Date.parse(d+'T12:00:00'))/864e5);
+    if(n<=0) return 'today'; if(n===1) return 'yesterday'; if(n<7) return n+'d ago'; if(n<30) return Math.round(n/7)+'w ago'; return Math.round(n/30)+'mo ago'; }
+  var STATUS={ 'on-track':['ok','On track'], 'needs-nudge':['nudge','Needs nudge'], 'at-risk':['risk','At risk'], 'not-started':['idle','Not started'] };
+
+  function fmt(n){ return (n==null?'—':n); }
+
+  /* ---------- KPI row ---------- */
+  function kpis(t){
+    var wk = DATA.series.slice(-7), pw = DATA.series.slice(-14,-7);
+    function sum(a,k){ return a.reduce(function(s,r){return s+r[k];},0); }
+    var actNow=sum(wk,'active'), actPrev=sum(pw,'active');
+    var minNow=sum(wk,'minutes'), minPrev=sum(pw,'minutes');
+    function trend(now,prev,unit){ if(!prev) return ''; var pct=prev? Math.round((now-prev)/prev*100):0;
+      return ' <b class="'+(pct>=0?'up':'dn')+'">'+(pct>=0?'▲':'▼')+' '+Math.abs(pct)+'% vs prev wk</b>'; }
+    return '<div class="kpis">'
+      +kpi('Active learners', t.active_7d, 'log in past 7 days · <b class="'+(actNow>=actPrev?'up':'dn')+'">'+(actNow>=actPrev?'▲':'▼')+' '+Math.abs((actPrev?Math.round((actNow-actPrev)/actPrev*100):0))+'% wk/wk</b>')
+      +kpi('Engaged learners', t.engaged+' / '+t.learners, 'have opened at least one lesson')
+      +kpi('Avg completion', t.avg_completion+'%', 'across enrolled courses')
+      +kpi('Learning hours', t.hours+'h', 'portal time · <b class="'+(minNow>=minPrev?'up':'dn')+'">'+(minNow>=minPrev?'▲':'▼')+' '+Math.round(minNow/60)+'h this wk</b>')
+      +kpi('Certificates', t.certificates, t.quiz_submissions+' quiz submissions · avg '+t.quiz_avg+'%')
+      +'</div>';
+  }
+  function kpi(lb,vl,sb){ return '<div class="kpi"><div class="lb">'+lb+'</div><div class="vl">'+esc(vl)+'</div><div class="sb">'+sb+'</div></div>'; }
+
+  /* ---------- SVG activity chart ---------- */
+  function chart(){
+    var S=DATA.series, n=S.length; if(!n) return '';
+    var W=720,H=210,L=34,R=14,T=14,B=26, iw=W-L-R, ih=H-T-B;
+    var maxM=Math.max.apply(null,S.map(function(r){return r.minutes;})); if(maxM<30)maxM=30;
+    var maxA=Math.max.apply(null,S.map(function(r){return r.active;})); if(maxA<3)maxA=3;
+    function X(i){ return L+ (n===1?iw/2:i/(n-1)*iw); }
+    function YM(v){ return T+ih-(v/maxM)*ih; } function YA(v){ return T+ih-(v/maxA)*ih; }
+    var grid='', i;
+    for(i=0;i<=4;i++){ var gy=T+ih-i/4*ih, lab=Math.round(maxM*i/4);
+      grid+='<line x1="'+L+'" y1="'+gy+'" x2="'+(W-R)+'" y2="'+gy+'" stroke="currentColor" stroke-opacity=".08"/>'
+           +'<text x="'+(L-6)+'" y="'+(gy+3.5)+'" text-anchor="end" font-size="9" fill="currentColor" fill-opacity=".45">'+lab+'</text>'; }
+    var area='M'+X(0)+' '+(T+ih), line='', dots='';
+    var pts=S.map(function(r,idx){return [X(idx),YM(r.minutes)];});
+    pts.forEach(function(p,idx){ var cmd=(idx?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1); area+=cmd.replace('M','L'); line+=cmd; });
+    area+='L'+X(n-1)+' '+(T+ih)+'L'+X(0)+' '+(T+ih)+'Z';
+    var apts=S.map(function(r,idx){return [X(idx),YA(r.active)];});
+    apts.forEach(function(p,idx){ dots+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.6" fill="#0A1930"><title>'+esc(S[idx].d)+' · '+S[idx].active+' active</title></circle>'; });
+    var xlab=''; var step=Math.max(1,Math.ceil(n/6));
+    for(i=0;i<n;i+=step){ xlab+='<text x="'+X(i).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" font-size="9" fill="currentColor" fill-opacity=".45">'+esc(S[i].d.slice(5))+'</text>'; }
+    var hover='';
+    for(i=0;i<n;i++){ hover+='<rect x="'+(X(i)-iw/n/2).toFixed(1)+'" y="'+T+'" width="'+(iw/n).toFixed(1)+'" height="'+ih+'" fill="transparent"><title>'+esc(S[i].d)+' — '+S[i].minutes+' min · '+S[i].active+' active</title></rect>'; }
+    return '<div class="chart-wrap"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Daily activity chart">'
+      +'<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00BFCe" stop-opacity=".34"/><stop offset="1" stop-color="#00BFCe" stop-opacity=".04"/></linearGradient></defs>'
+      +grid
+      +'<path d="'+area+'" fill="url(#ag)"/>'
+      +'<path d="'+line+'" fill="none" stroke="#00BFCe" stroke-width="2.4" stroke-linejoin="round"/>'
+      +'<polyline points="'+apts.map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'" fill="none" stroke="#0A1930" stroke-opacity=".85" stroke-width="1.6" stroke-dasharray="1 3" stroke-linecap="round"/>'
+      +dots+xlab+hover
+      +'</svg></div>'
+      +'<div class="legend" style="margin-top:6px;"><span><i style="background:#00BFCe"></i>Minutes learned</span><span><i style="background:#0A1930"></i>Active learners (right scale: max '+maxA+')</span></div>';
+  }
+
+  /* ---------- funnel ---------- */
+  function funnelCard(){
+    var f=DATA.funnel||{}, base=Math.max(1,f.video||0);
+    var rows=[['Video','video'],['PDF / PPT','pdf'],['MCQ','mcq'],['Exercise','ex']];
+    var body=rows.map(function(r){
+      var v=f[r[1]]||0, w=Math.max(v?4:0,Math.round(v/base*100));
+      var conv=base? Math.round(v/base*100):0;
+      return '<div class="funnel-row"><span>'+r[0]+'</span><span class="fbar"><i style="width:'+w+'%"></i></span><span class="fv">'+v+' · '+conv+'%</span></div>';
+    }).join('');
+    if(!f.video) body='<div class="empty"><b>No step completions yet</b>Funnel fills in as learners finish Video → PDF → MCQ → Exercise steps.</div>';
+    return '<div class="card"><div class="card-head"><h2>Learning funnel</h2><span class="hint">learners who completed each step at least once</span></div><div class="card-body">'+body+'</div></div>';
+  }
+
+  /* ---------- courses ---------- */
+  function coursesCard(){
+    var cs=DATA.courses||[];
+    if(!cs.length) return '<div class="card"><div class="card-body empty"><b>No active courses</b>Publish a course in the Content Manager to see it here.</div></div>';
+    var rows=cs.map(function(c){
+      var bar='<div class="cellbar"><div class="bar" style="flex:1"><i class="'+(c.avg_pct>=100?'full':'')+'" style="width:'+c.avg_pct+'%"></i></div><b>'+c.avg_pct+'%</b></div>';
+      var stall=c.stall? '<span class="chip stallchip">⚠ Subtopic '+c.stall.module+' · −'+c.stall.lost+' learner'+(c.stall.lost>1?'s':'')+'</span>' : '<span style="color:var(--text-400)">—</span>';
+      var fn=c.funnel||{};
+      var mini='<div class="mini">'+[['v','video'],['p','pdf'],['m','mcq'],['e','ex']].map(function(x){return '<span title="'+x[0]+' completed">'+x[1]+': '+(fn[x[1]]||0)+'</span>';}).join('')+'</div>';
+      return '<tr><td><b>'+esc(c.title)+'</b></td><td style="text-align:center">'+c.subtopics+'</td><td style="text-align:center">'+c.enrolled+'</td><td style="min-width:150px">'+bar+'</td><td>'+stall+'</td><td>'+mini+'</td></tr>';
+    }).join('');
+    return '<div class="card"><div class="card-head"><h2>Courses</h2><span class="hint">avg % = subtopics fully completed</span></div><div class="card-body" style="overflow-x:auto;"><table><thead><tr><th>Course</th><th style="text-align:center">Subtopics</th><th style="text-align:center">Enrolled</th><th>Avg progress</th><th>Biggest stall</th><th>Step completions</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  }
+
+  /* ---------- learners ---------- */
+  function filtered(){
+    var se0=$('search'); var q=(se0&&se0.value||'').toLowerCase().trim();
+    var ls=(DATA.learners||[]).slice();
+    if(q) ls=ls.filter(function(l){ return (l.name+' '+l.email+' '+l.status).toLowerCase().indexOf(q)>-1; });
+    ls.sort(function(a,b){
+      var va,vb;
+      if(sortKey==='name'){ va=a.name.toLowerCase(); vb=b.name.toLowerCase(); return sortAsc?(va<vb?-1:1):(va>vb?-1:1); }
+      va=a[sortKey]; vb=b[sortKey]; if(va==null)va=1e9; if(vb==null)vb=1e9;
+      return sortAsc?va-vb:vb-va;
+    });
+    return ls;
+  }
+  function learnersCard(){
+    var ls=filtered();
+    var head=[['name','Learner',1],['status','Status',0],['courses','Courses',0],['avg_pct','Avg progress',0],['hours','Hours',0],['streak','Streak',0],['quiz_avg','Quiz avg',0],['idle','Last active',0]];
+    var th=head.map(function(h){ return '<th class="sortable" data-k="'+h[0]+'">'+h[1]+(sortKey===h[0]?' <span class="arr">'+(sortAsc?'▲':'▼')+'</span>':'')+'</th>'; }).join('');
+    var rows=ls.map(function(l){
+      var s=STATUS[l.status]||STATUS['not-started'];
+      var ini=(l.name||'?').split(' ').map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2)||'?';
+      var bar='<div class="cellbar"><div class="bar" style="flex:1"><i class="'+(l.avg_pct>=100?'full':'')+'" style="width:'+l.avg_pct+'%"></i></div><b>'+l.avg_pct+'%</b></div>';
+      var hrs=l.hours+(l.week_hours>0?' <span style="color:var(--text-400);font-size:10.5px">(+'+l.week_hours+'w)</span>':'');
+      return '<tr><td><div class="who"><span class="avatar">'+esc(ini)+'</span><span><span class="nm">'+esc(l.name)+'</span><br><span class="em">'+esc(l.email)+'</span></span></div></td>'
+        +'<td><span class="chip '+s[0]+'">'+s[1]+'</span></td>'
+        +'<td style="text-align:center">'+(l.courses||'—')+'</td>'
+        +'<td style="min-width:150px">'+bar+(l.certified?' <span class="chip ok" style="margin-top:4px;">🎓 '+l.certified+'</span>':'')+'</td>'
+        +'<td style="font-family:var(--font-mono)">'+hrs+'</td>'
+        +'<td style="text-align:center">'+(l.streak>0?'🔥'+l.streak:'—')+'</td>'
+        +'<td style="text-align:center">'+(l.quiz_avg!=null?l.quiz_avg+'%':'—')+(l.quiz_attempts?' <span style="color:var(--text-400);font-size:10px">×'+l.quiz_attempts+'</span>':'')+'</td>'
+        +'<td>'+agoLabel(l.last_active)+'</td></tr>';
+    }).join('');
+    if(!ls.length) rows='<tr><td colspan="8"><div class="empty"><b>No learners match</b>'+(DATA.learners&&DATA.learners.length?'Try a different search.':'Invite students to the portal and they will appear here.')+'</div></td></tr>';
+    return '<div class="card"><div class="card-head"><h2>Learners <span style="color:var(--text-400);font-weight:500;font-size:12px;">('+ls.length+')</span></h2><input class="search" id="search" placeholder="Search name, email, status…" value="'+esc($('search')?$('search').value:'')+'"></div><div class="card-body" style="overflow-x:auto;"><table id="ltable"><thead><tr>'+th+'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    if(!DATA) return;
+    $('content').innerHTML = kpis(DATA.totals)
+      + '<div class="grid-2"><div class="card"><div class="card-head"><h2>Daily activity</h2><span class="hint">last '+DATA.days+' days · minutes learned &amp; active learners</span></div><div class="card-body">'+chart()+'</div></div>'+funnelCard()+'</div>'
+      + coursesCard() + learnersCard();
+    var d=new Date(); $('updated').textContent='updated '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    bindTable();
+  }
+  function bindTable(){
+    document.querySelectorAll('#ltable th.sortable').forEach(function(h){
+      h.addEventListener('click',function(){ var k=h.getAttribute('data-k');
+        if(sortKey===k) sortAsc=!sortAsc; else { sortKey=k; sortAsc=(k==='name'); }
+        render(); });
+    });
+    var se=$('search'); if(se) se.addEventListener('input',function(){ deb(); });
+  }
+  var dt=null; function deb(){ clearTimeout(dt); dt=setTimeout(function(){
+    var pos=document.activeElement===($('search')||null)?$('search').selectionStart:null;
+    render();
+    var ns=$('search'); if(ns&&pos!=null){ ns.focus(); try{ns.setSelectionRange(pos,pos);}catch(e){} }
+  },180); }
+
+  function load(){
+    $('content').innerHTML='<div class="card"><div class="card-body"><div class="sk" style="height:70px;margin-bottom:12px;"></div><div class="sk" style="height:220px;"></div></div></div>';
+    var n=parseInt($('rangeSel').value,10)||30;
+    fetch('/api/analytics/summary?days='+n).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(d){ if(!d||!d.ok) throw new Error('bad payload'); DATA=d; render(); })
+      .catch(function(e){ $('content').innerHTML='<div class="card"><div class="err">Could not load analytics ('+esc(e.message)+'). <button class="ctl" onclick="location.reload()">Retry</button></div></div>'; });
+  }
+
+  $('rangeSel').addEventListener('change',load);
+  $('refreshBtn').addEventListener('click',load);
+  $('exportBtn').addEventListener('click',function(){
+    if(!DATA){return;}
+    function dl(rows,name){ var csv=rows.map(function(r){return r.map(function(c){return '"'+String(c==null?'':c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+      var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=name; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);},4000); }
+    dl([['Name','Email','Status','Courses','Avg progress %','Certificates','Hours total','Hours this week','Streak days','Quiz avg %','Last active']].concat(filtered().map(function(l){
+      return [l.name,l.email,l.status,l.courses,l.avg_pct,l.certified,l.hours,l.week_hours,l.streak,l.quiz_avg==null?'':l.quiz_avg,l.last_active||''];})),
+      'softmarc-learners-'+new Date().toISOString().slice(0,10)+'.csv');
+    dl([['Course','Subtopics','Enrolled','Avg progress %','Certificates','Stall subtopic','Learners lost at stall','Video done','PDF done','MCQ done','Exercise done']].concat((DATA.courses||[]).map(function(c){
+      var f=c.funnel||{}; return [c.title,c.subtopics,c.enrolled,c.avg_pct,c.certificates,c.stall?c.stall.module:'',c.stall?c.stall.lost:'',f.video||0,f.pdf||0,f.mcq||0,f.ex||0];})),
+      'softmarc-courses-'+new Date().toISOString().slice(0,10)+'.csv');
+  });
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden && DATA && Date.now()-new Date(DATA.generated_at).getTime()>10*60*1000) load(); });
+
+  var sbn=$('sidebarName');
+  try{ var u=JSON.parse(localStorage.getItem('softmarc_user')||'{}'); if(sbn)sbn.textContent=u.full_name||u.email||'Admin'; }catch(e){}
+  $('logoutBtn').addEventListener('click',function(e){ e.preventDefault(); localStorage.removeItem('softmarc_user'); location.href='index.html'; });
+
+  load();
+})();
+</script>
+<script src="softmarc-common.js"></script>
+</body>
+</html>

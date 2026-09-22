@@ -120,8 +120,25 @@
     if (secs < 5) return;
     var u = whoami(); if (!u || !u.id) return;
     var body = JSON.stringify({ student_id: u.id, seconds: secs });
-    try { if (navigator.sendBeacon) { navigator.sendBeacon('/api/time', new Blob([body], {type:'application/json'})); return; } } catch(e){}
-    try { fetch('/api/time', { method:'POST', headers:{'Content-Type':'application/json'}, body: body, keepalive:true }).catch(function(){}); } catch(e){}
+    var tk = ''; try { tk = localStorage.getItem('softmarc_token') || ''; } catch(e){}
+    // While the tab is alive, go through fetch() so the x-auth token header is attached.
+    // Only on unload use sendBeacon, which cannot send headers — then the token travels
+    // in the query string instead (the API accepts both).
+    function viaBeacon(){
+      try {
+        if (!navigator.sendBeacon) return false;
+        var url = '/api/time' + (tk ? ('?token=' + encodeURIComponent(tk)) : '');
+        return navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }));
+      } catch (e) { return false; }
+    }
+    function viaFetch(){
+      try {
+        fetch('/api/time', { method:'POST', headers:{'Content-Type':'application/json'}, body: body, keepalive:true })
+          .catch(function(){});
+        return true;
+      } catch (e) { return false; }
+    }
+    if (document.visibilityState === 'hidden') { if (!viaBeacon()) viaFetch(); } else { viaFetch(); }
   }
   setInterval(tick, 5000);
   setInterval(flush, 30000);

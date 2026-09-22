@@ -30,6 +30,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="favicon.png?v=17">
+<script src="softmarc-auth.js?v=23"></script>
+<script>if(/[?&]expired=1/.test(location.search)){addEventListener("DOMContentLoaded",function(){var e=document.getElementById("errorText");if(e)e.textContent="Your session expired. Please sign in again.";});}</script>
 
 <style>
 :root{
@@ -80,9 +82,11 @@ body{
   height: auto;
   z-index: -100;
   object-fit: cover;
-  opacity: 1; /* 👈 Full 100% crystal-clear opacity! */
+  opacity: 0; /* starts invisible — no logo/flash while it loads */
+  transition: opacity .55s ease;
   pointer-events: none;
 }
+#bgVideo.on{opacity:1;transition:opacity .55s ease} /* 👈 Full 100% crystal-clear opacity once playing */
 
 /* ---------- Premium Login Card ---------- */
 .left-login-panel{
@@ -375,8 +379,8 @@ form {
 <body>
 
 <!-- Fullscreen Background Video (100% Opacity) -->
-<video id="bgVideo" preload="none" muted playsinline loop aria-hidden="true" >
-  <source src="login_bg.mp4" type="video/mp4">
+<video id="bgVideo" preload="none" muted playsinline loop aria-hidden="true">
+  <source src="brand-bg.mp4" type="video/mp4">
   <!-- swap in your own clip any time: drop a file next to index.html and edit the src above -->
 </video>
 
@@ -476,6 +480,7 @@ toggleBtn.addEventListener('click', () => {
 (function(){
   var v = document.getElementById('bgVideo'); if (!v) return;
   v.addEventListener('error', function(){ v.style.display = 'none'; }, true);
+  v.addEventListener('playing', function(){ v.classList.add('on'); });
   function go(){ setTimeout(function(){ try{ v.load(); var p = v.play(); if (p && p.catch) p.catch(function(){}); }catch(e){} }, 450); }
   if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
 })();
@@ -576,6 +581,7 @@ form.addEventListener('submit', async (e) => {
       return;
     }
 
+    if (window.SoftmarcAuth) SoftmarcAuth.setToken(data.token || '');
     localStorage.setItem('softmarc_user', JSON.stringify(data));
     loginBtn.textContent = 'Welcome! ✨';
     // Show beautiful welcome window, then go to dashboard
