@@ -212,8 +212,7 @@ tbody tr:hover{background:var(--bg);}
           <h2 id="activeQuizManageTitle" style="font-size:14.5px; font-family:var(--font-display); font-weight:700;">Select a Quiz to Manage Questions</h2>
           <div style="display:flex; gap:8px;">
             <button class="small-btn danger" id="deleteQuizBtn" style="display:none;" onclick="adminDeleteQuiz()">Delete Quiz</button>
-            <button class="small-btn" id="editQuizBtn" style="display:none;" onclick="openEditorForActiveQuiz()">Edit all questions</button>
-            <button class="small-btn primary" id="addQuestionBtn" style="display:none;" onclick="openQuestionModal('add')">+ Add Question</button>
+            <button class="small-btn primary" id="editQuizBtn" style="display:none;" onclick="openQuizEditor()">Add / edit questions</button>
           </div>
         </div>
         <div id="adminQuestionsList">
@@ -254,26 +253,6 @@ tbody tr:hover{background:var(--bg);}
       </div>
       <div class="form-error" id="quizFormError"></div>
       <div class="modal-actions"><button type="button" class="btn-secondary" id="cancelQuiz">Cancel</button><button type="submit" class="btn-primary" id="submitQuiz">Create &amp; add questions</button></div>
-    </form>
-  </div>
-</div>
-
-<!-- NEW: Add/Edit Question Modal (replaces prompt) -->
-<div class="modal-overlay" id="questionModalOverlay">
-  <div class="modal" style="width:560px;">
-    <h2 id="questionModalTitle">Add New Question</h2>
-    <div class="sub" id="questionModalSub">Fill all options and select the correct answer. Works even when switching tabs.</div>
-    <form id="questionForm" novalidate>
-      <div class="field"><label for="qText">Question Text</label><textarea id="qText" placeholder="Enter the question..." required></textarea></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <div class="field"><label for="qOptA">Option A</label><input type="text" id="qOptA" required></div>
-        <div class="field"><label for="qOptB">Option B</label><input type="text" id="qOptB" required></div>
-        <div class="field"><label for="qOptC">Option C</label><input type="text" id="qOptC" required></div>
-        <div class="field"><label for="qOptD">Option D</label><input type="text" id="qOptD" required></div>
-      </div>
-      <div class="field"><label for="qCorrect">Correct Answer</label><select id="qCorrect" required><option value="">Select correct option</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select></div>
-      <div class="form-error" id="questionFormError"></div>
-      <div class="modal-actions"><button type="button" class="btn-secondary" id="cancelQuestion">Cancel</button><button type="submit" class="btn-primary" id="submitQuestion">Save Question</button></div>
     </form>
   </div>
 </div>
@@ -371,7 +350,7 @@ document.querySelectorAll('[href="index.html"]').forEach(el=>{
 
 // Tabs
 let adminQuizRows=[];
-let activeManageQuizId=null, activeManageQuizTitle='', editingQuestionId=null;
+let activeManageQuizId=null, activeManageQuizTitle='';
 function switchAdminTab(tabName){
   document.querySelectorAll('.section-wrapper').forEach(sec=>sec.classList.remove('active'));
   document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('on'));
@@ -434,22 +413,20 @@ async function selectQuizToManage(id,title){
   activeManageQuizId=Number(id); activeManageQuizTitle=title;
   loadAdminQuizzes();
   document.getElementById('activeQuizManageTitle').textContent=`Questions in "${title}"`;
-  document.getElementById('addQuestionBtn').style.display='block';
   document.getElementById('deleteQuizBtn').style.display='block';
   const eib=document.getElementById('editQuizBtn'); if(eib) eib.style.display='block';
   try{
     const res=await fetch(`${API_HOST}/quizzes.php/${id}/questions`); const questions=await res.json();
     const list=document.getElementById('adminQuestionsList'); list.innerHTML='';
     if(questions.length===0){
-      list.innerHTML=`<p style="color:var(--text-600);text-align:center;padding:40px 0;">This quiz has no questions yet, so students get no MCQ step for it. Click <b>“Edit all questions”</b> above to write them.</p>`;
+      list.innerHTML=`<p style="color:var(--text-600);text-align:center;padding:40px 0;">This quiz has no questions yet, so students get no MCQ step for it. Press <b>“Add / edit questions”</b> above and write them there.</p>`;
       return;
     }
     questions.forEach((q,idx)=>{
       const qCard=`
         <div class="question-admin-card">
           <div class="actions">
-            <button class="small-btn primary" onclick="openQuestionModal('edit', {id:'${q.id}', text:\`${q.question_text.replace(/`/g,'\\`')}\`, a:\`${q.option_a.replace(/`/g,'\\`')}\`, b:\`${q.option_b.replace(/`/g,'\\`')}\`, c:\`${q.option_c.replace(/`/g,'\\`')}\`, d:\`${q.option_d.replace(/`/g,'\\`')}\`, correct:'${q.correct_option}'})">Edit</button>
-            <button class="small-btn danger" onclick="adminDeleteQuestion('${q.id}')">Delete</button>
+            <button class="small-btn primary" onclick="openQuizEditor({focusQuestionId:${q.id}})">Edit this question</button>
           </div>
           <div class="q-title">Q${idx+1}. ${escapeHtml(q.question_text)}</div>
           <div class="opt-grid">
@@ -499,17 +476,11 @@ quizForm.addEventListener('submit', async (e)=>{
     if(!res.ok) throw new Error((out&&out.error)||'Failed');
     closeQuizModal(); loadAdminQuizzes();
     const newId=Number(out && out.id)||0;
-    if(newId){ activeManageQuizId=newId; activeManageQuizTitle=title; await selectQuizToManage(newId,title); openEditorForActiveQuiz(); }
-    else showToast('Quiz created — add its questions from the list on the right.');
+    if(newId){ activeManageQuizId=newId; activeManageQuizTitle=title; await selectQuizToManage(newId,title); openQuizEditor({addBlank:true}); }
+    else showToast('Quiz created — press “Add / edit questions” to write it.');
   }catch(err){quizFormError.textContent=err.message||'Failed to create quiz.'; showToast('Failed to create quiz.',true);}
   submitBtn.disabled=false; submitBtn.textContent='Create & add questions';
 });
-function openEditorForActiveQuiz(){
-  const quiz=adminQuizRows.find(q=>Number(q.id)===Number(activeManageQuizId));
-  if(!quiz){ showToast('Select a quiz first.',true); return; }
-  if(!window.SoftmarcAssessments){ showToast('Quiz editor not loaded.',true); return; }
-  SoftmarcAssessments.open({quizId:Number(quiz.id), quizTitle:quiz.title, passPct:quiz.pass_pct==null?60:quiz.pass_pct, courseTitle:quiz.course_name||'Course'});
-}
 // after a save in the editor, refresh this tab so the counts next to each quiz stay true
 document.addEventListener('sm:assessments-changed',()=>{
   if(activeManageQuizId) selectQuizToManage(activeManageQuizId,activeManageQuizTitle); else loadAdminQuizzes();
@@ -522,76 +493,28 @@ async function adminDeleteQuiz(){
     const data=await res.json(); if(!res.ok) throw new Error(data.error||'Could not delete');
     activeManageQuizId=null; activeManageQuizTitle='';
     document.getElementById('activeQuizManageTitle').textContent='Select a Quiz to Manage Questions';
-    document.getElementById('addQuestionBtn').style.display='none';
     document.getElementById('deleteQuizBtn').style.display='none';
-    document.getElementById('adminQuestionsList').innerHTML='<p style="color:var(--text-600);text-align:center;padding:40px 0;">Please select a quiz from the left panel.</p>';
+    document.getElementById('editQuizBtn').style.display='none';
+    document.getElementById('adminQuestionsList').innerHTML='<p style="color:var(--text-600);text-align:center;padding:40px 0;">Quiz deleted. Pick another one, or create a new one.</p>';
     showToast('Quiz deleted.'); loadAdminQuizzes();
   }catch(err){console.error(err); showToast(err.message||'Failed to delete quiz.',true);}
 }
-
-// NEW: Question Modal (replaces prompt - tab safe)
-const questionModalOverlay=document.getElementById('questionModalOverlay');
-const questionForm=document.getElementById('questionForm');
-const questionFormError=document.getElementById('questionFormError');
-function openQuestionModal(mode, data=null){
-  questionModalOverlay.classList.add('open');
-  questionForm.reset(); questionFormError.textContent='';
-  if(mode==='add'){
-    editingQuestionId=null;
-    document.getElementById('questionModalTitle').textContent='Add New Question';
-    document.getElementById('questionModalSub').textContent=`Adding to "${activeManageQuizTitle}" - stays open when switching tabs`;
-  }else if(mode==='edit' && data){
-    editingQuestionId=data.id;
-    document.getElementById('questionModalTitle').textContent='Edit Question';
-    document.getElementById('questionModalSub').textContent='Update the question and correct answer';
-    document.getElementById('qText').value=data.text;
-    document.getElementById('qOptA').value=data.a;
-    document.getElementById('qOptB').value=data.b;
-    document.getElementById('qOptC').value=data.c;
-    document.getElementById('qOptD').value=data.d;
-    document.getElementById('qCorrect').value=data.correct;
-  }
-  document.getElementById('qText').focus();
-}
-function closeQuestionModal(){questionModalOverlay.classList.remove('open'); editingQuestionId=null;}
-document.getElementById('cancelQuestion').addEventListener('click',closeQuestionModal);
-questionModalOverlay.addEventListener('click',(e)=>{if(e.target===questionModalOverlay) closeQuestionModal();});
-questionForm.addEventListener('submit', async (e)=>{
-  e.preventDefault(); questionFormError.textContent='';
-  const question_text=document.getElementById('qText').value.trim();
-  const option_a=document.getElementById('qOptA').value.trim();
-  const option_b=document.getElementById('qOptB').value.trim();
-  const option_c=document.getElementById('qOptC').value.trim();
-  const option_d=document.getElementById('qOptD').value.trim();
-  const correct_option=document.getElementById('qCorrect').value;
-  if(!question_text||!option_a||!option_b||!option_c||!option_d||!correct_option){
-    questionFormError.textContent='All fields required.'; return;
-  }
-  const submitBtn=document.getElementById('submitQuestion'); submitBtn.disabled=true; submitBtn.textContent=editingQuestionId?'Updating…':'Saving…';
-  try{
-    let res;
-    if(editingQuestionId){
-      res=await fetch(`${API_HOST}/api/questions/${editingQuestionId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({question_text,option_a,option_b,option_c,option_d,correct_option})});
-    }else{
-      res=await fetch(`${API_HOST}/quizzes.php/${activeManageQuizId}/questions`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question_text,option_a,option_b,option_c,option_d,correct_option})});
-    }
-    if(!res.ok) throw new Error('Failed');
-    showToast(editingQuestionId?'Question updated!':'Question added!'); closeQuestionModal(); selectQuizToManage(activeManageQuizId,activeManageQuizTitle);
-  }catch(err){console.error(err); questionFormError.textContent='Failed to save question.'; showToast('Failed to save question.',true);}
-  submitBtn.disabled=false; submitBtn.textContent='Save Question';
-});
-async function adminDeleteQuestion(id){
-  if(!confirm('Delete this question? This cannot be undone.')) return;
-  try{
-    const res=await fetch(`${API_HOST}/api/questions/${id}`,{method:'DELETE'});
-    if(!res.ok) throw new Error();
-    showToast('Question deleted.'); selectQuizToManage(activeManageQuizId,activeManageQuizTitle);
-  }catch(err){console.error(err); showToast('Failed to delete question.',true);}
+// Add and edit both happen in the same box — the quiz editor (admin-assessment-editor.js).
+// opts.focusQuestionId opens it on one particular question.
+function openQuizEditor(opts){
+  const quiz=adminQuizRows.find(q=>Number(q.id)===Number(activeManageQuizId));
+  if(!quiz){ showToast('Select a quiz first.',true); return; }
+  if(!window.SoftmarcAssessments){ showToast('Quiz editor did not load — refresh this page.',true); return; }
+  SoftmarcAssessments.open(Object.assign({
+    quizId:Number(quiz.id), quizTitle:quiz.title,
+    passPct:(quiz.pass_pct==null||quiz.pass_pct==='')?60:quiz.pass_pct,
+    courseTitle:quiz.course_name||'Course'
+  }, opts||{}));
 }
 loadUsers();
 </script>
 <script src="softmarc-common.js?v=13"></script>
-<script src="admin-assessment-editor.js?v=26"></script>
+<script src="admin-assessment-editor.js?v=27"></script>
 <script src="admin-content-manager.js?v=16"></script>
 </body>
 </html>

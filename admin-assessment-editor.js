@@ -85,12 +85,23 @@
       '</div>';
     document.body.appendChild(d);
     d.addEventListener('mousedown', function (e) { if (e.target === d) close(); });
-    d.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } });
+    d.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.stopPropagation(); close(); return; }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); e.stopPropagation(); save(); }
+    });
     $('saeClose').onclick = close; $('saeCancel').onclick = close;
     $('saeAdd').onclick = function () { current.questions.push(blank()); current.dirty = true; render(); msg('Unsaved changes', ''); focusLast(); };
     $('saeSave').onclick = save;
   }
 
+  function focusCard(i) {
+    var cards = document.querySelectorAll('#saeList .sae-q');
+    var c = cards[Math.max(0, Math.min(i, cards.length - 1))];
+    if (!c) return;
+    var t = c.querySelector('textarea');
+    if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); }
+    if (typeof c.scrollIntoView === 'function') c.scrollIntoView({ block: 'center' });
+  }
   function focusLast() {
     var cards = document.querySelectorAll('#saeList .sae-q');
     var last = cards[cards.length - 1];
@@ -133,6 +144,20 @@
         current.questions[+el.dataset.i][el.dataset.f] = el.value;
         current.dirty = true; msg('Unsaved changes', '');
       });
+      // Enter walks the form instead of ending the edit: question → A → B → C → D → next question
+      el.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' || e.shiftKey) return;
+        e.preventDefault();
+        var i = +el.dataset.i, card = list.querySelectorAll('.sae-q')[i];
+        if (!card) return;
+        var inputs = [...card.querySelectorAll('input[type=text]')];
+        if (el.tagName === 'TEXTAREA') { if (inputs[0]) inputs[0].focus(); return; }
+        var k = inputs.indexOf(el);
+        if (k >= 0 && k < inputs.length - 1) { inputs[k + 1].focus(); return; }
+        var next = list.querySelectorAll('.sae-q')[i + 1];
+        if (next) { next.querySelector('textarea').focus(); }
+        else { $('saeAdd').focus(); }
+      });
     });
     list.querySelectorAll('input[type=radio]').forEach(function (el) {
       el.addEventListener('change', function () {
@@ -145,7 +170,10 @@
     list.querySelectorAll('[data-act]').forEach(function (btn) {
       btn.onclick = function () {
         var i = +btn.dataset.i, a = btn.dataset.act, arr = current.questions;
-        if (a === 'del') arr.splice(i, 1);
+        if (a === 'del') {
+          if (String(arr[i].question_text || '').trim() && !confirm('Delete question ' + (i + 1) + '? It disappears from the quiz when you press Save.')) return;
+          arr.splice(i, 1);
+        }
         else if (a === 'dup') arr.splice(i + 1, 0, JSON.parse(JSON.stringify(arr[i])));
         else if (a === 'up' && i > 0) { var t = arr[i - 1]; arr[i - 1] = arr[i]; arr[i] = t; }
         else if (a === 'down' && i < arr.length - 1) { var u = arr[i + 1]; arr[i + 1] = arr[i]; arr[i] = u; }
@@ -239,10 +267,23 @@
       msg('Could not load this quiz: ' + e.message, 'err');
     }
     current.loading = false;
-    if (!current.questions.length) current.questions = [blank()];
-    current.dirty = false;
-    msg('', ''); render();
-    var t = $('saeList').querySelector('textarea'); if (t) t.focus();
+    var wantAdd = !!opts.addBlank;
+    if (!current.questions.length) { current.questions = [blank()]; wantAdd = false; }
+    current.dirty = wantAdd;
+    msg(wantAdd ? 'New question — press Save quiz when you are done.' : '', '');
+    render();
+    if (wantAdd) {
+      current.questions.push(blank());
+      render();
+      focusCard(current.questions.length - 1);
+    } else if (opts.focusQuestionId != null) {
+      var at = -1;
+      current.questions.forEach(function (q, i) { if (Number(q.id) === Number(opts.focusQuestionId)) at = i; });
+      if (at >= 0) { focusCard(at); msg('Editing question ' + (at + 1) + ' of ' + current.questions.length + ' — press Save quiz to keep the change.', ''); }
+      else { var t0 = $('saeList').querySelector('textarea'); if (t0) t0.focus(); }
+    } else {
+      var t = $('saeList').querySelector('textarea'); if (t) t.focus();
+    }
   }
 
   window.SoftmarcAssessments = {

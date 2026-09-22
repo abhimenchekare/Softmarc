@@ -9,7 +9,7 @@ change anything.
 | What | Who may use it |
 |---|---|
 | `GET /api/users`, `/api/submissions`, `/api/analytics/summary` | **admins only** |
-| `POST/PUT/DELETE` courses, subtopics, quizzes, questions | **admins only** |
+| `POST/PUT/DELETE` courses, subtopics, quizzes | **admins only** (a quiz is written whole — there is no single-question write) |
 | `PUT /api/quizzes/<id>/assessment` (the quiz editor's one-save write: title, pass mark, all questions) | **admins only** |
 | `GET /api/quizzes/<id>` | public, but the correct answers are stripped unless an admin token is present |
 | `GET /api/quizzes/<id>/questions` — the correct answers | **admins only** (students get `/paper`, which has no answers) |

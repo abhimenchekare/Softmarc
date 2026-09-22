@@ -200,7 +200,7 @@ const ADMIN = [[/^GET$/, /^\/(users|submissions|analytics\/summary)$/], [/^POST$
   [/^GET$/, /^\/quizzes\/\d+\/questions$/],                       // correct answers: admin only
   [/^PUT$/, /^\/quizzes\/\d+\/assessment$/],                       // one-save quiz editor
   [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
-  [/^POST$/, /^\/quizzes\/\d+\/questions$/], [/^(PUT|DELETE)$/, /^\/questions\/\d+$/], [/^DELETE$/, /^\/users\/\d+$/]];
+  [/^DELETE$/, /^\/users\/\d+$/]];
 const SCOPED = [/^\/(progress|time|steps)/, /^\/users\/\d+/, /^\/quizzes\/\d+\/submit$/];
 function claimedId(req) {
   const rp = req.path.replace(/\.php/gi, '');

@@ -273,7 +273,7 @@ const ADMIN = [[/^GET$/, /^\/(users|submissions|analytics\/summary)$/], [/^POST$
   [/^GET$/, /^\/quizzes\/\d+\/questions$/],                       // correct answers: admin only
   [/^PUT$/, /^\/quizzes\/\d+\/assessment$/],                       // one-save quiz editor
   [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
-  [/^POST$/, /^\/quizzes\/\d+\/questions$/], [/^(PUT|DELETE)$/, /^\/questions\/\d+$/], [/^DELETE$/, /^\/users\/\d+$/]];
+  [/^DELETE$/, /^\/users\/\d+$/]];
 const SCOPED = [/^\/(progress|time|steps)/, /^\/users\/\d+/, /^\/quizzes\/\d+\/submit$/];
 function claimedId(req) {
   const rp = req.path.replace(/\.php/gi, '');
@@ -725,43 +725,8 @@ app.delete('/api/quizzes/:id', async (req, res) => {
   }
 });
 
-// =============================================================
-// QUESTIONS
-// =============================================================
-
-app.post('/api/quizzes/:id/questions', async (req, res) => {
-  const { question_text, option_a, option_b, option_c, option_d, correct_option } = req.body;
-  try {
-    const result = db.prepare(
-      'INSERT INTO questions (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_option) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(req.params.id, question_text, option_a, option_b, option_c, option_d, correct_option);
-    const q = db.prepare('SELECT id, question_text, correct_option FROM questions WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(q);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create question' });
-  }
-});
-
-app.put('/api/questions/:id', async (req, res) => {
-  const { question_text, option_a, option_b, option_c, option_d, correct_option } = req.body;
-  try {
-    db.prepare(
-      'UPDATE questions SET question_text=?, option_a=?, option_b=?, option_c=?, option_d=?, correct_option=? WHERE id=?'
-    ).run(question_text, option_a, option_b, option_c, option_d, correct_option, req.params.id);
-    res.json({ updated: true, id: parseInt(req.params.id) });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update question' });
-  }
-});
-
-app.delete('/api/questions/:id', async (req, res) => {
-  try {
-    db.prepare('DELETE FROM questions WHERE id = ?').run(req.params.id);
-    res.json({ deleted: true, id: parseInt(req.params.id) });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to delete question' });
-  }
-});
+// (no single-question write routes: a quiz is written as a whole, see
+// PUT /api/quizzes/:id/assessment below — one validation path, one save, both engines.)
 
 // =============================================================
 // QUIZ SUBMISSIONS
