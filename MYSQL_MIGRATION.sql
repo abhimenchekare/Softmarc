@@ -58,8 +58,15 @@ CREATE TABLE IF NOT EXISTS quizzes (
   id              INT AUTO_INCREMENT PRIMARY KEY,
   course_name     VARCHAR(500) DEFAULT '',
   title           VARCHAR(500) NOT NULL,
+  course_id       INT NULL,                 -- which course this assessment belongs to
+  module_index    INT NULL,                  -- unused by the quiz editor (a quiz belongs to the course); kept so older rows still load
+  pass_pct        INT NOT NULL DEFAULT 60,   -- score needed to unlock the exercise step
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- One assessment per subtopic: the app enforces this in the editor, the index just makes the
+-- lookup cheap. Existing databases get these three columns automatically on first start.
+CREATE INDEX idx_quizzes_topic ON quizzes (course_id, module_index);   -- helps the course-filtered quiz list
 
 -- 5. QUESTIONS TABLE
 CREATE TABLE IF NOT EXISTS questions (
@@ -96,9 +103,14 @@ CREATE TABLE IF NOT EXISTS lesson_progress (
   UNIQUE KEY unique_progress (student_id, course_name, module_index)
 );
 
--- 8. Insert a default admin user (password: admin123)
-INSERT INTO users (full_name, email, password_hash, role) VALUES 
-('Admin User', 'admin@softmarc.com', '$2b$10$rQZ8K.5x1lL.1lL.1lL.1eOKX5lL.1lL.1lL.1lL.1lL.1lL.1l', 'admin')
+-- 8. Admin account (deliberately UNUSABLE until you set your own password).
+--    This row makes sure an admin exists, but its hash can never match anything.
+--    To activate it, run on your own PC:   node set-admin-password.js
+--    and paste the single UPDATE line it prints into phpMyAdmin (SQL tab -> Go).
+--    Nothing that documents a working password ships with this app, so nobody
+--    can read a credential out of the repo, the docs, or a download of the code.
+INSERT INTO users (full_name, email, password_hash, role) VALUES
+('Admin User', 'admin@softmarc.com', 'PASTE-YOUR-OWN-BCRYPT-HASH-HERE-00000000000000000000000000000', 'admin')
 ON DUPLICATE KEY UPDATE email=email;
 
 -- =============================================================

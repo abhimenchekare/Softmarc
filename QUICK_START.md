@@ -7,7 +7,7 @@
    (empty password = XAMPP default).
 3. phpMyAdmin → create database **softmarc** → SQL tab → paste `MYSQL_MIGRATION.sql` → Go.
 4. `node server.js` → open http://localhost:3000
-   Admin: `admin@softmarc.com` / `admin123`
+   Then: `node set-admin-password.js` -> paste the UPDATE line it prints into phpMyAdmin.
    Terminal must show `[DB] MySQL connected`. If not, read the `[DB]` line — it now names the problem.
 
 ## RUN ON THE CLOUD (real users)
@@ -18,7 +18,8 @@
    `DB_HOST=127.0.0.1` `DB_PORT=3306` `DB_NAME=uXXXXXX_softmarc` `DB_USER=uXXXXXX_admin` `DB_PASS=…` → **Save** → **Restart App**.
 5. Open `https://softmarcedu.in/api/health?v=1` → must say `"status":"ok"`.
    If it says `missing_env` → step 4 not saved/restarted. If `Access denied` → wrong DB password/user in MySQL.
-6. Login fails with "Invalid email or password"? Run `RESET_ADMIN.sql` in hosted phpMyAdmin, then login `admin123` and change it.
+6. Login fails with "Invalid email or password"? Run `node set-admin-password.js`, paste its UPDATE
+   line into hosted phpMyAdmin (see `RESET_ADMIN.sql`), then sign in with the password you typed.
 
 ## IMPORTANT
 Your PC database and the cloud database are **separate**. Content made on the PC is not on

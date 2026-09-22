@@ -135,8 +135,7 @@
         videoUrl: s.video_url || '',
         pdfUrl: s.pdf_url || '',
         exercise: s.exercise || ''
-      })),
-      assessments: []
+      }))
     }));
     return getCourses();
   }
@@ -169,6 +168,23 @@
   }
 
   function showStatus(msg){ const el=$('cmStatus'); if(el) el.textContent=msg; }
+  async function checkDocReach(u){
+    const url=String(u||'').trim(); if(!url) return;
+    const ext=(url.split('?')[0].match(/\.([a-z0-9]+)$/i)||[])[1]||'';
+    const hint=/^(ppt|pps|pot)$/i.test(ext) ? '  Tip: re-save as .pptx — old .ppt files often fail in the online viewer.' : '';
+    try{
+      const r=await fetch(url,{method:'HEAD'});
+      if(r.ok){
+        const mb=r.headers&&r.headers.get&&r.headers.get('content-length');
+        const size=mb?(' ('+Math.round((+mb)/1024/102.4)/10+' MB)'):'';
+        const big=mb&&(+mb)>100*1024*1024;
+        showStatus(big ? '⚠️ Saved, but the file is '+Math.round(+mb/1048576)+' MB — viewers give up above ~100 MB.'+hint
+                       : '✅ File is reachable at that path'+size+'. Learners will see it.'+hint);
+      } else {
+        showStatus('⚠️ Saved, but the server answered '+r.status+' for '+url+' — the file is not there. Upload it again or fix the path.'+hint);
+      }
+    }catch(e){ showStatus('⚠️ Saved, but that path could not be read from this browser — check it opens at '+url+hint); }
+  }
   function showError(msg){ const el=$('cmStatus'); if(el) el.textContent=msg; }
 
   function injectStyle(){
@@ -266,10 +282,14 @@
         showStatus('New course created in Database!');
       }
       await renderAll();
+      // tell the admin straight away if the file they just pointed at cannot be read —
+      // a broken slide deck only shows up as a third-party error on the learner's screen
+      if(type==='pdf' && fields.pdf_url) checkDocReach(fields.pdf_url);
+      if(type==='video' && fields.video_url) checkDocReach(fields.video_url);
     } catch(err) {
       showError('Database save failed: '+err.message);
       let cs=getCourses(); let c=selectedCourseId?cs.find(x=>x.id===selectedCourseId):null;
-      if(!c){c={id:SoftmarcContent.slug(title),subtopics:[],assessments:[],display_order:cs.length}; cs.push(c); selectedCourseId=c.id;}
+      if(!c){c={id:SoftmarcContent.slug(title),subtopics:[],display_order:cs.length}; cs.push(c); selectedCourseId=c.id;}
       c.title=title; c.slug=SoftmarcContent.slug(title); c.tag=fields.tag; c.short_description=fields.short_description; c.duration_hours=fields.duration_hours; c.image=fields.image;
       saveCourses(cs, 'Saved to localStorage only.');
     }
@@ -342,7 +362,7 @@
   function renderResources(){
     const el=$('cmPanelResources'); if(!el) return;
     const c=selectedCourse(); const st=selectedSubtopic();
-    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">Save PDF</button><button class="cm-btn primary" id="cmSaveExerciseTop">Save Exercise</button></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box"><b>Video</b><span>'+esc(st.videoUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>PDF / PPT</b><span>'+esc(st.pdfUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>Exercise</b><span>'+(st.exercise?'Added':'Not added')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"><div class="cm-upload-row" style="margin-top:8px"><div><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin-bottom:4px">Or upload video file (up to 1 GB — needs a minute for big files, keep the page open)</label><input id="cmVideoFile" type="file" accept="video/*,.mp4,.webm,.ogg,.mov"></div></div></div><div class="cm-field"><label>PDF / PPT URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdfs/notes.pdf or pdfs/deck.pptx"><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin:8px 0 4px">Or upload PDF or PowerPoint file — PPT / PPTX (up to 1 GB)</label><input id="cmPdfFile" type="file" accept="application/pdf,.pdf,.ppt,.pptx,.pps,.ppsx"></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">Save Video</button><button class="cm-btn primary" id="cmSavePdf">Save PDF</button><button class="cm-btn primary" id="cmSaveExercise">Save Exercise</button></div>':'<p class="cm-help">Add/select a subtopic first.</p>')+'</div>';
+    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">Save PDF</button><button class="cm-btn primary" id="cmSaveExerciseTop">Save Exercise</button></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box"><b>Video</b><span>'+esc(st.videoUrl||'Not added')+'</span></div><div class="cm-resource-box"><b>PDF / PPT</b><span>'+esc(st.pdfUrl||'Not added')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"><div class="cm-upload-row" style="margin-top:8px"><div><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin-bottom:4px">Or upload video file (up to 1 GB — needs a minute for big files, keep the page open)</label><input id="cmVideoFile" type="file" accept="video/*,.mp4,.webm,.ogg,.mov"></div></div></div><div class="cm-field"><label>PDF / PPT URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdfs/notes.pdf or pdfs/deck.pptx"><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin:8px 0 4px">Or upload PDF or PowerPoint file — PPT / PPTX (up to 1 GB)</label><input id="cmPdfFile" type="file" accept="application/pdf,.pdf,.ppt,.pptx,.pps,.ppsx"></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">Save Video</button><button class="cm-btn primary" id="cmSavePdf">Save PDF</button><button class="cm-btn primary" id="cmSaveExercise">Save Exercise</button></div>':'<p class="cm-help">Add/select a subtopic first.</p>')+'</div>';
     $('cmResCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
     const vf=$('cmVideoFile'); if(vf) vf.onchange=startUpload('video','cmVideoUrl');
     const pf=$('cmPdfFile'); if(pf) pf.onchange=startUpload('pdf','cmPdfUrl');

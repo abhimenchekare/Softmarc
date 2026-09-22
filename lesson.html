@@ -340,6 +340,9 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
 .pv-note.ok{color:var(--lv-green);font-weight:700}
 .pv-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none;z-index:3}
 .pv-viewer.ppt .pv-frame{display:block}
+.pv-pptbar{display:none;align-items:center;gap:12px;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border,#e2e8f0);background:var(--surface-hover,#f1f5f9);font-size:12px;color:var(--text-500,#475569);line-height:1.45}
+.pv-viewer.ppt .pv-pptbar,.pv-viewer.pptbroken .pv-pptbar{display:flex}
+.pv-pptbar .pv-btn{flex:0 0 auto;font-size:11.5px;padding:6px 10px}
 .pv-viewer.ppt .pv-canvas-wrap{display:none}
 .pv-viewer.ppt .pv-scroll{background:#0F172A;padding:0;display:block}
 .pv-viewer.ppt .pv-rail{display:none}
@@ -433,7 +436,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
         <div class="big-icon">📝</div>
         <div class="big-content">
           <div class="big-title">MCQ</div>
-          <div class="big-desc">Quiz for this subtopic</div>
+          <div class="big-desc">Course assessment (MCQ)</div>
           <div class="big-meta">Pass to unlock exercise</div>
           <span class="complete-badge">✓ Complete</span>
         </div>
@@ -576,9 +579,10 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
                     <button class="pv-btn" id="pvFs" aria-label="Fullscreen" title="Fullscreen">⛶</button>
                   </div>
                 </div>
+                <div class="pv-pptbar" id="pvPptBar"><span id="pvPptNote">Slides are shown by an online viewer.</span><button class="pv-btn" id="pvPptAlt" type="button">Try the other viewer</button></div>
                 <div class="pv-scroll" id="pvScroll">
                   <div class="pv-canvas-wrap" id="pvWrap"><canvas id="pvCanvas"></canvas></div>
-                  <iframe id="pvFrame" class="pv-frame" title="Slides (view only)" loading="lazy" referrerpolicy="no-referrer"></iframe>
+                  <iframe id="pvFrame" class="pv-frame" title="Slides (view only)" loading="lazy" referrerpolicy="origin"></iframe>
                   <div class="pv-status" id="pvStatus">
                     <div class="sp" id="pvSpin"></div>
                     <div class="t1" id="pvStatusT1">Loading document…</div>
@@ -1197,6 +1201,24 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     if(!e)return 'none';
     return 'other'; }
   function absUrl(u){ if(/^https?:\/\//i.test(u))return u; return location.origin+'/'+String(u).replace(/^\/+/,''); }
+  function sameOriginFile(u){ try{ return absUrl(u).indexOf(location.origin)===0; }catch(e){ return false; } }
+  var pptSrc='ms', pptBig=0;
+  function pptFrameSrc(which){
+    var abs=absUrl(docUrl());
+    return which==='gg'
+      ? 'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(abs)
+      : 'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(abs);
+  }
+  function pptNote(){
+    var t = pptSrc==='gg'
+      ? 'Showing the Google viewer. If the slides stay blank, the file itself cannot be read from this server.'
+      : 'Slides are shown by an online viewer. If they do not load, press “Try the other viewer”.';
+    if(/\.(ppt|pps|pot)$/i.test(String(docUrl()).split('?')[0])) t += ' This is the old .ppt format — re-saving as .pptx opens far more reliably.';
+    if(pptBig) t += ' Note: the file is '+fmtSize(pptBig)+', above the ~100 MB these viewers accept.';
+    return t;
+  }
+  function refreshPptBar(){ var b=$('pvPptAlt'), t=$('pvPptNote'); if(t) t.textContent=pptNote(); if(b) b.textContent = pptSrc==='gg'?'Use the Microsoft viewer':'Try the other viewer'; }
+  function setPptFrame(which){ pptSrc = which==='gg'?'gg':'ms'; try{ $('pvFrame').src=pptFrameSrc(pptSrc); }catch(e){} refreshPptBar(); }
   function setTools(on){ ['pvPrev','pvNext','pvZoomIn','pvZoomOut','pvFit','pvRot'].forEach(function(id){var b=$(id);if(b)b.disabled=!on;}); var rh=$('pvRailHide'); if(rh)rh.style.display=on?'':'none'; }
   function startTimer(){ if(viewTimer)return; viewTimer=setInterval(function(){
       if(!pptMode||!PV.classList.contains('active'))return;
@@ -1364,7 +1386,8 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   async function loadDoc(){
     tok++; var myTok=tok;
     doc=null; totalPages=0; pageNum=1; maxSeen=0; rot=0; pptMode=false; viewSecs=0; timeOk=false;
-    try{ $('pvViewer').classList.remove('ppt'); }catch(e){}
+    try{ $('pvViewer').classList.remove('ppt'); $('pvViewer').classList.remove('pptbroken'); }catch(e){}
+    pptSrc='ms'; pptBig=0;
     try{ $('pvFrame').src='about:blank'; }catch(e){}
     $('pvThumbs').innerHTML='';
     $('pvFileSize').textContent='—'; $('pvInfoSize').textContent='—';
@@ -1376,13 +1399,32 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     var nm=decodeURIComponent(url.split('/').pop().split('?')[0]);
     $('pvFileName').textContent=nm;
     $('pvInfoRead').textContent=readMinutes()+' min read';
-    try{ var r0=await fetch(url,{method:'HEAD'}); var n0=r0.headers&&r0.headers.get&&r0.headers.get('content-length'); if(n0&&myTok===tok){ var s0=fmtSize(+n0); $('pvFileSize').textContent=s0; $('pvInfoSize').textContent=s0; } }catch(e){}
+    // ask the server whether this file is really there before handing it to a viewer,
+    // so a wrong path says that instead of showing a third-party "something went wrong" page
+    var reach={ok:null,status:0,size:0};
+    try{
+      var r0=await fetch(url,{method:'HEAD'});
+      reach.ok=r0.ok; reach.status=r0.status;
+      var h0=r0.headers, n0=h0&&h0.get&&h0.get('content-length');
+      if(n0&&isFinite(+n0)&&+n0>0) reach.size=+n0;
+    }catch(e){ if(sameOriginFile(url)) reach.ok=false; }
+    if(reach.size&&myTok===tok){ var s0=fmtSize(reach.size); $('pvFileSize').textContent=s0; $('pvInfoSize').textContent=s0; }
     if(kind==='ppt'||kind==='office'){
       pptMode=true;
       try{ $('pvViewer').classList.add('ppt'); }catch(e){}
       setTools(false);
       $('pvPage').textContent=(kind==='ppt'?'Slides · PowerPoint':'Slides · Office');
-      try{ $('pvFrame').src='https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(absUrl(url)); }catch(e){}
+      pptBig = reach.size>100*1024*1024 ? reach.size : 0;
+      refreshPptBar();
+      if(reach.ok===false){
+        // no .ppt class here: the frame stays hidden and our own message is the thing they see
+        try{ $('pvViewer').classList.add('pptbroken'); }catch(e){}
+        status('The slides could not be read from the server',
+          'The path '+absUrl(url).replace(/^https?:\/\/[^/]+/,'')+' answered '+(reach.status||'nothing')+
+          '. In Course Manager \u2192 \u201CVideos, PDF & Exercises\u201D check the PDF/PPT path, or upload the file again.', false);
+        startTimer(); syncUI(); return;
+      }
+      setPptFrame('ms');
       clearStatus(); startTimer(); syncUI(); return;
     }
     if(kind!=='pdf'){
@@ -1458,6 +1500,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     $('pvZoomOut').onclick=function(){scale=Math.max(.25,Math.round(scale*0.87*100)/100);renderPage();};
     $('pvFit').onclick=function(){fitMode=fitMode==='width'?'page':'width';toast(fitMode==='width'?'Fitting to width':'Fitting page');applyFit();};
     $('pvRot').onclick=function(){rot=(rot+90)%360;renderPage();if(doc)buildThumbs(tok);};
+    var alt=$('pvPptAlt'); if(alt) alt.onclick=function(){ setPptFrame(pptSrc==='ms'?'gg':'ms'); if(pptSrc==='gg') clearStatus(); };
     $('pvFs').onclick=function(){ try{
       if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
       else{var el=$('pvViewer');(el.requestFullscreen||el.webkitRequestFullscreen).call(el);}
@@ -1516,6 +1559,12 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   ];
   var cfg={video_req_pct:90,pdf_req_pct:90};
   var map={}, ready=false, hasMcq=true, waiting=[], gateOff=false;
+  /* One assessment per course (it is written in Manage Quizzes, not per subtopic).
+     It is required on every topic as soon as the course has a quiz with questions in it;
+     with no quiz the MCQ row still shows, stays locked behind the document step, and simply
+     never blocks. mcqInfo is null until the quiz list loads. */
+  var mcqInfo=null;
+  function mcqRequired(){ return mcqInfo ? (mcqInfo.withQuestions>0) : hasMcq; }
 
   function LKEY(){return 'lp_steps_'+encodeURIComponent(courseName);}
   function loadLocal(){try{map=JSON.parse(localStorage.getItem(LKEY())||'{}');}catch(e){map={};}}
@@ -1525,14 +1574,14 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     try{if(typeof done!=='undefined'&&done.has(i))return true;}catch(e){}
     try{return (JSON.parse(localStorage.getItem('done_'+courseName)||'[]')).indexOf(i)>-1;}catch(e){return false;}
   }
-  function required(i){var m=modules[i]||{};return {video:!!(m.videoUrl||'').trim(),pdf:!!(m.pdfUrl||'').trim(),mcq:true,ex:!!(m.exercise||'').trim()};}
+  function required(i){var m=modules[i]||{};return {video:!!(m.videoUrl||'').trim(),pdf:!!(m.pdfUrl||'').trim(),mcq:true,ex:!!(m.exercise||'').trim()}; /* the MCQ row stays locked until the document step, quiz or not */}
   function stepDone(i,k){
     if(!required(i)[k])return true;
     if(legacyDone(i))return true;
     var s=map[i]||{};
     if(k==='video')return (s.video||0)>=cfg.video_req_pct;
     if(k==='pdf')return (s.pdf||0)>=cfg.pdf_req_pct;
-    if(k==='mcq'&&!hasMcq)return stepDone(i,'pdf'); /* course has no quiz yet — nothing to pass */
+    if(k==='mcq'&&!mcqRequired())return stepDone(i,'pdf'); /* no assessment in this course — nothing to pass */
     return !!s[k];
   }
   function stepPct(i,k){var s=map[i]||{};return (k==='video'||k==='pdf')?Math.max(0,Math.min(100,s[k]||0)):(s[k]?100:0);}
@@ -1675,10 +1724,10 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       else{dn=stepDone(moduleIdx,r.k);lock=dn?'':blockReason(moduleIdx,r.k);}
       if(dn)doneN++;
       if(r.k==='__next'&&!lock)doneN++;
-      var mcqAuto=(r.k==='mcq'&&dn&&!hasMcq&&!(map[moduleIdx]&&map[moduleIdx].mcq));
+      var mcqAuto=(r.k==='mcq'&&dn&&!mcqRequired()&&!(map[moduleIdx]&&map[moduleIdx].mcq));
       var pill=r.k==='__next'
         ? (lock?'<span class="lp-pill pl">🔒 Locked</span>':'<span class="lp-pill pa">'+(nx?'Open →':'Continue →')+'</span>')
-        : (dn?(mcqAuto?'<span class="lp-pill pl">No quiz yet</span>':'<span class="lp-pill pc">✓ Completed</span>')
+        : (dn?(mcqAuto?'<span class="lp-pill pl">No quiz set</span>':'<span class="lp-pill pc">✓ Completed</span>')
           :(lock?'<span class="lp-pill pl">🔒 Locked</span>'
             :(cur?'<span class="lp-pill pi">In Progress</span>'
               :(reqd[r.k]?'<span class="lp-pill pa">🔓 Available</span>':'<span class="lp-pill pl">Not required</span>'))));
@@ -1795,7 +1844,19 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     }catch(e){}
     try{
       var qs=await(await fetch('/api/quizzes.php')).json();
-      if(Array.isArray(qs)){ hasMcq=qs.some(function(q){return (q.course_name||q.course)===courseName;}); }
+      if(Array.isArray(qs)){
+        var mine=qs.filter(function(q){return (q.course_name||q.course)===courseName;});
+        hasMcq=mine.length>0;
+        var info={withQuestions:0,quizzes:mine.length};
+        mine.forEach(function(q){
+          var n=Number(q.question_count);
+          // counts come from the server; if an older build omits them, treat a quiz as real (1)
+          // so the MCQ gate is never dropped by accident — pass it once and everything moves on
+          if(!isFinite(n)) n=(q.questions&&q.questions.length)?q.questions.length:1;
+          if(n>0) info.withQuestions++;
+        });
+        mcqInfo=info;
+      } else { mcqInfo=null; }
     }catch(e){}
     ready=true;
     var fi=firstIncomplete();

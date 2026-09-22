@@ -50,17 +50,67 @@ app.use(express.static(__dirname));
 // SQLITE DATABASE (for local testing only)
 // =============================================================
 
-const Database = require('better-sqlite3');
 const dbPath = './softmarc.db';
-let db;
+let db = null, DB_ENGINE = '';
+let DEMO_ADMIN_PW = '';
+
+// node:sqlite logs an ExperimentalWarning on Node 22/23/24. This is the local test copy only,
+// so keep that noise out of the console — every other warning still shows as usual.
+try {
+  const forward = process.listeners('warning');
+  process.removeAllListeners('warning');
+  process.on('warning', (w) => {
+    if (w && w.name === 'ExperimentalWarning' && /SQLite/i.test(String(w.message))) return;
+    forward.forEach((f) => { try { f(w); } catch (e) { console.warn(String((w && w.message) || w)); } });
+  });
+} catch (e) { /* never let a console filter break the app */ }
+
+// A better-sqlite3-shaped wrapper over the SQLite built into Node 22.5+ (node:sqlite).
+// Used when the npm module can't load: newer Node ABI, blocked install script, no compiler.
+function openNodeSqlite() {
+  let mod;
+  try { mod = require('node:sqlite'); } catch (e) { return null; }
+  if (!mod || typeof mod.DatabaseSync !== 'function') return null;
+  const raw = new mod.DatabaseSync(dbPath);
+  raw.exec('PRAGMA journal_mode = WAL');
+  // node:sqlite is stricter than better-sqlite3 about bind values: no undefined, no booleans.
+  // Normalising here keeps every existing call site (60+ of them) working unchanged.
+  const nz = (v) => (v === undefined ? null : (typeof v === 'boolean' ? (v ? 1 : 0) : v));
+  const norm = (a) => ((a.length === 1 && Array.isArray(a[0]) ? a[0] : a).map(nz));
+  return {
+    prepare: (sql) => {
+      const st = raw.prepare(sql);
+      return { all: (...a) => st.all(...norm(a)), get: (...a) => st.get(...norm(a)), run: (...a) => st.run(...norm(a)) };
+    },
+    exec: (sql) => raw.exec(sql),
+    pragma: (spec) => raw.exec('PRAGMA ' + spec),
+    close: () => raw.close()
+  };
+}
 
 try {
+  const Database = require('better-sqlite3');
   db = new Database(dbPath);
   db.pragma('journal_mode = WAL');
-  console.log('[DB] SQLite connected:', dbPath);
+  DB_ENGINE = 'better-sqlite3';
+  console.log('[DB] SQLite connected (' + DB_ENGINE + '):', dbPath);
 } catch (err) {
-  console.error('[DB] SQLite error:', err.message);
-  console.log('[DB] Trying sql.js fallback...');
+  const why = String((err && err.message) || err).split('\n')[0];
+  try { db = openNodeSqlite(); } catch (e2) { db = null; }
+  if (db) {
+    DB_ENGINE = 'node:sqlite';
+    console.log('[DB] better-sqlite3 not usable (' + why.slice(0, 96) + ')');
+    console.log('[DB] Using the SQLite built into Node ' + process.versions.node + ' — the demo works exactly the same.');
+  } else {
+    console.error('\n[DB] The local demo cannot open a database, so it stopped instead of running half-broken.');
+    console.error('     better-sqlite3 said: ' + why);
+    console.error('     Node\'s own SQLite needs Node 22.5 or newer (you are on ' + process.versions.node + ').');
+    console.error('   Fix it with ONE of these, then run: npm run local');
+    console.error('     1) use Node 22.5+ / 24 LTS  (no install step at all — the demo will use node:sqlite)');
+    console.error('     2) npm install-scripts approve better-sqlite3   then   npm install');
+    console.error('     3) npm uninstall better-sqlite3   (forces the built-in SQLite path)\n');
+    process.exit(1);
+  }
 }
 
 // Create tables
@@ -156,9 +206,13 @@ if (db) {
   // Create admin user if not exists
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get('admin@softmarc.com');
   if (!existing) {
-    const hash = bcrypt.hashSync('admin123', 10);
+    // Local demo only. Set your own: ADMIN_PASSWORD=... npm run local  (nothing is published anywhere)
+    const crypto = require('crypto');
+    const demoPw = process.env.ADMIN_PASSWORD || (crypto.randomBytes(9).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) || 'demo' + Date.now());
+    const hash = bcrypt.hashSync(demoPw, 10);
     db.prepare("INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)").run('Admin', 'admin@softmarc.com', hash, 'admin');
-    console.log('[DB] Admin created: admin@softmarc.com / admin123');
+    DEMO_ADMIN_PW = demoPw;
+    console.log('[DB] Local demo admin row created (lives in softmarc.db on this PC only).');
   }
 }
 
@@ -213,8 +267,11 @@ function needSignIn(req, res) {
   res.status(401).json({ error: 'Please sign in again.', code: 'auth_required' });
 }
 // who may touch what
-const PUB = [[/^POST$/, /^\/login$/], [/^GET$/, /^\/(health|config)$/], [/^GET$/, /^\/courses(\/\d+)?$/], [/^GET$/, /^\/quizzes(\/\d+)(\/questions)?$/]];
+const PUB = [[/^POST$/, /^\/login$/], [/^GET$/, /^\/(health|config)$/], [/^GET$/, /^\/courses(\/\d+)?$/],
+  [/^GET$/, /^\/quizzes(\/\d+)?$/], [/^GET$/, /^\/quizzes\/\d+\/paper$/]];   // /paper = questions WITHOUT the answers
 const ADMIN = [[/^GET$/, /^\/(users|submissions|analytics\/summary)$/], [/^POST$/, /^\/(config|upload|users|courses|quizzes)$/],
+  [/^GET$/, /^\/quizzes\/\d+\/questions$/],                       // correct answers: admin only
+  [/^PUT$/, /^\/quizzes\/\d+\/assessment$/],                       // one-save quiz editor
   [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
   [/^POST$/, /^\/quizzes\/\d+\/questions$/], [/^(PUT|DELETE)$/, /^\/questions\/\d+$/], [/^DELETE$/, /^\/users\/\d+$/]];
 const SCOPED = [/^\/(progress|time|steps)/, /^\/users\/\d+/, /^\/quizzes\/\d+\/submit$/];
@@ -228,7 +285,9 @@ function claimedId(req) {
 }
 app.use('/api', (req, res, next) => {
   const p = req.path.replace(/\.php/gi, '');  // the .php alias rewrite runs later — normalise here (also mid-path: /users.php/7/avatar)   // the .php alias rewrite runs later — normalise here
-  if (PUB.some(r => r[0].test(req.method) && r[1].test(p))) return next();
+  // public to anonymous callers, but if a valid token rides along we remember who —
+  // a couple of read routes show a little more to an admin than to a stranger
+  if (PUB.some(r => r[0].test(req.method) && r[1].test(p))) { const pub = authFrom(req); if (pub) req.auth = pub; return next(); }
   const a = authFrom(req);
   if (!a) return needSignIn(req, res);
   req.auth = a;
@@ -322,11 +381,20 @@ const TRY_WINDOW = 10 * 60e3, TRY_MAX = 8;
 const tries = new Map();
 function throttled(key) { const now = Date.now(); const l = (tries.get(key) || []).filter(t => now - t < TRY_WINDOW); tries.set(key, l); return l.length >= TRY_MAX; }
 function noteTry(key) { const now = Date.now(); const l = (tries.get(key) || []).filter(t => now - t < TRY_WINDOW); l.push(now); tries.set(key, l); }
+const WEAK_PASSWORDS = ['admin123', 'password', 'password1', 'passw0rd', '12345678', '123456789', 'qwerty123', 'softmarc', 'admin1234', 'welcome1'];
+function passwordProblem(pw) {
+  const s = String(pw || '');
+  if (s.length < 8) return 'Password must be at least 8 characters';
+  if (WEAK_PASSWORDS.includes(s.toLowerCase())) return 'That password is on the easily-guessed list — choose another';
+  if (/^(.)\1+$/.test(s)) return 'Password must not be one repeated character';
+  return '';
+}
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
-  const tkey = String(email).toLowerCase() + '|' + (req.ip || '');
+  const clientIp = req.get('cf-connecting-ip') || (req.ips && req.ips[0]) || req.ip || '';
+  const tkey = String(email).toLowerCase() + '|' + clientIp;
   if (throttled(tkey))
     return res.status(429).json({ error: 'Too many sign-in attempts. Wait a few minutes and try again.', code: 'slow_down' });
 
@@ -361,6 +429,8 @@ app.post('/api/login', async (req, res) => {
 app.post('/api/users', async (req, res) => {
   const { full_name, email, password, role } = req.body;
   if (!full_name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
+  const pwErr = passwordProblem(password);
+  if (pwErr) return res.status(400).json({ error: pwErr });
 
   try {
     const password_hash = await bcrypt.hash(password, 10);
@@ -414,6 +484,8 @@ app.delete('/api/users/:id/avatar', async (req, res) => {
 
 app.put('/api/users/:id/password', async (req, res) => {
   const { current_password, new_password } = req.body;
+  const npwErr = passwordProblem(new_password);
+  if (npwErr) return res.status(400).json({ error: npwErr });
   try {
     const row = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'User not found' });
@@ -578,7 +650,19 @@ app.delete('/api/subtopics/:id', async (req, res) => {
 
 app.get('/api/quizzes', async (req, res) => {
   try {
-    const rows = db.prepare('SELECT * FROM quizzes ORDER BY id ASC').all();
+    ensureQuizColumnsLocal();
+    const w = [], args = [];
+    if (req.query.course_id) { w.push('course_id = ?'); args.push(Number(req.query.course_id)); }
+    if (req.query.course_name) { w.push('course_name = ?'); args.push(String(req.query.course_name)); }
+    if (req.query.module_index !== undefined && req.query.module_index !== '') { w.push('module_index = ?'); args.push(Number(req.query.module_index)); }
+    const rows = db.prepare('SELECT * FROM quizzes' + (w.length ? ' WHERE ' + w.join(' AND ') : '') + ' ORDER BY module_index ASC, id ASC').all(...args);
+    const counts = q('SELECT quiz_id, COUNT(*) AS n FROM questions GROUP BY quiz_id');
+    const n = {}; counts.forEach(r => { n[r.quiz_id] = +r.n; });
+    rows.forEach(r => {
+      r.question_count = n[r.id] || 0;
+      if (r.pass_pct == null) r.pass_pct = 60;
+      r.bound = (r.module_index === null || r.module_index === undefined) ? 'course' : 'subtopic';
+    });
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch quizzes' });
@@ -590,6 +674,8 @@ app.get('/api/quizzes/:id', async (req, res) => {
     const quiz = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(req.params.id);
     if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
     const questions = db.prepare('SELECT * FROM questions WHERE quiz_id = ? ORDER BY id ASC').all(req.params.id);
+    // the answer key stays on the server: students use /quizzes/<id>/paper
+    if (!(req.auth && req.auth.role === 'admin')) questions.forEach(x => { delete x.correct_option; });
     quiz.questions = questions;
     res.json(quiz);
   } catch (err) {
@@ -607,9 +693,18 @@ app.get('/api/quizzes/:id/questions', async (req, res) => {
 });
 
 app.post('/api/quizzes', async (req, res) => {
-  const { course_name, title } = req.body;
+  const { course_name, title } = req.body || {};
   try {
-    const result = db.prepare('INSERT INTO quizzes (course_name, title) VALUES (?, ?)').run(course_name, title);
+    ensureQuizColumnsLocal();
+    if (!String(title || '').trim()) return res.status(400).json({ error: 'title is required' });
+    const body = req.body || {};
+    const mi = (body.module_index === null || body.module_index === undefined || body.module_index === '') ? null : Number(body.module_index);
+    if (mi !== null && (!isFinite(mi) || mi < 0)) return res.status(400).json({ error: 'module_index must be 0 or more' });
+    const pp = Math.max(1, Math.min(100, parseInt(body.pass_pct, 10) || 60));
+    const cid = body.course_id ? Number(body.course_id) : null;
+    const cname = body.course_name ? String(body.course_name) : (cid ? ((q('SELECT title FROM courses WHERE id = ?', [cid])[0] || {}).title || '') : '');
+    const result = db.prepare('INSERT INTO quizzes (course_name, title, course_id, module_index, pass_pct) VALUES (?, ?, ?, ?, ?)')
+      .run(cname, String(title).trim(), cid, mi, pp);
     const quiz = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(quiz);
   } catch (err) {
@@ -621,6 +716,8 @@ app.delete('/api/quizzes/:id', async (req, res) => {
   try {
     const quiz = db.prepare('SELECT id, title FROM quizzes WHERE id = ?').get(req.params.id);
     if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
+    db.prepare('UPDATE student_submissions SET quiz_id = NULL WHERE quiz_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM questions WHERE quiz_id = ?').run(req.params.id);
     db.prepare('DELETE FROM quizzes WHERE id = ?').run(req.params.id);
     res.json({ deleted: true, quiz });
   } catch (err) {
@@ -671,9 +768,10 @@ app.delete('/api/questions/:id', async (req, res) => {
 // =============================================================
 
 app.post('/api/quizzes/:id/submit', async (req, res) => {
-  const { student_id, student_name, quiz_title, answers } = req.body;
+  const { student_id, student_name, quiz_title } = req.body || {};
+  const answers = (req.body && req.body.answers) || {};
   try {
-    const questions = db.prepare('SELECT id, correct_option FROM questions WHERE quiz_id = ?').all(req.params.id);
+    const questions = db.prepare('SELECT id, question_text, correct_option FROM questions WHERE quiz_id = ? ORDER BY id ASC').all(req.params.id);
     if (questions.length === 0) return res.status(400).json({ error: 'Quiz has no questions' });
 
     let correctCount = 0;
@@ -682,10 +780,16 @@ app.post('/api/quizzes/:id/submit', async (req, res) => {
     });
     const score = Math.round((correctCount / questions.length) * 100);
 
+    const meta = db.prepare('SELECT * FROM quizzes WHERE id = ?').get(req.params.id) || {};
+    const need = Math.max(1, Math.min(100, parseInt(meta.pass_pct, 10) || 60));
     const result = db.prepare(
       'INSERT INTO student_submissions (student_id, student_name, quiz_id, quiz_title, answers, score) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(student_id, student_name, req.params.id, quiz_title, JSON.stringify(answers), score);
-    res.json({ submission_id: result.lastInsertRowid, score, correct_count: correctCount, total_count: questions.length });
+    ).run(student_id, student_name, req.params.id, quiz_title || meta.title || '', JSON.stringify(answers), score);
+    const review = questions.map(qq => ({ id: qq.id, correct_option: qq.correct_option, chosen: (answers && answers[qq.id] ? String(answers[qq.id]).toUpperCase() : '') }));
+    res.json({ review, submission_id: result.lastInsertRowid, score, passed: score >= need, pass_pct: need,
+      correct_count: correctCount, total_count: questions.length,
+      quiz_id: meta.id || Number(req.params.id), quiz_title: meta.title || '', course_name: meta.course_name || '',
+      course_id: meta.course_id ?? null, module_index: meta.module_index ?? null });
   } catch (err) {
     res.status(500).json({ error: 'Failed to submit quiz' });
   }
@@ -1010,18 +1114,114 @@ app.get('/api/analytics/summary', (req, res) => {
   } catch (e) { console.error('local analytics failed:', e); res.status(500).json({ error: 'Analytics unavailable', detail: e.message }); }
 });
 
+
+// -------- per-subtopic assessments (SQLite mirror of the cloud routes) --------
+function ensureQuizColumnsLocal() {
+  if (!db) return;
+  try {
+    const cols = db.prepare('PRAGMA table_info(quizzes)').all().map(c => c.name);
+    if (!cols.includes('course_id')) db.exec('ALTER TABLE quizzes ADD COLUMN course_id INTEGER');
+    if (!cols.includes('module_index')) db.exec('ALTER TABLE quizzes ADD COLUMN module_index INTEGER');
+    if (!cols.includes('pass_pct')) db.exec('ALTER TABLE quizzes ADD COLUMN pass_pct INTEGER DEFAULT 60');
+  } catch (e) { console.warn('[DB] quizzes column check skipped:', e.message); }
+}
+ensureQuizColumnsLocal();
+
+// ---- the quiz editor's single save: title + pass mark + the whole question set ----
+function checkQuestionsLocal(questions) {
+  const clean = [];
+  for (const qq of questions) {
+    const text = String(qq.question_text || '').trim();
+    if (!text) continue;
+    const opts = ['option_a', 'option_b', 'option_c', 'option_d'].map(k => String(qq[k] == null ? '' : qq[k]).trim().slice(0, 500));
+    if (opts.filter(x => x).length < 2) return { error: 'Every question needs at least two answer options', question: text.slice(0, 60) };
+    const correct = String(qq.correct_option || '').trim().toUpperCase().slice(0, 1);
+    const ci = correct ? 'ABCD'.indexOf(correct) : -1;   // indexOf('') is 0 — guard the blank case
+    if (ci < 0 || !opts[ci]) return { error: 'Mark which option is correct for: ' + text.slice(0, 60) };
+    clean.push([text, opts[0], opts[1], opts[2], opts[3], correct]);
+  }
+  if (!clean.length) return { error: 'Add at least one question with text, two options and a marked answer.' };
+  return { clean };
+}
+
+// keeps a question's id when its wording is unchanged, so past submissions still point at a live row
+function writeQuizQuestionsLocal(quizId, clean) {
+  const have = q('SELECT id, question_text FROM questions WHERE quiz_id = ? ORDER BY id ASC', [quizId]);
+  const byText = {}; have.forEach(r => { const k = String(r.question_text); if (!(k in byText)) byText[k] = r.id; });
+  const keep = [];
+  for (const [text, a, b, c, d, correct] of clean) {
+    const oldId = byText[text];
+    if (oldId) { run('UPDATE questions SET option_a = ?, option_b = ?, option_c = ?, option_d = ?, correct_option = ? WHERE id = ?', [a, b, c, d, correct, oldId]); keep.push(oldId); }
+    else keep.push(run('INSERT INTO questions (quiz_id, question_text, option_a, option_b, option_c, option_d, correct_option) VALUES (?, ?, ?, ?, ?, ?, ?)', [quizId, text, a, b, c, d, correct]).lastInsertRowid);
+  }
+  if (keep.length) run('DELETE FROM questions WHERE quiz_id = ? AND id NOT IN (' + keep.map(() => '?').join(',') + ')', [quizId].concat(keep));
+  else run('DELETE FROM questions WHERE quiz_id = ?', [quizId]);
+  return q('SELECT * FROM questions WHERE quiz_id = ? ORDER BY id ASC', [quizId]);
+}
+
+app.put('/api/quizzes/:id/assessment', (req, res) => {
+  try {
+    ensureQuizColumnsLocal();
+    const id = Number(req.params.id);
+    const found = q('SELECT * FROM quizzes WHERE id = ?', [id])[0];
+    if (!found) return res.status(404).json({ error: 'Quiz not found' });
+    const body = req.body || {};
+    const upd = [], args = [];
+    if (body.title !== undefined) {
+      const t = String(body.title).trim();
+      if (!t) return res.status(400).json({ error: 'Give the quiz a title' });
+      upd.push('title = ?'); args.push(t);
+    }
+    if (body.pass_pct !== undefined) { upd.push('pass_pct = ?'); args.push(Math.max(1, Math.min(100, parseInt(body.pass_pct, 10) || 60))); }
+    if (upd.length) { args.push(id); run('UPDATE quizzes SET ' + upd.join(', ') + ' WHERE id = ?', args); }
+    let questions;
+    if (Array.isArray(body.questions)) {
+      if (!body.questions.length) { run('DELETE FROM questions WHERE quiz_id = ?', [id]); questions = []; }
+      else {
+        const v = checkQuestionsLocal(body.questions);
+        if (v.error) return res.status(400).json({ error: v.error, question: v.question });
+        questions = writeQuizQuestionsLocal(id, v.clean);
+      }
+    } else {
+      questions = q('SELECT * FROM questions WHERE quiz_id = ? ORDER BY id ASC', [id]);
+    }
+    res.json({ saved: true, quiz_id: id, quiz: q('SELECT * FROM quizzes WHERE id = ?', [id])[0], questions });
+  } catch (e) { console.error('quiz save failed:', e); res.status(500).json({ error: 'Failed to save quiz' }); }
+});
+
+// questions without the answer key — what the student page is allowed to read
+app.get('/api/quizzes/:id/paper', (req, res) => {
+  res.json(q('SELECT id, question_text, option_a, option_b, option_c, option_d FROM questions WHERE quiz_id = ? ORDER BY id ASC', [req.params.id]));
+});
+
 // =============================================================
 // START SERVER
 // =============================================================
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
+function listenError(err) {
+  if (err && err.code === 'EADDRINUSE') {
+    console.error('\n[Port] Port ' + PORT + ' is already in use, so this app did NOT start.');
+    console.error('   → Usually it is already running in another window (or the demo is up).');
+    console.error('     Windows:   netstat -ano | findstr :' + PORT + '   →  taskkill /PID <the number> /F');
+    console.error('     macOS/Linux:  lsof -ti :' + PORT + ' | xargs kill');
+    console.error('   → Or put this one on another port:  Windows: set PORT=4100 && npm start   ·   Mac/Linux: PORT=4100 npm start\n');
+    process.exit(1);
+  }
+  console.error('\n[Port] Could not listen on ' + PORT + ':', (err && err.message) || err);
+  process.exit(1);
+}
+const SERVER = app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Softmarc API running on port ${PORT}`);
   console.log(`📍 Local: http://localhost:${PORT}`);
   console.log(`📍 Health: http://localhost:${PORT}/health`);
-  console.log(`\n👤 Admin Login:`);
+  console.log(`\n👤 Admin (local demo only — not the cloud site):`);
   console.log(`   Email: admin@softmarc.com`);
-  console.log(`   Password: admin123\n`);
+  console.log(DEMO_ADMIN_PW
+    ? `   Password: ${DEMO_ADMIN_PW}  (shown once, because softmarc.db was just created)`
+    : `   Password: the one you chose earlier (softmarc.db already existed)`);
+  console.log(`   Set it yourself instead: ADMIN_PASSWORD=yourchoice npm run local\n`);
 });
+SERVER.on('error', listenError);
 
 module.exports = app;

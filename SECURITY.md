@@ -10,22 +10,27 @@ change anything.
 |---|---|
 | `GET /api/users`, `/api/submissions`, `/api/analytics/summary` | **admins only** |
 | `POST/PUT/DELETE` courses, subtopics, quizzes, questions | **admins only** |
+| `PUT /api/quizzes/<id>/assessment` (the quiz editor's one-save write: title, pass mark, all questions) | **admins only** |
+| `GET /api/quizzes/<id>` | public, but the correct answers are stripped unless an admin token is present |
+| `GET /api/quizzes/<id>/questions` — the correct answers | **admins only** (students get `/paper`, which has no answers) |
 | `POST /api/upload` (putting files on your server) | **admins only**, and only `.mp4 .webm .m4v .mov / .pdf .ppt .pptx / .png .jpg .jpeg .webp .gif` |
 | `POST /api/config` (unlock thresholds) | **admins only** |
 | `DELETE /api/users/<id>` | admin, or the owner closing their own account |
 | `/api/progress`, `/api/time`, `/api/steps`, quiz submit, `/api/users/<id>…` | only your **own** id (admins may act for anyone) |
 | everything else under `/api/*` | needs a valid token |
-| `*.sql *.md *.json *.db *.env *.log *.sh server.js` over HTTP | **403 Forbidden** |
+| `*.sql *.md *.json *.db *.env *.log *.sh server.js` over HTTP | **403 Forbidden** (and no shipped file contains a working password) |
 | `/api/login` | public, but 8 wrong tries per 10 min per email+IP → `429` |
 | `/api/health` | public "is it up"; DB host/user/errors only with `HEALTH_VERBOSE=1` or an admin token |
 | Iframes from other sites, `Access-Control-Allow-Origin: *` | removed — `X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`, HSTS behind https |
 
-Still public on purpose: `GET /api/courses`, `GET /api/quizzes…`, `GET /api/config`,
+Still public on purpose: `GET /api/courses`, `GET /api/quizzes` (titles/counts), `GET /api/quizzes/<id>` and `GET /api/quizzes/<id>/paper`
+(questions without the answer key), `GET /api/config`,
 `/videos /pdfs /images` file URLs (the lesson player and PDF viewer need them),
 and the HTML pages themselves.
 
 ## Deploy these together — one GitHub push, then Redeploy + Restart
-`server.js`, `server-local.js`, `softmarc-auth.js`, `softmarc-common.js`
+`server.js`, `server-local.js`, `softmarc-auth.js`, `softmarc-common.js`,
+`admin.html`, `admin-content-manager.js`, `admin-assessment-editor.js`, `lesson.html`, `assessments.html`
 and **all 11 pages**: `index.html soft_dashboard.html courses.html lesson.html
 assessments.html certificates.html profile.html settings.html admin.html
 analytics.html view_certificate.html`.

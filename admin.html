@@ -212,6 +212,7 @@ tbody tr:hover{background:var(--bg);}
           <h2 id="activeQuizManageTitle" style="font-size:14.5px; font-family:var(--font-display); font-weight:700;">Select a Quiz to Manage Questions</h2>
           <div style="display:flex; gap:8px;">
             <button class="small-btn danger" id="deleteQuizBtn" style="display:none;" onclick="adminDeleteQuiz()">Delete Quiz</button>
+            <button class="small-btn" id="editQuizBtn" style="display:none;" onclick="openEditorForActiveQuiz()">Edit all questions</button>
             <button class="small-btn primary" id="addQuestionBtn" style="display:none;" onclick="openQuestionModal('add')">+ Add Question</button>
           </div>
         </div>
@@ -243,13 +244,16 @@ tbody tr:hover{background:var(--bg);}
 <!-- NEW: Add Quiz Modal (replaces prompt) -->
 <div class="modal-overlay" id="quizModalOverlay">
   <div class="modal">
-    <h2>Create New Quiz</h2>
-    <div class="sub">Add a quiz for a course. You can add questions after creation. This modal stays open even if you switch tabs.</div>
+    <h2>New assessment</h2>
+    <div class="sub">Pick the course this assessment belongs to &mdash; students take it as the course's MCQ step.</div>
     <form id="quizForm" novalidate>
-      <div class="field"><label for="quizCourseName">Course Name (exact)</label><input type="text" id="quizCourseName" placeholder='e.g., CATIA V5 Part Design' required><div style="font-size:11px;color:var(--text-400);margin-top:4px;">Must match course name in dashboard</div></div>
-      <div class="field"><label for="quizTitle">Quiz Title</label><input type="text" id="quizTitle" placeholder='e.g., CATIA V5 Part Design Quiz' required></div>
+      <div class="field"><label for="quizCourseSelect">Course</label><select id="quizCourseSelect" required><option value="">Loading courses&hellip;</option></select></div>
+      <div style="display:grid;grid-template-columns:1fr 130px;gap:12px;">
+        <div class="field"><label for="quizTitle">Quiz title</label><input type="text" id="quizTitle" placeholder='e.g., Assembly Design check' required></div>
+        <div class="field"><label for="quizPassPct">Pass mark %</label><input type="number" id="quizPassPct" min="10" max="100" step="5" value="60"></div>
+      </div>
       <div class="form-error" id="quizFormError"></div>
-      <div class="modal-actions"><button type="button" class="btn-secondary" id="cancelQuiz">Cancel</button><button type="submit" class="btn-primary" id="submitQuiz">Create Quiz</button></div>
+      <div class="modal-actions"><button type="button" class="btn-secondary" id="cancelQuiz">Cancel</button><button type="submit" class="btn-primary" id="submitQuiz">Create &amp; add questions</button></div>
     </form>
   </div>
 </div>
@@ -366,6 +370,7 @@ document.querySelectorAll('[href="index.html"]').forEach(el=>{
 });
 
 // Tabs
+let adminQuizRows=[];
 let activeManageQuizId=null, activeManageQuizTitle='', editingQuestionId=null;
 function switchAdminTab(tabName){
   document.querySelectorAll('.section-wrapper').forEach(sec=>sec.classList.remove('active'));
@@ -412,12 +417,15 @@ async function loadStudentSubmissions(){
 }
 async function loadAdminQuizzes(){
   try{
-    const res=await fetch(`${API_HOST}/quizzes.php`); const quizzes=await res.json();
+    const res=await fetch(`${API_HOST}/quizzes.php`); const quizzes=res.ok?await res.json():[];
+    adminQuizRows=Array.isArray(quizzes)?quizzes:[];
     const container=document.getElementById('adminQuizList'); container.innerHTML='';
-    if(quizzes.length===0){container.innerHTML='<p style="color:var(--text-600);font-size:13px;text-align:center;">No quizzes found.</p>'; return;}
-    quizzes.forEach(quiz=>{
+    if(adminQuizRows.length===0){container.innerHTML='<p style="color:var(--text-600);font-size:13px;text-align:center;">No quizzes yet. Press “+ New Quiz”, pick the course, then write the questions.</p>'; return;}
+    adminQuizRows.forEach(quiz=>{
       const activeClass=quiz.id===activeManageQuizId?'active':'';
-      const btnHtml=`<button class="quiz-item-btn ${activeClass}" onclick="selectQuizToManage('${quiz.id}', \`${quiz.title.replace(/`/g,'\\`')}\`)"><span>${escapeHtml(quiz.title)}</span><span style="font-size:11px;opacity:0.85;">➔</span></button>`;
+      const nq=Number(quiz.question_count||0);
+      const cnt=nq?nq+' Q':'<span style="color:#b45309">no questions yet</span>';
+      const btnHtml=`<button class="quiz-item-btn ${activeClass}" onclick="selectQuizToManage('${quiz.id}', \`${String(quiz.title).replace(/`/g,'\\`')}\`)"><span>${escapeHtml(quiz.title)}</span><span style="display:block;font-size:10.5px;opacity:.8;margin-top:3px;">${escapeHtml(quiz.course_name||'—')} · ${cnt} · pass ${quiz.pass_pct==null?60:quiz.pass_pct}%</span></button>`;
       container.insertAdjacentHTML('beforeend',btnHtml);
     });
   }catch(err){console.error(err); showToast('Failed to load quizzes.',true);}
@@ -428,11 +436,12 @@ async function selectQuizToManage(id,title){
   document.getElementById('activeQuizManageTitle').textContent=`Questions in "${title}"`;
   document.getElementById('addQuestionBtn').style.display='block';
   document.getElementById('deleteQuizBtn').style.display='block';
+  const eib=document.getElementById('editQuizBtn'); if(eib) eib.style.display='block';
   try{
     const res=await fetch(`${API_HOST}/quizzes.php/${id}/questions`); const questions=await res.json();
     const list=document.getElementById('adminQuestionsList'); list.innerHTML='';
     if(questions.length===0){
-      list.innerHTML=`<p style="color:var(--text-600);text-align:center;padding:40px 0;">This quiz has no questions yet. Click "+ Add Question" above to write one!</p>`;
+      list.innerHTML=`<p style="color:var(--text-600);text-align:center;padding:40px 0;">This quiz has no questions yet, so students get no MCQ step for it. Click <b>“Edit all questions”</b> above to write them.</p>`;
       return;
     }
     questions.forEach((q,idx)=>{
@@ -459,22 +468,51 @@ async function selectQuizToManage(id,title){
 const quizModalOverlay=document.getElementById('quizModalOverlay');
 const quizForm=document.getElementById('quizForm');
 const quizFormError=document.getElementById('quizFormError');
-function openQuizModal(){quizModalOverlay.classList.add('open'); document.getElementById('quizCourseName').focus(); quizForm.reset(); quizFormError.textContent='';}
+let quizCourseRows=[];
+// one dropdown: which course owns this quiz. The course name is never typed by hand.
+async function fillQuizPickers(){
+  const sel=document.getElementById('quizCourseSelect');
+  try{
+    const res=await fetch(`${API_HOST}/courses.php`); const rows=res.ok?await res.json():[];
+    quizCourseRows=Array.isArray(rows)?rows:[];
+    if(!quizCourseRows.length){sel.innerHTML='<option value="">No courses in the database yet</option>'; return;}
+    sel.innerHTML='<option value="">Choose a course&hellip;</option>'+quizCourseRows.map(c=>`<option value="${c.id}">${escapeHtml(c.title)} (${(c.subtopics||[]).length} topics)</option>`).join('');
+  }catch(e){sel.innerHTML='<option value="">Could not load courses</option>';}
+}
+function openQuizModal(){quizModalOverlay.classList.add('open'); quizForm.reset(); document.getElementById('quizPassPct').value=60; quizFormError.textContent=''; fillQuizPickers(); setTimeout(()=>document.getElementById('quizCourseSelect').focus(),60);}
 function closeQuizModal(){quizModalOverlay.classList.remove('open');}
 document.getElementById('cancelQuiz').addEventListener('click',closeQuizModal);
 quizModalOverlay.addEventListener('click',(e)=>{if(e.target===quizModalOverlay) closeQuizModal();});
 quizForm.addEventListener('submit', async (e)=>{
   e.preventDefault(); quizFormError.textContent='';
-  const course_name=document.getElementById('quizCourseName').value.trim();
+  const sel=document.getElementById('quizCourseSelect');
+  const course=quizCourseRows.find(x=>String(x.id)===String(sel.value));
   const title=document.getElementById('quizTitle').value.trim();
-  if(!course_name||!title){quizFormError.textContent='Both fields required.'; return;}
+  const pass_pct=Math.max(1,Math.min(100,parseInt(document.getElementById('quizPassPct').value,10)||60));
+  if(!course){quizFormError.textContent='Choose the course this quiz belongs to.'; return;}
+  if(!title){quizFormError.textContent='Give the quiz a title.'; return;}
   const submitBtn=document.getElementById('submitQuiz'); submitBtn.disabled=true; submitBtn.textContent='Creating…';
   try{
-    const res=await fetch(`${API_HOST}/quizzes.php`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({course_name,title})});
-    if(!res.ok) throw new Error('Failed');
-    showToast('Quiz created successfully!'); closeQuizModal(); loadAdminQuizzes();
-  }catch(err){console.error(err); quizFormError.textContent='Failed to create quiz.'; showToast('Failed to create quiz.',true);}
-  submitBtn.disabled=false; submitBtn.textContent='Create Quiz';
+    const body={course_id:Number(course.id), course_name:course.title, title, pass_pct};
+    const res=await fetch(`${API_HOST}/quizzes.php`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const out=res.ok?await res.json().catch(()=>({})):{};
+    if(!res.ok) throw new Error((out&&out.error)||'Failed');
+    closeQuizModal(); loadAdminQuizzes();
+    const newId=Number(out && out.id)||0;
+    if(newId){ activeManageQuizId=newId; activeManageQuizTitle=title; await selectQuizToManage(newId,title); openEditorForActiveQuiz(); }
+    else showToast('Quiz created — add its questions from the list on the right.');
+  }catch(err){quizFormError.textContent=err.message||'Failed to create quiz.'; showToast('Failed to create quiz.',true);}
+  submitBtn.disabled=false; submitBtn.textContent='Create & add questions';
+});
+function openEditorForActiveQuiz(){
+  const quiz=adminQuizRows.find(q=>Number(q.id)===Number(activeManageQuizId));
+  if(!quiz){ showToast('Select a quiz first.',true); return; }
+  if(!window.SoftmarcAssessments){ showToast('Quiz editor not loaded.',true); return; }
+  SoftmarcAssessments.open({quizId:Number(quiz.id), quizTitle:quiz.title, passPct:quiz.pass_pct==null?60:quiz.pass_pct, courseTitle:quiz.course_name||'Course'});
+}
+// after a save in the editor, refresh this tab so the counts next to each quiz stay true
+document.addEventListener('sm:assessments-changed',()=>{
+  if(activeManageQuizId) selectQuizToManage(activeManageQuizId,activeManageQuizTitle); else loadAdminQuizzes();
 });
 async function adminDeleteQuiz(){
   if(!activeManageQuizId) return;
@@ -553,6 +591,7 @@ async function adminDeleteQuestion(id){
 loadUsers();
 </script>
 <script src="softmarc-common.js?v=13"></script>
-<script src="admin-content-manager.js?v=13"></script>
+<script src="admin-assessment-editor.js?v=26"></script>
+<script src="admin-content-manager.js?v=16"></script>
 </body>
 </html>

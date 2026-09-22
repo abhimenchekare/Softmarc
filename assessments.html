@@ -36,6 +36,8 @@ html[data-theme="dark"] .assess-icon,body[data-theme="dark"] .assess-icon{backgr
 
 
 /* Popup assessment modal + congratulations modal */
+.result.pass{background:#dcfce7;color:#15803d}.result.fail{background:#fef3c7;color:#92400e}
+
 .assessment-row{cursor:pointer;}
 .status-pill.completed{background:#D1FAE5!important;color:#059669!important;}
 .status-pill.completed::before{background:#059669!important;}
@@ -178,7 +180,7 @@ html[data-theme="dark"] .congrats-card.pro h2,body[data-theme="dark"] .congrats-
     </div>
 
     <div id="assessmentGrid" class="assessment-list"></div>
-    <div id="emptyState" class="empty" style="display:none;">No assessments are available yet. Ask an admin to add quizzes from the Admin Panel.</div>
+    <div id="emptyState" class="empty" style="display:none;">No assessment for this topic yet. Your trainer adds it in Course Manager → Videos, PDF & Exercises → Manage quiz.</div>
 
     <section id="quizPanel" class="quiz-panel" aria-live="polite">
       <div class="quiz-dialog">
@@ -274,20 +276,6 @@ html[data-theme="dark"] .congrats-card.pro h2,body[data-theme="dark"] .congrats-
 <script src="softmarc-content.js"></script>
 <script>
 const API_HOST='/api';
-const fallbackQuizzes=[
-  {id:'local-catia-assembly',title:'CATIA Design',course_name:'CATIA Assembly Design',local:true},
-  {id:'local-catia-part',title:'CATIA V5',course_name:'CATIA V5 Part Design',local:true}
-];
-const fallbackQuestions={
-  'local-catia-part':[
-    {id:1,question_text:'Which CATIA workbench is used to create solid features such as pad and pocket?',option_a:'Drafting',option_b:'Part Design',option_c:'DMU Kinematics',option_d:'Generative Shape Design',correct_option:'B'},
-    {id:2,question_text:'A fully constrained sketch normally appears in which color in CATIA V5?',option_a:'Green',option_b:'White',option_c:'Orange',option_d:'Red',correct_option:'A'}
-  ],
-  'local-catia-assembly':[
-    {id:1,question_text:'Which workbench is used for positioning components in a product?',option_a:'Part Design',option_b:'Assembly Design',option_c:'Drafting',option_d:'Sketcher only',correct_option:'B'},
-    {id:2,question_text:'Which constraint commonly aligns circular axes?',option_a:'Coincidence',option_b:'Offset',option_c:'Contact',option_d:'Fix together only',correct_option:'A'}
-  ]
-};
 let quizzes=[],filteredQuizzes=[],activeQuiz=null,questions=[],answers={};
 function authGuard(){const raw=localStorage.getItem('softmarc_user'); if(!raw) window.location.href='index.html'; return raw?JSON.parse(raw):{};}
 const user=authGuard();
@@ -296,18 +284,20 @@ document.getElementById('assessmentHeading').textContent='Assessments — '+firs
 function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
 function normaliseQuiz(q){return {...q,title:q.title||q.quiz_title||'Assessment',course_name:q.course_name||q.course||'Softmarc Course'};}
 function quizDoneKey(q){return 'assessment_done_'+(user.id||'local')+'_'+q.id;}
-/* LP v7 — record MCQ pass as a lesson step so the exercise unlocks (backend-enforced order) */
-function lpMarkMcq(){
+const lessonParams=new URLSearchParams(location.search);
+const lessonModule=(function(){const m=parseInt(lessonParams.get('module'),10); return isFinite(m)&&m>=0?m:null;})();
+/* LP — record the MCQ result as a lesson step so the exercise unlocks (backend-enforced order).
+   The server's pass mark decides; the lesson no longer needs a perfect score. */
+async function lpMarkMcq(pct){
   try{
-    const p=new URLSearchParams(location.search);
-    const c=p.get('course'); const m=parseInt(p.get('module')||'-1',10);
-    if(!c||isNaN(m)||m<0)return;
+    const c=lessonParams.get('course'); const m=lessonModule;
+    if(!c||m===null)return;
     const key='lp_steps_'+encodeURIComponent(c);
     let o={}; try{o=JSON.parse(localStorage.getItem(key)||'{}');}catch(e){}
     o[m]=o[m]||{}; o[m].mcq=1;
     localStorage.setItem(key,JSON.stringify(o));
-    fetch('/api/steps.php',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({student_id:user.id||0,course_name:c,module_index:m,step:'mcq',pct:100})}).catch(()=>{});
+    await fetch('/api/steps.php',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({student_id:user.id||0,course_name:c,module_index:m,step:'mcq',pct:Math.round(pct||100)})}).catch(()=>{});
   }catch(e){console.warn('lp',e);}
 }
 async function loadQuizzes(){
@@ -316,12 +306,20 @@ async function loadQuizzes(){
   try{
     const res=await fetch(API_HOST+'/quizzes.php');
     if(!res.ok) throw new Error('API unavailable');
-    quizzes=(await res.json()).map(normaliseQuiz);
-    if(!quizzes.length) quizzes=fallbackQuizzes;
-  }catch(e){ quizzes=fallbackQuizzes; }
-  if(window.SoftmarcContent){ quizzes=SoftmarcContent.getAssessments(quizzes); }
-  const params=new URLSearchParams(location.search); const course=params.get('course');
+    const rows=await res.json();
+    quizzes=Array.isArray(rows)?rows.map(normaliseQuiz):[];
+  }catch(e){
+    quizzes=[];
+    const em=document.getElementById('emptyState');
+    if(em) em.textContent='Assessments could not be loaded right now. Use Refresh to try again.';
+  }
+  const course=lessonParams.get('course');
   if(course) quizzes=quizzes.filter(q=>(q.course_name||'').toLowerCase().includes(course.toLowerCase())||(q.title||'').toLowerCase().includes(course.toLowerCase()));
+  // the assessment belongs to the course, so every quiz of this course is offered here
+  if(lessonModule!==null && course){
+    const h=document.getElementById('assessmentHeading');
+    if(h) h.textContent='MCQ — '+course;
+  }
   renderAssessmentList();
 }
 function renderAssessmentList(){
@@ -332,26 +330,32 @@ function renderAssessmentList(){
   if(!filteredQuizzes.length){ empty.style.display='block'; return; }
   empty.style.display='none';
   filteredQuizzes.forEach(q=>{
-    const completed=localStorage.getItem(quizDoneKey(q))==='100';
+    const stored=parseInt(localStorage.getItem(quizDoneKey(q)),10);
+    const need=q.pass_pct==null?60:Number(q.pass_pct);
+    const completed=isFinite(stored)&&stored>=need;
+    const cntTxt=(q.question_count!==undefined? q.question_count+' question'+(Number(q.question_count)===1?'':'s') : 'Interactive questions');
+    const ready=!(q.question_count!==undefined && Number(q.question_count)===0);   // an empty quiz cannot be taken or passed
     const row=document.createElement('article');
     row.className='assessment-row';
     row.innerHTML=`
       <div class="assess-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity=".18" fill="currentColor"></path><path d="M7 17V7l10 10H7z"></path><path d="M10 14l2-2 2 2"></path></svg></div>
-      <div class="assess-info"><h3>${escapeHtml(q.title)}</h3><div class="assess-meta"><span>${escapeHtml(q.course_name)}</span><span>Interactive questions</span><span>${completed?'Perfect score completed':'New assessment'}</span></div></div>
-      <span class="status-pill ${completed?'completed':''}">${completed?'Completed':'Upcoming'}</span>
+      <div class="assess-info"><h3>${escapeHtml(q.title)}</h3><div class="assess-meta"><span>${escapeHtml(q.course_name)}</span><span>${escapeHtml(cntTxt)}</span><span>pass ${need}%</span></div></div>
+      <span class="status-pill ${completed?'completed':''}">${!ready?'Not ready yet':(completed?'Passed '+stored+'%':'Upcoming')}</span>
       <span class="dash-mark">—</span>
-      <button type="button" class="start-btn">${completed?'Retake':'Start'}</button>`;
-    row.querySelector('.start-btn').addEventListener('click',(ev)=>{ev.stopPropagation();startQuiz(q);});
-    row.addEventListener('click',()=>startQuiz(q));
+      <button type="button" class="start-btn"${ready?'':' disabled'}>${!ready?'Soon':(completed?'Retake':'Start')}</button>`;
+    if(ready){
+      row.querySelector('.start-btn').addEventListener('click',(ev)=>{ev.stopPropagation();startQuiz(q);});
+      row.addEventListener('click',()=>startQuiz(q));
+    }
     list.appendChild(row);
   });
 }
 function openQuizModal(){document.getElementById('quizPanel').classList.add('show');document.body.classList.add('modal-open');}
 function closeQuizModal(){document.getElementById('quizPanel').classList.remove('show');document.body.classList.remove('modal-open');}
-function showCongrats(pct){
+function showCongrats(pct,need){
   closeQuizModal();
-  localStorage.setItem(quizDoneKey(activeQuiz),'100');
-  document.getElementById('congratsMessage').textContent=`Excellent work, ${firstName}! You completed ${activeQuiz.title} with a perfect score.`;
+  localStorage.setItem(quizDoneKey(activeQuiz),String(pct));
+  document.getElementById('congratsMessage').textContent=`Nice work, ${firstName}! You passed ${activeQuiz.title} with ${pct}%${lessonModule!==null?' — the exercise for this topic is unlocked.':(need?' (pass mark '+need+'%).':'.')}`;
   document.getElementById('congratsScore').textContent=pct+'%';
   document.getElementById('congratsModal').classList.add('show');
   document.body.classList.add('modal-open');
@@ -359,11 +363,15 @@ function showCongrats(pct){
 }
 function closeCongrats(){document.getElementById('congratsModal').classList.remove('show');document.body.classList.remove('modal-open');}
 async function startQuiz(q){
-  activeQuiz=q; answers={}; document.getElementById('resultBox').style.display='none';
+  activeQuiz=q; answers={}; const rb=document.getElementById('resultBox');
+  rb.style.display='none'; rb.className='result';
   document.getElementById('quizTitle').textContent=q.title; document.getElementById('quizCourse').textContent=q.course_name||'';
-  if(q.questions&&q.questions.length){ questions=q.questions; renderQuestions(); openQuizModal(); return; }
-  try{ if(q.local) throw new Error('local'); const res=await fetch(API_HOST+'/quizzes.php/'+q.id+'/questions'); if(!res.ok) throw new Error('No questions'); questions=await res.json(); }
-  catch(e){ questions=fallbackQuestions[q.id]||[]; }
+  try{
+    const res=await fetch(API_HOST+'/quizzes.php/'+q.id+'/paper'); if(!res.ok) throw new Error('No questions');
+    const rows=await res.json(); questions=Array.isArray(rows)?rows:[];
+  }catch(e){ questions=[]; }
+  const meta=document.getElementById('quizCourse');
+  if(meta) meta.textContent=(q.course_name||'')+(q.pass_pct!=null?(' · pass '+q.pass_pct+'%'):'');
   renderQuestions(); openQuizModal();
 }
 function renderQuestions(){
@@ -375,24 +383,43 @@ function renderQuestions(){
 document.getElementById('submitQuiz').onclick=async()=>{
   if(!activeQuiz||!questions.length)return;
   if(Object.keys(answers).length<questions.length){alert('Please answer all questions before submitting.');return;}
-  let score=0; questions.forEach(q=>{if(answers[q.id]===q.correct_option)score++;});
-  const pct=Math.round((score/questions.length)*100);
-  document.querySelectorAll('.option').forEach(btn=>{
-    const q=questions.find(x=>String(x.id)===String(btn.dataset.q));
-    if(!q) return;
-    btn.disabled=true;
-    if(btn.dataset.opt===q.correct_option) btn.classList.add('correct');
-    else if(answers[q.id]===btn.dataset.opt) btn.classList.add('wrong');
-  });
-  if(!activeQuiz.local){try{await fetch(API_HOST+'/quizzes.php/'+activeQuiz.id+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_id:user.id,student_name:user.full_name||user.email||'Student',quiz_title:activeQuiz.title,answers})});}catch(e){console.warn(e);}}
+  const btn=document.getElementById('submitQuiz'); const oldLabel=btn.textContent;
+  btn.disabled=true; btn.textContent='Checking…';
   const box=document.getElementById('resultBox');
-  if(pct===100){
-    lpMarkMcq();
-    box.textContent='Perfect score! Opening congratulations...'; box.style.display='block';
-    setTimeout(()=>showCongrats(pct),650);
+  let review=null, pct=0, correct=0, passed=false, need=activeQuiz.pass_pct==null?60:Number(activeQuiz.pass_pct);
+  try{
+    const res=await fetch(API_HOST+'/quizzes.php/'+activeQuiz.id+'/submit',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({student_id:user.id,student_name:user.full_name||user.email||'Student',quiz_title:activeQuiz.title,answers})});
+    if(!res.ok) throw new Error('server refused the submission');
+    const out=await res.json();
+    review=out.review||null; pct=out.score==null?0:Math.round(out.score); need=out.pass_pct==null?need:Number(out.pass_pct);
+    passed=!!out.passed; correct=out.correct_count==null?0:out.correct_count;
+    box.className='result '+(passed?'pass':'fail');
+    box.textContent=passed?`Passed — ${pct}% (${correct} of ${questions.length} correct). The exercise for this topic is now unlocked.`
+                          :`Not passed yet — ${pct}% (${correct} of ${questions.length}). You need ${need}% to unlock the exercise. Check the highlighted answers and try again.`;
+  }catch(e){
+    box.className='result fail';
+    box.textContent='Your answers were not checked — the server did not accept this submission. Stay on the page and press Submit again.';
+    btn.disabled=false; btn.textContent=oldLabel; box.style.display='block';
+    return;
+  }
+  btn.disabled=false; btn.textContent=oldLabel;
+  box.style.display='block';
+  const right={}; (review||[]).forEach(r=>{ right[r.id]=String(r.correct_option||'').toUpperCase(); });
+  document.querySelectorAll('.option').forEach(el=>{
+    const q=questions.find(x=>String(x.id)===String(el.dataset.q)); if(!q) return;
+    el.disabled=true;
+    const correctOpt=right[q.id]||'';
+    if(el.dataset.opt===correctOpt) el.classList.add('correct');
+    else if(answers[q.id]===el.dataset.opt) el.classList.add('wrong');
+  });
+  if(passed){
+    localStorage.setItem(quizDoneKey(activeQuiz),String(pct));
+    if(!activeQuiz.local) await lpMarkMcq(pct);
+    setTimeout(()=>showCongrats(pct,need),900);
   }else{
-    box.textContent=`Submitted. Score: ${pct}% (${score}/${questions.length} correct). Review highlighted answers and try again for 100%.`;
-    box.style.display='block';
+    localStorage.setItem(quizDoneKey(activeQuiz),String(pct));
+    renderAssessmentList();
   }
 };
 document.getElementById('closeQuiz').onclick=closeQuizModal;
