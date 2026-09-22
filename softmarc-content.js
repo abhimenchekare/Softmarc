@@ -6,7 +6,9 @@
   // This ensures admin-added content is visible to ALL students.
   // =============================================================
 
-  const KEY='softmarc_courses_v1';
+  // v2 key: an older, poisoned cache must never be able to hide a file the trainer just added
+  const KEY='softmarc_courses_v2';
+  const MAX_CACHE_AGE=10*60*1000;   // localStorage is a stop-gap, not the source of truth
   const API_HOST='/api'; // Same origin on Vercel
   const API={};
 
@@ -20,11 +22,8 @@
     return 'data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(svg)));
   }
 
-  // Hardcoded fallback (only used if Database AND localStorage are empty)
-  const builtIn=[
-    {id:'catia-v5-part-design',title:'CATIA V5 Part Design',tag:'Part Design',short_description:'Automotive solid modelling, sketches, dress-up features and capstone.',duration_hours:18,level:'Beginner',image:null,subtopics:[{id:'sketcher',title:'Sketcher Workbench & Constraints',dur:'20 min',description:'2D profiles and constraints',videoUrl:'videos/Your_First_Design_Project (1) 1.mp4',pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',exercise:'Create a fully constrained L-bracket sketch.'}],assessments:[]},
-    {id:'catia-assembly-design',title:'CATIA Assembly Design',tag:'Assembly',short_description:'Product structure, constraints, clash checks and BOM workflow.',duration_hours:14,level:'Intermediate',image:null,subtopics:[{id:'assembly-overview',title:'Assembly Workbench Overview',dur:'15 min',description:'Assembly UI and product structure',videoUrl:'videos/Your_First_Design_Project (1) 1.mp4',pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',exercise:'Create a new Product with three parts.'}],assessments:[]}
-  ];
+  // There is deliberately NO hardcoded course list: if the database has no content yet,
+  // the pages say so instead of showing demo videos and PDFs that a learner cannot watch.
 
   function normaliseCourse(c,i){
     const title=c.title||c.name||'Untitled Course';
@@ -85,13 +84,14 @@
   }
 
   function fallbackToCourses(courseData,defs){
+    // only ever used for the legacy demo pages that still pass their own literal list
     if(courseData && typeof courseData==='object'){
       return Object.keys(courseData).map((name,i)=>{
         const def=(defs||[]).find(d=>d.name===name)||{};
         return normaliseCourse({id:slug(name),title:name,tag:def.tag,duration_hours:def.hours,subtopics:(courseData[name]||[])},i);
       });
     }
-    return builtIn.map(normaliseCourse);
+    return [];
   }
 
   // =============================================================
@@ -99,6 +99,9 @@
   // =============================================================
   let _coursesCache = null;
   let _fetchPromise = null;
+  let _fromDatabase = false;      // true once the rows came from the server, not from this device
+  let _settled = null;            // resolve() of the promise ready() hands out
+  const settled = new Promise(res => { _settled = res; });
 
   API.getCourses = function(courseData, defs){
     // If we already have cached courses from Database, return them
@@ -107,12 +110,15 @@
     // Try localStorage as immediate fallback (so page renders fast)
     try{
       const saved=JSON.parse(localStorage.getItem(KEY)||'null');
-      if(Array.isArray(saved) && saved.length){
-        _coursesCache = saved.map(normaliseCourse).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
-        // Still fetch from Database in background to get latest
+      const rows=Array.isArray(saved)?saved:(saved&&Array.isArray(saved.courses)?saved.courses:null);
+      const fresh=!saved||!saved.at||(Date.now()-saved.at)<MAX_CACHE_AGE;
+      if(Array.isArray(rows) && rows.length && fresh){
+        // paint from the device copy now, but it is provisional — ready() waits for the server
+        _coursesCache = rows.map(normaliseCourse).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
         API._fetchFromDatabase(courseData, defs);
         return _coursesCache;
       }
+      if(Array.isArray(rows) && rows.length && !fresh) console.warn('[SoftmarcContent] local copy is older than 10 min — waiting for the server');
     }catch(e){}
 
     // Use hardcoded fallback
@@ -135,14 +141,16 @@
         if(Array.isArray(courses) && courses.length > 0){
           // Convert Database format to internal format
           _coursesCache = courses.map(databaseToInternal).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
-          // Update localStorage cache
-          try{ localStorage.setItem(KEY, JSON.stringify(_coursesCache)); }catch(e){}
+          _fromDatabase = true;
+          // Update localStorage cache (with the time it was taken)
+          try{ localStorage.setItem(KEY, JSON.stringify({at:Date.now(), courses:_coursesCache})); }catch(e){}
           console.log(`[SoftmarcContent] Loaded ${_coursesCache.length} courses from Database`);
 
           // Dispatch event so pages can re-render
           window.dispatchEvent(new CustomEvent('softmarc-courses-uploaded', { detail: _coursesCache }));
         } else {
-          console.log('[SoftmarcContent] Database returned 0 courses, using fallback');
+          _fromDatabase = true;   // an empty database is still an answer — pages must say "nothing yet"
+          console.log('[SoftmarcContent] Database has no courses yet');
         }
       })
       .catch(err => {
@@ -150,6 +158,7 @@
       })
       .finally(() => {
         _fetchPromise = null;
+        if(_settled){ _settled(); _settled = null; }
       });
   };
 
@@ -157,7 +166,31 @@
   API.refreshFromDatabase = function(){
     _fetchPromise = null;
     _coursesCache = null;
+    _fromDatabase = false;
     return API._fetchFromDatabase();
+  };
+
+  // Pages await this before they lock anything in: it resolves once the server answer
+  // has arrived (or failed), so a trainer's new video is never hidden by this device's copy.
+  API.ready = function(timeoutMs){
+    if(_fromDatabase) return Promise.resolve(_coursesCache||[]);
+    API._fetchFromDatabase();
+    const t=Math.max(500,timeoutMs||4000);
+    return Promise.race([
+      settled.then(()=>_coursesCache||[]),
+      new Promise(res=>setTimeout(()=>res(_coursesCache||[]),t))
+    ]);
+  };
+  API.fromDatabase = function(){ return _fromDatabase; };
+
+  // a course by title, case/space insensitive, or by slug
+  API.findCourse = function(nameOrSlug){
+    const want=String(nameOrSlug||'').trim().toLowerCase().replace(/\s+/g,' ');
+    const list=API.getCourses()||[];
+    return list.find(c=>String(c.title||'').trim().toLowerCase().replace(/\s+/g,' ')===want)
+        || list.find(c=>slug(c.title)===slug(nameOrSlug))
+        || list.find(c=>String(c.id||'').toLowerCase()===want)
+        || null;
   };
 
   API.saveCourses = function(courses){
@@ -172,9 +205,13 @@
   API.getCourseDataObject=function(fallbackCourseData){
     const obj={};
     API.getCourses(fallbackCourseData).forEach(c=>{
-      obj[c.title]=c.subtopics.map(st=>({
-        title:st.title,dur:st.dur,videoUrl:st.videoUrl,pdfUrl:st.pdfUrl,exercise:st.exercise,description:st.description
+      const rows=c.subtopics.map(st=>({
+        title:st.title,dur:st.dur,videoUrl:st.videoUrl,pdfUrl:st.pdfUrl,exercise:st.exercise,description:st.description,
+        _sub_id:st._database_id||null
       }));
+      obj[c.title]=rows;
+      const k=slug(c.title);
+      if(!(k in obj)) obj[k]=rows;   // links built from the slug work too
     });
     return obj;
   };

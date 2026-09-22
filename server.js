@@ -211,6 +211,8 @@ function claimedId(req) {
   return isFinite(n) && n > 0 ? n : 0;
 }
 app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');   // content and progress must never be served from a cache
+
   const p = req.path.replace(/\.php/gi, '');  // the .php alias rewrite runs later — normalise here (also mid-path: /users.php/7/avatar)   // the .php alias rewrite runs later — normalise here
   // public to anonymous callers, but if a valid token rides along we remember who —
   // a couple of read routes show a little more to an admin than to a stranger

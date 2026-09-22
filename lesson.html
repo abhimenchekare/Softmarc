@@ -114,6 +114,12 @@ html[data-theme="dark"] .resource-complete-pill,body[data-theme="dark"] .resourc
   .menu-toggle{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--surface);cursor:pointer;}
   .content{padding:18px;}
 }
+/* honest empty state instead of demo content */
+.lv-empty{border:1px dashed var(--border,#cbd5e1);background:var(--surface,#fff);border-radius:14px;padding:22px 22px 20px;margin:0 0 14px;box-shadow:var(--shadow-sm,0 2px 10px rgba(10,40,80,.05))}
+.lv-empty h3{font-family:var(--font-display);font-size:16px;margin:0 0 6px;color:var(--text-900,#0f172a)}
+.lv-empty p{font-size:13px;line-height:1.55;color:var(--text-600,#475569);margin:0 0 8px}
+.lv-empty button{margin-top:4px;border:1px solid var(--border,#cbd5e1);background:var(--surface-hover,#f1f5f9);color:var(--text-900,#0f172a);border-radius:9px;padding:8px 13px;font:800 12.5px var(--font-body);cursor:pointer}
+.lv-empty button:hover{border-color:#0A1930}
 </style>
 <link rel="stylesheet" href="softmarc-unified.css">
 
@@ -661,7 +667,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
   </div>
 </main>
 <div class="toast" id="toast"></div>
-<script src="softmarc-content.js"></script>
+<script src="softmarc-content.js?v=14"></script>
 <script>
 // Auth
 const _raw = localStorage.getItem('softmarc_user');
@@ -687,88 +693,69 @@ document.getElementById('themeToggle').addEventListener('click', ()=>{
   applyTheme(cur==='dark'?'light':'dark');
 });
 
-// Course data
-const COURSE_DATA = {
-  'CATIA V5 Part Design': [
-    {title:'Sketcher Workbench & Constraints', dur:'20 min', videoUrl:'videos/Your_First_Design_Project (1) 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Create a fully constrained sketch of a L-bracket with 2 holes. Use Coincidence, Distance, and Diameter constraints. Export as CATPart.'},
-    {title:'Pad & Pocket Features', dur:'25 min', videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Model a rectangular block 100x60x20mm and create a pocket 40x30x10mm in center.'},
-    {title:'Shaft & Groove Operations', dur:'22 min', videoUrl:'videos/Auto_Engineering_Zones 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Design a stepped shaft using Shaft tool. 20mm, 30mm, 20mm with groove.'},
-    {title:'Holes & Thread Specifications', dur:'18 min', videoUrl:'videos/Automotive_CATIA_Designer 3.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Add 4x M6 threaded holes on a flange with counterbore.'},
-    {title:'Fillets, Chamfers & Dress-up Features', dur:'15 min', videoUrl:'videos/Automotive_Engineering.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Apply 5mm edge fillet and 2mm chamfer on all sharp edges.'},
-    {title:'Edge Fillet & Variable Fillet', dur:'20 min', videoUrl:'videos/Automotive_Interior_Design 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Create variable fillet 2mm to 8mm on car door handle.'},
-    {title:'Patterns & Mirror Operations', dur:'18 min', videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Circular pattern of 6 holes on PCD 50mm and mirror.'},
-    {title:'Draft Angle & Shell Features', dur:'22 min', videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Model plastic enclosure with 2° draft and 2mm shell.'},
-    {title:'Boolean Operations in Body Design', dur:'25 min', videoUrl:'videos/Introduction to Design World.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Combine bodies using Boolean Add/Remove to create manifold.'},
-    {title:'Surface-Based Features', dur:'24 min', videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Split solid with surface and thicken surface to 3mm.'},
-    {title:'Design Tables & Parametric Parts', dur:'26 min', videoUrl:'videos/The_Idea_of_a_Car 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Create design table for bolts M6x20 to M6x60.'},
-    {title:'Part Design Final Capstone', dur:'30 min', videoUrl:'videos/Your_First_Design_Project (1) 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Final project: Model automotive bracket from drawing.'},
-  ],
-  'CATIA Assembly Design': [
-    {title:'Assembly Workbench Overview', dur:'15 min', videoUrl:'videos/Your_First_Design_Project (1) 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Create Product with 3 empty parts.'},
-    {title:'Inserting & Positioning Components', dur:'20 min', videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Insert CATParts into Product and position.'},
-    {title:'Coincidence & Contact Constraints', dur:'18 min', videoUrl:'videos/Auto_Engineering_Zones 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Apply Coincidence and Contact between plates.'},
-    {title:'Offset, Angle & Fix Constraints', dur:'22 min', videoUrl:'videos/Automotive_CATIA_Designer 3.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Assemble hinge with angle 0-90°.'},
-    {title:'Product Structure & Sub-Assemblies', dur:'24 min', videoUrl:'videos/Automotive_Engineering.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Build piston-rod sub-assembly.'},
-    {title:'Interference & Clash Analysis', dur:'20 min', videoUrl:'videos/Automotive_Interior_Design 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Run Clash detection.'},
-    {title:'BOM Generation', dur:'18 min', videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Generate BOM for 10-part assembly.'},
-    {title:'Exploded Views & Scenes', dur:'16 min', videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Create exploded scene with trails.'},
-    {title:'Flexible Sub-Assemblies', dur:'21 min', videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Make sub-assembly flexible.'},
-    {title:'Final Assembly Project', dur:'30 min', videoUrl:'videos/The_Idea_of_a_Car 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Assemble car door with 15 components.'},
-  ],
-  'CATIA Sheet Metal Design': [
-    {title:'Sheet Metal Parameters Setup', dur:'15 min', videoUrl:'videos/The_Idea_of_a_Car 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Set thickness 1mm, bend radius 2mm, K-factor 0.3'},
-    {title:'Walls & Wall On Edge', dur:'20 min', videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Base wall 100x100 and wall on edge 30mm'},
-    {title:'Bending & Fold/Unfold', dur:'18 min', videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'3 bends 90° and fold/unfold'},
-    {title:'Flanges, Hems & Teardrop', dur:'22 min', videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Flange with hem on door edge'},
-    {title:'Corner Reliefs & Cutouts', dur:'19 min', videoUrl:'videos/Automotive_Interior_Design 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Corner relief and cutout for connector'},
-    {title:'Stamping Features', dur:'21 min', videoUrl:'videos/Automotive_Engineering.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Louver and bead for strengthening'},
-    {title:'Hopper & Rolled Wall', dur:'25 min', videoUrl:'videos/Automotive_CATIA_Designer 3.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Model hopper conical wall'},
-    {title:'Flat Pattern View', dur:'16 min', videoUrl:'videos/Auto_Engineering_Zones 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Flat pattern and DXF export'},
-    {title:'Final Sheet Metal Project', dur:'30 min', videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Complete sheet metal bracket'},
-  ],
-  'CATIA Generative Shape Design': [
-    {title:'Wireframe Construction', dur:'15 min', videoUrl:'videos/Auto_Engineering_Zones 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Points, lines, planes for car hood'},
-    {title:'Basic Curves', dur:'20 min', videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Spline through 5 points and helix'},
-    {title:'Extruded & Revolved Surfaces', dur:'18 min', videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Extrude car profile 200mm'},
-    {title:'Swept Surfaces', dur:'25 min', videoUrl:'videos/The_Idea_of_a_Car 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Swept surface for roof rail'},
-    {title:'Lofted & Blend Surfaces', dur:'24 min', videoUrl:'videos/Automotive_CATIA_Designer 3.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Loft 3 sections for fender'},
-    {title:'Surface Operations', dur:'20 min', videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Join 3 surfaces and trim'},
-    {title:'Filleting Surfaces', dur:'22 min', videoUrl:'videos/Automotive_Engineering.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'10mm fillet between surfaces'},
-    {title:'Surface to Solid', dur:'30 min', videoUrl:'videos/Building_Tomorrow_s_Auto_Talent 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Thicken hood to 1.2mm solid'},
-  ],
-  'CATIA DMU Kinematics': [
-    {title:'DMU Kinematics Intro', dur:'12 min', videoUrl:'videos/The_Idea_of_a_Car 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Open DMU Kinematics, create fixed part'},
-    {title:'Revolute & Prismatic Joints', dur:'15 min', videoUrl:'videos/Automotive_CATIA_Designer 3.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Revolute joint for door hinge'},
-    {title:'Cylindrical, Screw & Spherical Joints', dur:'20 min', videoUrl:'videos/How_a_Car_is_Made_in_24_Mo_ 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Cylindrical joint for piston'},
-    {title:'Commands & Constraints', dur:'18 min', videoUrl:'videos/Automotive_Engineering.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Angle command 0-70° for door'},
-    {title:'Simulating Mechanisms', dur:'16 min', videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Simulate 4-bar mechanism'},
-    {title:'Exporting Replays & Clash', dur:'25 min', videoUrl:'videos/Automotive_Engineering.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Export simulation video and clash check'},
-  ],
-  'CATIA Drafting & Annotations': [
-    {title:'Drafting Sheet Setup & Scaling', dur:'15 min', videoUrl:'videos/Automotive_Engineering.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Setup A3 sheet 1:2 scale and title block'},
-    {title:'Generating Primary Views', dur:'18 min', videoUrl:'videos/The_Idea_of_a_Car 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Generate Front, Top, Side views'},
-    {title:'Section Cuts & Detail Views', dur:'22 min', videoUrl:'videos/5_Secrets__Car_Interiors 2.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Offset section view and detail 2:1'},
-    {title:'Dimensions & GD&T', dur:'20 min', videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Add dimensions and flatness tolerance'},
-    {title:'BOM & Balloons', dur:'24 min', videoUrl:'videos/The_Idea_of_a_Car 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Insert BOM and balloons'},
-    {title:'Title Block Customization', dur:'25 min', videoUrl:'videos/Styling_vs_CAD_vs_CAE 1.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Customize title block with logo'},
-    {title:'Final Drawing Export & PLM', dur:'30 min', videoUrl:'videos/Introduction to Design World.mp4', pdfUrl:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', exercise:'Export PDF and release to PLM'},
-  ]
-};
-
-if(window.SoftmarcContent){
-  const __dynamicCourseData = SoftmarcContent.getCourseDataObject(COURSE_DATA);
-  Object.keys(COURSE_DATA).forEach(k=>delete COURSE_DATA[k]);
-  Object.assign(COURSE_DATA, __dynamicCourseData);
-}
+// Course data — nothing is hardcoded here any more.
+// Lessons, videos, PDFs and PPTs come from the database only: a learner must never be shown
+// a demo file that no trainer attached, and a stale copy on the device must not hide a new one.
+let COURSE_DATA = (window.SoftmarcContent && SoftmarcContent.getCourseDataObject) ? SoftmarcContent.getCourseDataObject(null) : {};
 
 const params = new URLSearchParams(location.search);
-const courseName = decodeURIComponent(params.get('course') || 'CATIA Drafting & Annotations');
+let courseName = decodeURIComponent(params.get('course') || '');
 const moduleIdx = parseInt(params.get('module') || '0');
 const typeParam = params.get('type') || null;
-const modules = COURSE_DATA[courseName] || [];
-const currentMod = modules[moduleIdx] || {title:'Unknown', dur:'15 min', videoUrl:'', pdfUrl:'', exercise:''};
 
-document.getElementById('breadCourse').textContent = courseName;
+const __norm = v => String(v == null ? '' : v).trim().toLowerCase().replace(/\s+/g, ' ');
+const __slug  = v => (window.SoftmarcContent && SoftmarcContent.slug) ? SoftmarcContent.slug(v) : __norm(v).replace(/[^a-z0-9]+/g, '-');
+// admin-typed titles differ by a space or a capital now and then — that must not lose the lesson
+function __sameCourse(x, y){ const A = __norm(x), B = __norm(y); return !!A && !!B && (A === B || __slug(A) === __slug(B)); }
+function __courseRows(name){
+  const keys = Object.keys(COURSE_DATA || {});
+  for (let i = 0; i < keys.length; i++) if (__sameCourse(keys[i], name)) return COURSE_DATA[keys[i]] || [];
+  return null;                       // null: this course is unknown · []: known but still empty
+}
+// use the database's own spelling of the title from here on: progress, steps and the quiz
+// filter all key off course_name, so a differently-cased link must not split a learner's history.
+// It runs once for a warm cache and again after the actual database response arrives.
+function canonicaliseCourseName(){
+  const keys = Object.keys(COURSE_DATA || {});
+  for (let i = 0; i < keys.length; i++) if (__sameCourse(keys[i], courseName)) { courseName = keys[i]; return true; }
+  return false;
+}
+canonicaliseCourseName();
+
+const modules = [];
+let currentMod = { title: 'Loading\u2026', dur: '', videoUrl: '', pdfUrl: '', exercise: '' };
+let contentKnown = false;            // false until the database has answered for this page
+let contentState = '';
+function signature(){ return JSON.stringify([modules.map(m => [m.title, m.videoUrl, m.pdfUrl, m.exercise]), currentMod && currentMod.title]); }
+function adoptCourseContent(){
+  const before = contentState;
+  canonicaliseCourseName();
+  const rows = __courseRows(courseName);
+  modules.length = 0;
+  (rows || []).forEach(m => modules.push(Object.assign({}, m)));
+  currentMod = modules[moduleIdx] || (modules.length
+    ? { title: 'Unknown', dur: '', videoUrl: '', pdfUrl: '', exercise: '' }
+    : { title: courseName || 'This lesson', dur: '', videoUrl: '', pdfUrl: '', exercise: '' });
+  contentKnown = true;
+  contentState = signature();
+  renderNoContent();
+  try{ if (window.__lvReinit) window.__lvReinit(); } catch(e){}
+  return contentState !== before;
+}
+function renderNoContent(){
+  const host = document.querySelector('.lv-main') || document.querySelector('main') || document.body;
+  let el = document.getElementById('lvNoContent');
+  if (!contentKnown || modules.length) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.id = 'lvNoContent'; el.className = 'lv-empty'; host.insertBefore(el, host.firstChild); }
+  el.innerHTML = '<h3>Nothing to open here yet</h3><p>This course has no lessons in the database yet, or the video/PDF was not saved on its subtopic.</p>' +
+    '<p>If you are the trainer: <b>Course Manager \u2192 Subtopics</b> (add the subtopic and press Save), then <b>Videos, PDF & Exercises</b> \u2192 press the Save button for that item and wait for \u201cFile is reachable\u201d.</p>' +
+    '<button type="button">Check again</button>';
+  const btn = el.querySelector('button');
+  if (btn) btn.onclick = function(){ location.reload(); };
+}
+adoptCourseContent();
+
+document.getElementById('breadCourse').textContent = courseName || 'Course not selected';
 
 function getTopicSummary(title, course){
   const t = title.toLowerCase();
@@ -913,7 +900,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
   function fmt(t){if(!isFinite(t)||t<0)t=0;var m=Math.floor(t/60),s=Math.floor(t%60);return m+':'+(s<10?'0':'')+s;}
   function enc(){return encodeURIComponent((typeof courseName==='string'?courseName:'def'));}
-  if(typeof moduleIdx==='undefined'||typeof modules==='undefined'||!modules||!modules.length) return;
+  if(typeof moduleIdx==='undefined'||typeof modules==='undefined'||!modules) return;   /* an empty list is allowed: the database answer can still arrive */
   var ratio=0, watchKey=null, autoDoneSent=false, lastSave=0, scrubbing=false, lastT=0, watchedSecs=0;
   function gkey(){return enc()+'_'+moduleIdx;}
   function isDone(){try{return typeof done!=='undefined'&&done.has(moduleIdx);}catch(e){return false;}}
@@ -1167,6 +1154,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     if(window.LP)window.LP.refresh();
     try{window.scrollTo({top:0,behavior:'smooth'});}catch(e){window.scrollTo(0,0);}
   };
+  window.__lvReinit=function(){ try{ buildHeader(); if(V&&V.classList.contains('active')) setTopCrumb(true); }catch(e){} };
   var _sbb=window.showBigButtons;
   if(_sbb&&!_sbb.__lvWrap){
     var w1=function(){document.body.classList.remove('lv-video-mode');setTopCrumb(false);V.classList.remove('active','lv-panel-open');closePanel();try{if(!vp.paused)vp.pause();}catch(e){}return _sbb.apply(this,arguments);};
@@ -1184,7 +1172,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
 (function(){
   var PV=document.getElementById('pdfView'); if(!PV)return;
   function $(id){return document.getElementById(id);}
-  if(typeof modules==='undefined'||!modules||!modules.length)return;
+  if(typeof modules==='undefined'||!modules)return;   /* an empty list is allowed: content can still arrive */
   var doc=null,pageNum=1,totalPages=0,scale=1,rot=0,maxSeen=0,fitMode='width',busy=false,tok=0,bound=false;
   var renderTask=null,lastRenderErr=false;
   function req(){return (window.LP&&window.LP.cfg&&window.LP.cfg.pdf_req_pct)||90;}
@@ -1547,7 +1535,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
 <script id="lp-script">
 /* ============ LP v7 — sequential Learning Path engine: video → PDF → MCQ → Exercise → next ============ */
 (function(){
-  if(typeof modules==='undefined'||!modules||!modules.length||typeof moduleIdx==='undefined') return;
+  if(typeof modules==='undefined'||!modules||typeof moduleIdx==='undefined') return;   /* an empty list is allowed: boot() waits for the database before it decides anything */
   var V=document.getElementById('videoView'), PV=document.getElementById('pdfView');
   function $(id){return document.getElementById(id);}
   function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':String(s));return d.innerHTML;}
@@ -1825,6 +1813,10 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
 
   /* ---------- boot ---------- */
   async function boot(){
+    // the lesson list is content, not config: take the server's copy before anything is locked
+    try{ if(window.SoftmarcContent && SoftmarcContent.ready) await SoftmarcContent.ready(4000); }catch(e){}
+    try{ if(window.SoftmarcContent && SoftmarcContent.getCourseDataObject) COURSE_DATA = SoftmarcContent.getCourseDataObject(null); }catch(e){}
+    if(adoptCourseContent()){ try{ refresh(); }catch(e){} }
     loadLocal();
     try{
       var c=await(await fetch('/api/config.php')).json();
@@ -1845,7 +1837,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     try{
       var qs=await(await fetch('/api/quizzes.php')).json();
       if(Array.isArray(qs)){
-        var mine=qs.filter(function(q){return (q.course_name||q.course)===courseName;});
+        var mine=qs.filter(function(q){return __sameCourse(q.course_name||q.course,courseName);});
         hasMcq=mine.length>0;
         var info={withQuestions:0,quizzes:mine.length};
         mine.forEach(function(q){
@@ -1870,6 +1862,11 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     var wq=waiting.slice(); waiting.length=0;
     wq.forEach(function(t){ openResource(t); });
   }
+
+  window.addEventListener('softmarc-courses-uploaded', function(){
+    try{ COURSE_DATA = (window.SoftmarcContent && SoftmarcContent.getCourseDataObject) ? SoftmarcContent.getCourseDataObject(null) : COURSE_DATA; }catch(e){}
+    if(adoptCourseContent()){ refresh(); try{ if(typeof showToast==='function') showToast('Lesson content refreshed from the database.','success'); }catch(e){} }
+  });
 
   window.LP={
     cfg:cfg, ready:function(){return ready;},
