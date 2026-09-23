@@ -87,8 +87,20 @@ app.use((req, res, next) => {
 });
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
+// Documents are intentionally public to lesson viewers, but this is not a general public file
+// folder. Serve only the two formats the in-lesson reader understands — never a stray HTML,
+// script, archive or backup someone placed in data/pdfs by mistake.
+const PUBLIC_DOCUMENT_EXT = new Set(['.pdf', '.pptx']);
+function lessonDocumentOnly(req, res, next) {
+  let ext = '';
+  try { ext = path.extname(decodeURIComponent(req.path || '')).toLowerCase(); } catch (e) {}
+  if (!PUBLIC_DOCUMENT_EXT.has(ext)) return res.status(404).end();
+  res.setHeader('Cache-Control', 'public, max-age=' + (ONE_DAY / 1000));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+}
 app.use('/videos', express.static(path.join(DATA_DIR, 'videos'), { maxAge: ONE_DAY }), express.static(path.join(__dirname, 'videos'), { maxAge: ONE_DAY }));
-app.use('/pdfs', express.static(path.join(DATA_DIR, 'pdfs'), { maxAge: ONE_DAY }));
+app.use('/pdfs', lessonDocumentOnly, express.static(path.join(DATA_DIR, 'pdfs'), { maxAge: ONE_DAY }));
 app.use('/images', express.static(path.join(DATA_DIR, 'images'), { maxAge: ONE_DAY }));
 app.use(express.static(__dirname, {
   setHeaders(res, filePath) {
@@ -901,13 +913,16 @@ app.delete('/api/progress', async (req, res) => {
 // =============================================================
 
 const MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB) || 1024; // default 1 GB
-const pickFolder = type => (type === 'video' ? 'videos' : type === 'pdf' ? 'pdfs' : 'images');
+const UPLOAD_FOLDERS = { video: 'videos', pdf: 'pdfs', image: 'images' };
+const pickFolder = type => UPLOAD_FOLDERS[type] || null;
 
 // Stream uploads straight to disk (no whole-file RAM buffering) —
 // this is what makes multi-hundred-MB videos safe on shared hosting.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(DATA_DIR, pickFolder(req.body.type));
+    const folder = pickFolder(req.body && req.body.type);
+    if (!folder) return cb(Object.assign(new Error('Choose video, PDF/PPTX, or image before uploading'), { code: 'BAD_TYPE' }));
+    const dir = path.join(DATA_DIR, folder);
     fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -918,20 +933,37 @@ const storage = multer.diskStorage({
 });
 const ALLOW_EXT = {
   videos: ['.mp4', '.webm', '.m4v', '.mov'],
-  pdfs:   ['.pdf', '.ppt', '.pptx'],
+  // Old binary .ppt is deliberately not accepted: it is unreliable in modern embedded viewers.
+  // PPTX keeps animations/video in the in-lesson PowerPoint viewer.
+  pdfs:   ['.pdf', '.pptx'],
   images: ['.png', '.jpg', '.jpeg', '.webp', '.gif']
 };
+function uploadTypeOk(folder, file) {
+  const name = (file.originalname || '').toLowerCase();
+  const ext = path.extname(name);
+  if (!folder || !ALLOW_EXT[folder] || !ALLOW_EXT[folder].includes(ext)) return false;
+  const mime = String(file.mimetype || '').toLowerCase();
+  if (folder === 'videos') return /^video\//.test(mime);
+  if (folder === 'images') return /^image\/(png|jpe?g|webp|gif)$/.test(mime);
+  // Some browsers label a genuine PPTX as application/octet-stream. The extension is not trusted
+  // by itself: uploadDocumentLooksReal() checks its first bytes after it reaches disk.
+  return ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/octet-stream', 'application/zip'].includes(mime);
+}
+function uploadDocumentLooksReal(filePath, originalName) {
+  const ext = path.extname(String(originalName || '')).toLowerCase();
+  let fd, b = Buffer.alloc(8), got = 0;
+  try { fd = fs.openSync(filePath, 'r'); got = fs.readSync(fd, b, 0, b.length, 0); } catch (e) { return false; }
+  finally { try { if (fd !== undefined) fs.closeSync(fd); } catch (e) {} }
+  if (ext === '.pdf') return got >= 5 && b.subarray(0, 5).toString('ascii') === '%PDF-';
+  if (ext === '.pptx') return got >= 4 && b[0] === 0x50 && b[1] === 0x4b && (b[2] === 0x03 || b[2] === 0x05 || b[2] === 0x07) && (b[3] === 0x04 || b[3] === 0x06 || b[3] === 0x08);
+  return false;
+}
 const upload = multer({
   storage,
   limits: { fileSize: MAX_UPLOAD_MB * 1024 * 1024, files: 1 },
   fileFilter: (req, file, cb) => {
     const folder = pickFolder(req.body && req.body.type);
-    const name = (file.originalname || '').toLowerCase();
-    const okExt = ALLOW_EXT[folder].some(e => name.endsWith(e));
-    const okMime = /^(video\/|image\/(png|jpe?g|webp|gif)$|application\/(pdf|vnd\.ms-powerpoint|officedocument\.presentationml\.presentation)$)/.test(file.mimetype || '');
-    if (!okExt || !okMime) {
-      return cb(Object.assign(new Error('Only ' + ALLOW_EXT[folder].join(', ') + ' files can be uploaded here'), { code: 'BAD_TYPE' }));
-    }
+    if (!uploadTypeOk(folder, file)) return cb(Object.assign(new Error('Only ' + ((folder && ALLOW_EXT[folder]) || ['.mp4', '.pdf', '.pptx', '.png']).join(', ') + ' files can be uploaded here'), { code: 'BAD_TYPE' }));
     cb(null, true);
   }
 });
@@ -949,7 +981,13 @@ app.post('/api/upload', (req, res) => {
       });
     }
     if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-    const filePath = `${pickFolder(req.body.type)}/${req.file.filename}`;
+    const folder = pickFolder(req.body && req.body.type);
+    if (!folder) return res.status(400).json({ error: 'Choose video, PDF/PPTX, or image before uploading' });
+    if (folder === 'pdfs' && !uploadDocumentLooksReal(req.file.path, req.file.originalname)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(400).json({ error: 'This is not a readable PDF or PPTX file. Export/save it again and upload the .pdf or .pptx file.' });
+    }
+    const filePath = `${folder}/${req.file.filename}`;
     const url = `${req.protocol}://${req.get('host')}/${filePath}`;
     res.json({ url, path: filePath, size: req.file.size });
   });

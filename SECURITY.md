@@ -13,7 +13,7 @@ change anything.
 | `PUT /api/quizzes/<id>/assessment` (the quiz editor's one-save write: title, pass mark, all questions) | **admins only** |
 | `GET /api/quizzes/<id>` | public, but the correct answers are stripped unless an admin token is present |
 | `GET /api/quizzes/<id>/questions` — the correct answers | **admins only** (students get `/paper`, which has no answers) |
-| `POST /api/upload` (putting files on your server) | **admins only**, and only `.mp4 .webm .m4v .mov / .pdf .ppt .pptx / .png .jpg .jpeg .webp .gif` |
+| `POST /api/upload` (putting files on your server) | **admins only**; strict `.mp4 .webm .m4v .mov / .pdf .pptx / .png .jpg .jpeg .webp .gif` allow-list. PDF/PPTX signature bytes are checked after upload; old `.ppt` is refused. |
 | `POST /api/config` (unlock thresholds) | **admins only** |
 | `DELETE /api/users/<id>` | admin, or the owner closing their own account |
 | `/api/progress`, `/api/time`, `/api/steps`, quiz submit, `/api/users/<id>…` | only your **own** id (admins may act for anyone) |
@@ -25,8 +25,8 @@ change anything.
 
 Still public on purpose: `GET /api/courses`, `GET /api/quizzes` (titles/counts), `GET /api/quizzes/<id>` and `GET /api/quizzes/<id>/paper`
 (questions without the answer key), `GET /api/config`,
-`/videos /pdfs /images` file URLs (the lesson player and PDF viewer need them),
-and the HTML pages themselves.
+`/videos /images` file URLs, and `/pdfs` **only for `.pdf` and `.pptx` lesson files** (the in-site viewer needs them),
+and the HTML pages themselves. `/pdfs` is not a general public file folder.
 
 ## Deploy these together — one GitHub push, then Redeploy + Restart
 `server.js`, `server-local.js`, `softmarc-auth.js`, `softmarc-common.js`,
@@ -55,9 +55,10 @@ token yet). Sessions then last 12 hours by default.
    themselves. "Log out" clears the device; it cannot kill a token that was copied.
    A sessions table (next sprint) fixes that and brings forgot-password email at the
    same time.
-2. **Uploaded files stay reachable by URL.** Anyone who guesses a video/PDF filename can
-   open it. Names contain a timestamp + random part, so guessing is impractical, but a
-   shared link is a shared link.
+2. **Uploaded lesson files stay reachable by URL.** Anyone who gets a video/PDF/PPTX URL can
+   open that lesson file. Names contain a timestamp + random part, so guessing is impractical,
+   but a shared link is a shared link. Never put passwords, student marks, or private personal
+   data in a course document. The document route serves only `.pdf` and `.pptx`.
 3. **Passwords are only as strong as they are.** bcrypt hashes are stored properly, so a
    DB leak is survivable — but there is still no email reset; a forgotten password needs
    an admin to change it (Settings → Change password, or `RESET_ADMIN.sql`).

@@ -221,11 +221,11 @@
       }
     };
   }
-  function note(msg, kind){ setStatus(msg, kind); const el=$('cmStatus'); if(el){ el.scrollIntoView({block:'nearest'}); } return false; }
+  function note(msg, kind){ setStatus(msg, kind); const el=$('cmStatus'); try{ if(el && el.scrollIntoView) el.scrollIntoView({block:'nearest'}); }catch(e){} return false; }
   async function checkDocReach(u){
     const url=String(u||'').trim(); if(!url) return;
     const ext=(url.split('?')[0].match(/\.([a-z0-9]+)$/i)||[])[1]||'';
-    const hint=/^(ppt|pps|pot)$/i.test(ext) ? '  Tip: re-save as .pptx — old .ppt files often fail in the online viewer.' : '';
+    const hint=/^(ppt|pps|pot)$/i.test(ext) ? '  This old PowerPoint format is not used in the lesson screen. Save it as .pptx and upload that file.' : '';
     try{
       const r=await fetch(url,{method:'HEAD'});
       if(r.ok){
@@ -358,7 +358,7 @@
     const main=document.querySelector('main.main')||document.body;
     if($('secContent')) return;
     const sec=document.createElement('div'); sec.className='section-wrapper content-manager'; sec.id='secContent';
-    sec.innerHTML='<div class="cm-shell"><div class="cm-top"><div><h2>Course Manager <span class="cm-db-badge" id="cmDatabaseBadge">Database Sync</span></h2><p>Add topics, subtopics, videos, PDFs. Changes sync to Database so ALL students see them.</p></div><div class="cm-status" id="cmStatus"></div></div><div class="cm-tabs" role="tablist"><button class="cm-tab active" data-cm-tab="topics">Main Topics</button><button class="cm-tab" data-cm-tab="subtopics">Subtopics</button><button class="cm-tab" data-cm-tab="resources">Videos, PDF & Exercises</button></div><section class="cm-panel active" id="cmPanelTopics"></section><section class="cm-panel" id="cmPanelSubtopics"></section><section class="cm-panel" id="cmPanelResources"></section></div>';
+    sec.innerHTML='<div class="cm-shell"><div class="cm-top"><div><h2>Course Manager <span class="cm-db-badge" id="cmDatabaseBadge">Database Sync</span></h2><p>Add topics, subtopics, videos, PDFs and PPTX slides. Changes sync to Database so ALL students see them.</p></div><div class="cm-status" id="cmStatus"></div></div><div class="cm-tabs" role="tablist"><button class="cm-tab active" data-cm-tab="topics">Main Topics</button><button class="cm-tab" data-cm-tab="subtopics">Subtopics</button><button class="cm-tab" data-cm-tab="resources">Videos, PDF & Exercises</button></div><section class="cm-panel active" id="cmPanelTopics"></section><section class="cm-panel" id="cmPanelSubtopics"></section><section class="cm-panel" id="cmPanelResources"></section></div>';
     main.appendChild(sec);
     sec.querySelectorAll('.cm-tab').forEach(b=>b.onclick=()=>setContentTab(b.dataset.cmTab));
   }
@@ -548,7 +548,7 @@
   function renderResources(){
     const el=$('cmPanelResources'); if(!el) return;
     const c=selectedCourse(); const st=selectedSubtopic();
-    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">'+ICO.video+'Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">'+ICO.doc+'Save PDF / PPT</button><button class="cm-btn primary" id="cmSaveExerciseTop">'+ICO.ex+'Save Exercise</button><span class="cm-note" style="margin-left:auto">Saving is per item — the other two stay untouched</span></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box '+(st.videoUrl?'set':'missing')+'"><b>'+ICO.video+'Video</b><span>'+esc(st.videoUrl?fileOf(st.videoUrl):'no video yet — learners see the document only')+'</span></div><div class="cm-resource-box '+(st.pdfUrl?'set':'missing')+'"><b>'+ICO.doc+'PDF / PPT</b><span>'+esc(st.pdfUrl?fileOf(st.pdfUrl):'no document yet')+'</span></div><div class="cm-resource-box '+(st.exercise?'set':'missing')+'"><b>'+ICO.ex+'Exercise</b><span>'+esc(st.exercise?String(st.exercise).slice(0,90):'no exercise text')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"><div class="cm-upload-row" style="margin-top:8px"><div><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin-bottom:4px">Or upload video file (up to 1 GB — needs a minute for big files, keep the page open)</label><input id="cmVideoFile" type="file" accept="video/*,.mp4,.webm,.ogg,.mov"></div></div></div><div class="cm-field"><label>PDF / PPT URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdfs/notes.pdf or pdfs/deck.pptx"><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin:8px 0 4px">Or upload PDF or PowerPoint file — PPT / PPTX (up to 1 GB)</label><input id="cmPdfFile" type="file" accept="application/pdf,.pdf,.ppt,.pptx,.pps,.ppsx"></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">'+ICO.video+'Save Video</button><button class="cm-btn primary" id="cmSavePdf">'+ICO.doc+'Save PDF / PPT</button><button class="cm-btn primary" id="cmSaveExercise">'+ICO.ex+'Save Exercise</button></div>':'<p class="cm-help">Pick a subtopic first \u2014 the Videos, PDF &amp; Exercises tab always writes to the subtopic shown here.</p>')+'</div>';
+    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">'+ICO.video+'Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">'+ICO.doc+'Save PDF / PPTX</button><button class="cm-btn primary" id="cmSaveExerciseTop">'+ICO.ex+'Save Exercise</button><span class="cm-note" style="margin-left:auto">Saving is per item — the other two stay untouched</span></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box '+(st.videoUrl?'set':'missing')+'"><b>'+ICO.video+'Video</b><span>'+esc(st.videoUrl?fileOf(st.videoUrl):'no video yet — learners see the document only')+'</span></div><div class="cm-resource-box '+(st.pdfUrl?'set':'missing')+'"><b>'+ICO.doc+'PDF / PPTX</b><span>'+esc(st.pdfUrl?fileOf(st.pdfUrl):'no document yet')+'</span></div><div class="cm-resource-box '+(st.exercise?'set':'missing')+'"><b>'+ICO.ex+'Exercise</b><span>'+esc(st.exercise?String(st.exercise).slice(0,90):'no exercise text')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"><div class="cm-upload-row" style="margin-top:8px"><div><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin-bottom:4px">Or upload video file (up to 1 GB — needs a minute for big files, keep the page open)</label><input id="cmVideoFile" type="file" accept="video/*,.mp4,.webm,.m4v,.mov"></div></div></div><div class="cm-field"><label>PDF / PPTX URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdfs/notes.pdf or pdfs/animated-deck.pptx"><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin:8px 0 4px">Upload PDF or PowerPoint — PDF / PPTX only (up to 1 GB; .ppt is not supported)</label><input id="cmPdfFile" type="file" accept="application/pdf,.pdf,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"><p class="cm-note"><b>Animated PPT?</b> Upload the saved <b>.pptx</b> file here. Students see it inside the lesson PPT screen — do not upload old <b>.ppt</b> files.</p></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">'+ICO.video+'Save Video</button><button class="cm-btn primary" id="cmSavePdf">'+ICO.doc+'Save PDF / PPTX</button><button class="cm-btn primary" id="cmSaveExercise">'+ICO.ex+'Save Exercise</button></div>':'<p class="cm-help">Pick a subtopic first \u2014 the Videos, PDF &amp; Exercises tab always writes to the subtopic shown here.</p>')+'</div>';
     $('cmResCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
     const vf=$('cmVideoFile'); if(vf) vf.onchange=startUpload('video','cmVideoUrl');
     const pf=$('cmPdfFile'); if(pf) pf.onchange=startUpload('pdf','cmPdfUrl');
@@ -569,7 +569,13 @@
     const fields = {};
     const readVal = id => { const el=$(id); return el ? el.value.trim() : ''; };
     if(type==='video') fields.video_url = (forcedVal !== undefined ? forcedVal : readVal('cmVideoUrl'));
-    if(type==='pdf') fields.pdf_url = (forcedVal !== undefined ? forcedVal : readVal('cmPdfUrl'));
+    if(type==='pdf') {
+      fields.pdf_url = (forcedVal !== undefined ? forcedVal : readVal('cmPdfUrl'));
+      if(fields.pdf_url && !/\.(pdf|pptx)(?:[?#].*)?$/i.test(fields.pdf_url)){
+        note('Use a .pdf or .pptx file here. Old .ppt files cannot safely play in the lesson screen.','err');
+        const input=$('cmPdfUrl'); if(input) input.focus(); return;
+      }
+    }
     if(type==='exercise') fields.exercise = readVal('cmExercise');
     try {
       showStatus('Saving\u2026');
@@ -586,7 +592,7 @@
   async function verifyResourceOnServer(type, fields, st){
     const key = type==='video' ? 'video_url' : type==='pdf' ? 'pdf_url' : 'exercise';
     const want = String(fields[key]||'').trim();
-    const label = type==='video' ? 'Video' : type==='pdf' ? 'PDF / PPT' : 'Exercise';
+    const label = type==='video' ? 'Video' : type==='pdf' ? 'PDF / PPTX' : 'Exercise';
     let got = String((type==='video'?st.videoUrl:type==='pdf'?st.pdfUrl:st.exercise)||'').trim();
     if(got !== want){
       try{

@@ -346,9 +346,8 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
 .pv-note.ok{color:var(--lv-green);font-weight:700}
 .pv-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none;z-index:3}
 .pv-viewer.ppt .pv-frame{display:block}
-.pv-pptbar{display:none;align-items:center;gap:12px;justify-content:space-between;padding:8px 14px;border-bottom:1px solid var(--border,#e2e8f0);background:var(--surface-hover,#f1f5f9);font-size:12px;color:var(--text-500,#475569);line-height:1.45}
+.pv-pptbar{display:none;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border,#e2e8f0);background:var(--surface-hover,#f1f5f9);font-size:12px;color:var(--text-500,#475569);line-height:1.45}
 .pv-viewer.ppt .pv-pptbar,.pv-viewer.pptbroken .pv-pptbar{display:flex}
-.pv-pptbar .pv-btn{flex:0 0 auto;font-size:11.5px;padding:6px 10px}
 .pv-viewer.ppt .pv-canvas-wrap{display:none}
 .pv-viewer.ppt .pv-scroll{background:#0F172A;padding:0;display:block}
 .pv-viewer.ppt .pv-rail{display:none}
@@ -585,7 +584,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
                     <button class="pv-btn" id="pvFs" aria-label="Fullscreen" title="Fullscreen">⛶</button>
                   </div>
                 </div>
-                <div class="pv-pptbar" id="pvPptBar"><span id="pvPptNote">Slides are shown by an online viewer.</span><button class="pv-btn" id="pvPptAlt" type="button">Try the other viewer</button></div>
+                <div class="pv-pptbar" id="pvPptBar"><span id="pvPptNote">PowerPoint stays inside this lesson screen.</span></div>
                 <div class="pv-scroll" id="pvScroll">
                   <div class="pv-canvas-wrap" id="pvWrap"><canvas id="pvCanvas"></canvas></div>
                   <iframe id="pvFrame" class="pv-frame" title="Slides (view only)" loading="lazy" referrerpolicy="origin"></iframe>
@@ -1184,29 +1183,26 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function minView(){var v=+window.PV_MIN_VIEW; return isFinite(v)&&v>=0?v:15;}
   function fileKind(u){ u=String(u||'').split('?')[0].toLowerCase(); var mm=u.match(/\.([a-z0-9]+)$/); var e=mm?mm[1]:'';
     if(e==='pdf')return 'pdf';
-    if(['ppt','pptx','pps','ppsx'].indexOf(e)>-1)return 'ppt';
-    if(['doc','docx','xls','xlsx','odp','odt'].indexOf(e)>-1)return 'office';
+    // The portal deliberately accepts PPTX only: it is the modern format PowerPoint for the web
+    // can show in the lesson screen. Legacy .ppt/.pps files are rejected clearly, not handed to
+    // a random browser/plugin that may fail or ask students to download them.
+    if(e==='pptx')return 'ppt';
     if(!e)return 'none';
     return 'other'; }
   function absUrl(u){ if(/^https?:\/\//i.test(u))return u; return location.origin+'/'+String(u).replace(/^\/+/,''); }
   function sameOriginFile(u){ try{ return absUrl(u).indexOf(location.origin)===0; }catch(e){ return false; } }
-  var pptSrc='ms', pptBig=0;
-  function pptFrameSrc(which){
-    var abs=absUrl(docUrl());
-    return which==='gg'
-      ? 'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(abs)
-      : 'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(abs);
+  var pptBig=0;
+  function pptFrameSrc(){
+    // One official PowerPoint screen, in this lesson. No Google swap and no new tab/download UI.
+    return 'https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(absUrl(docUrl()));
   }
   function pptNote(){
-    var t = pptSrc==='gg'
-      ? 'Showing the Google viewer. If the slides stay blank, the file itself cannot be read from this server.'
-      : 'Slides are shown by an online viewer. If they do not load, press “Try the other viewer”.';
-    if(/\.(ppt|pps|pot)$/i.test(String(docUrl()).split('?')[0])) t += ' This is the old .ppt format — re-saving as .pptx opens far more reliably.';
-    if(pptBig) t += ' Note: the file is '+fmtSize(pptBig)+', above the ~100 MB these viewers accept.';
+    var t='PowerPoint is displayed inside this lesson. It does not open a separate tab or download for students.';
+    if(pptBig) t += ' This deck is '+fmtSize(pptBig)+'. Keep PPTX files below 100 MB for reliable playback.';
     return t;
   }
-  function refreshPptBar(){ var b=$('pvPptAlt'), t=$('pvPptNote'); if(t) t.textContent=pptNote(); if(b) b.textContent = pptSrc==='gg'?'Use the Microsoft viewer':'Try the other viewer'; }
-  function setPptFrame(which){ pptSrc = which==='gg'?'gg':'ms'; try{ $('pvFrame').src=pptFrameSrc(pptSrc); }catch(e){} refreshPptBar(); }
+  function refreshPptBar(){ var t=$('pvPptNote'); if(t) t.textContent=pptNote(); }
+  function setPptFrame(){ try{ $('pvFrame').src=pptFrameSrc(); }catch(e){} refreshPptBar(); }
   function setTools(on){ ['pvPrev','pvNext','pvZoomIn','pvZoomOut','pvFit','pvRot'].forEach(function(id){var b=$(id);if(b)b.disabled=!on;}); var rh=$('pvRailHide'); if(rh)rh.style.display=on?'':'none'; }
   function startTimer(){ if(viewTimer)return; viewTimer=setInterval(function(){
       if(!pptMode||!PV.classList.contains('active'))return;
@@ -1375,7 +1371,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     tok++; var myTok=tok;
     doc=null; totalPages=0; pageNum=1; maxSeen=0; rot=0; pptMode=false; viewSecs=0; timeOk=false;
     try{ $('pvViewer').classList.remove('ppt'); $('pvViewer').classList.remove('pptbroken'); }catch(e){}
-    pptSrc='ms'; pptBig=0;
+    pptBig=0;
     try{ $('pvFrame').src='about:blank'; }catch(e){}
     $('pvThumbs').innerHTML='';
     $('pvFileSize').textContent='—'; $('pvInfoSize').textContent='—';
@@ -1397,11 +1393,11 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       if(n0&&isFinite(+n0)&&+n0>0) reach.size=+n0;
     }catch(e){ if(sameOriginFile(url)) reach.ok=false; }
     if(reach.size&&myTok===tok){ var s0=fmtSize(reach.size); $('pvFileSize').textContent=s0; $('pvInfoSize').textContent=s0; }
-    if(kind==='ppt'||kind==='office'){
+    if(kind==='ppt'){
       pptMode=true;
       try{ $('pvViewer').classList.add('ppt'); }catch(e){}
       setTools(false);
-      $('pvPage').textContent=(kind==='ppt'?'Slides · PowerPoint':'Slides · Office');
+      $('pvPage').textContent='Slides · PowerPoint';
       pptBig = reach.size>100*1024*1024 ? reach.size : 0;
       refreshPptBar();
       if(reach.ok===false){
@@ -1412,11 +1408,11 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
           '. In Course Manager \u2192 \u201CVideos, PDF & Exercises\u201D check the PDF/PPT path, or upload the file again.', false);
         startTimer(); syncUI(); return;
       }
-      setPptFrame('ms');
+      setPptFrame();
       clearStatus(); startTimer(); syncUI(); return;
     }
     if(kind!=='pdf'){
-      status('This file type cannot be previewed','Only PDF and PowerPoint (PPT/PPTX) documents open inside the portal. Ask the trainer to re-save it as a PDF.',false);
+      status('This file type cannot be previewed','Use a PDF for notes or save the presentation as a .pptx. Old .ppt files are not used because they are unreliable in the secure in-lesson viewer.',false);
       setTools(false); syncUI(); return;
     }
     status('Loading document…','Rendering '+nm+' — view-only inside the portal.',true);
@@ -1488,7 +1484,6 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     $('pvZoomOut').onclick=function(){scale=Math.max(.25,Math.round(scale*0.87*100)/100);renderPage();};
     $('pvFit').onclick=function(){fitMode=fitMode==='width'?'page':'width';toast(fitMode==='width'?'Fitting to width':'Fitting page');applyFit();};
     $('pvRot').onclick=function(){rot=(rot+90)%360;renderPage();if(doc)buildThumbs(tok);};
-    var alt=$('pvPptAlt'); if(alt) alt.onclick=function(){ setPptFrame(pptSrc==='ms'?'gg':'ms'); if(pptSrc==='gg') clearStatus(); };
     $('pvFs').onclick=function(){ try{
       if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
       else{var el=$('pvViewer');(el.requestFullscreen||el.webkitRequestFullscreen).call(el);}

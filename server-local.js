@@ -44,6 +44,19 @@ app.use((req, res, next) => {
   next();
 });
 
+// Keep local behaviour aligned with production: lesson documents are public to the in-site
+// viewer, but the /pdfs path is never a general file browser.
+const LOCAL_ONE_DAY = 24 * 60 * 60 * 1000;
+const LOCAL_PUBLIC_DOCUMENT_EXT = new Set(['.pdf', '.pptx']);
+function localLessonDocumentOnly(req, res, next) {
+  let ext = '';
+  try { ext = path.extname(decodeURIComponent(req.path || '')).toLowerCase(); } catch (e) {}
+  if (!LOCAL_PUBLIC_DOCUMENT_EXT.has(ext)) return res.status(404).end();
+  res.setHeader('Cache-Control', 'public, max-age=' + (LOCAL_ONE_DAY / 1000));
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  next();
+}
+app.use('/pdfs', localLessonDocumentOnly, express.static(path.join(__dirname, 'pdfs'), { maxAge: LOCAL_ONE_DAY }));
 app.use(express.static(__dirname));
 
 // =============================================================
@@ -829,24 +842,66 @@ app.delete('/api/progress', async (req, res) => {
 // FILE UPLOAD
 // =============================================================
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 200 * 1024 * 1024 } });
+const LOCAL_MAX_UPLOAD_MB = Number(process.env.MAX_UPLOAD_MB) || 1024;
+const LOCAL_UPLOAD_FOLDERS = { video: 'videos', pdf: 'pdfs', image: 'images' };
+const localPickFolder = type => LOCAL_UPLOAD_FOLDERS[type] || null;
+const LOCAL_ALLOW_EXT = {
+  videos: ['.mp4', '.webm', '.m4v', '.mov'],
+  pdfs: ['.pdf', '.pptx'],
+  images: ['.png', '.jpg', '.jpeg', '.webp', '.gif']
+};
+function localUploadTypeOk(folder, file) {
+  const ext = path.extname(String(file.originalname || '')).toLowerCase();
+  if (!folder || !LOCAL_ALLOW_EXT[folder] || !LOCAL_ALLOW_EXT[folder].includes(ext)) return false;
+  const mime = String(file.mimetype || '').toLowerCase();
+  if (folder === 'videos') return /^video\//.test(mime);
+  if (folder === 'images') return /^image\/(png|jpe?g|webp|gif)$/.test(mime);
+  return ['application/pdf', 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/octet-stream', 'application/zip'].includes(mime);
+}
+function localDocumentLooksReal(filePath, originalName) {
+  const ext = path.extname(String(originalName || '')).toLowerCase();
+  let fd, b = Buffer.alloc(8), got = 0;
+  try { fd = fs.openSync(filePath, 'r'); got = fs.readSync(fd, b, 0, b.length, 0); } catch (e) { return false; }
+  finally { try { if (fd !== undefined) fs.closeSync(fd); } catch (e) {} }
+  if (ext === '.pdf') return got >= 5 && b.subarray(0, 5).toString('ascii') === '%PDF-';
+  if (ext === '.pptx') return got >= 4 && b[0] === 0x50 && b[1] === 0x4b && (b[2] === 0x03 || b[2] === 0x05 || b[2] === 0x07) && (b[3] === 0x04 || b[3] === 0x06 || b[3] === 0x08);
+  return false;
+}
+// Disk storage mirrors production and does not hold a large training video in Node's memory.
+const localUploadStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = localPickFolder(req.body && req.body.type);
+    if (!folder) return cb(Object.assign(new Error('Choose video, PDF/PPTX, or image before uploading'), { code: 'BAD_TYPE' }));
+    const dir = path.join(__dirname, folder); fs.mkdirSync(dir, { recursive: true }); cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const safe = (file.originalname || 'file').replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^\.+/, '');
+    cb(null, `${Date.now()}_${Math.random().toString(36).slice(2,7)}_${safe || 'file'}`);
+  }
+});
+const upload = multer({
+  storage: localUploadStorage,
+  limits: { fileSize: LOCAL_MAX_UPLOAD_MB * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const folder = localPickFolder(req.body && req.body.type);
+    if (!localUploadTypeOk(folder, file)) return cb(Object.assign(new Error('Only ' + ((folder && LOCAL_ALLOW_EXT[folder]) || ['.mp4', '.pdf', '.pptx', '.png']).join(', ') + ' files can be uploaded here'), { code: 'BAD_TYPE' }));
+    cb(null, true);
+  }
+});
 
-app.post('/api/upload', upload.single('file'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  
-  const type = req.body.type || 'image';
-  const folder = type === 'video' ? 'videos' : type === 'pdf' ? 'pdfs' : 'images';
-  const timestamp = Date.now();
-  const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const filePath = `${folder}/${timestamp}_${safeName}`;
-  const fullPath = path.join(__dirname, filePath);
-  
-  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-  fs.writeFileSync(fullPath, req.file.buffer);
-  
-  const url = `${req.protocol}://${req.get('host')}/${filePath}`;
-  res.json({ url, path: filePath, size: req.file.size });
+app.post('/api/upload', (req, res) => {
+  upload.single('file')(req, res, err => {
+    if (err) return res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? `File is larger than the ${LOCAL_MAX_UPLOAD_MB} MB limit.` : ('Upload failed: ' + (err.message || 'bad request')) });
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const folder = localPickFolder(req.body && req.body.type);
+    if (folder === 'pdfs' && !localDocumentLooksReal(req.file.path, req.file.originalname)) {
+      try { fs.unlinkSync(req.file.path); } catch (e) {}
+      return res.status(400).json({ error: 'This is not a readable PDF or PPTX file. Export/save it again and upload the .pdf or .pptx file.' });
+    }
+    const filePath = `${folder}/${req.file.filename}`;
+    const url = `${req.protocol}://${req.get('host')}/${filePath}`;
+    res.json({ url, path: filePath, size: req.file.size });
+  });
 });
 
 
