@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softmarc Learning Portal — Admin</title>
 <link rel="icon" type="image/png" href="favicon.png?v=17">
-<script src="softmarc-auth.js?v=23"></script>
+<script src="softmarc-auth.js?v=31"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -49,6 +49,8 @@ tbody tr:hover{background:var(--bg);}
 .role-badge{font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px;text-transform:capitalize;}
 .role-badge.student{background:rgba(0,191,206,.14);color:var(--cyan-700);}
 .role-badge.admin{background:rgba(0,90,130,.12);color:var(--navy-800);}
+.role-badge.trainer{background:rgba(124,58,237,.13);color:#6D28D9;}
+.student-contact{display:grid;gap:3px;min-width:180px}.student-contact b{font-size:12.5px;color:var(--text-900)}.student-contact small{font-size:11px;color:var(--text-600);line-height:1.35}.profile-cell{min-width:160px;max-width:230px;font-size:11.5px;color:var(--text-700);line-height:1.45}.profile-cell strong{display:block;font-size:11px;color:var(--text-900)}.profile-empty{color:var(--text-400);font-size:11px}.user-table-note{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--bg);font-size:11.5px;color:var(--text-600);}.user-table-note b{color:var(--text-900);}
 .icon-btn{border:none;background:none;cursor:pointer;padding:7px 9px;border-radius:8px;color:var(--danger);font-size:13px;font-weight:600;transition:background .15s;}
 .icon-btn:hover{background:rgba(217,70,60,.1);}
 .empty-state,.loading-state,.error-state{padding:40px 24px;text-align:center;color:var(--text-600);font-size:14px;}
@@ -152,13 +154,16 @@ tbody tr:hover{background:var(--bg);}
         <span class="count-badge" id="userCount">0 users</span>
       </div>
 
+      <div class="user-table-note"><b>Student support profiles</b> — contact, location and learning context supplied at signup. Trainer and admin rows show only applicable details.</div>
       <div id="tableWrap">
         <table>
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
+              <th>Student & contact</th>
               <th>Role</th>
+              <th>Location</th>
+              <th>Academic / work profile</th>
+              <th>Learning goal</th>
               <th>Joined</th>
               <th></th>
             </tr>
@@ -228,12 +233,12 @@ tbody tr:hover{background:var(--bg);}
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <h2>Add new user</h2>
-    <div class="sub">Create a student or admin account.</div>
+    <div class="sub">Create a student, trainer, or admin account. Trainers manage only their own batches.</div>
     <form id="addUserForm" novalidate>
       <div class="field"><label for="fullName">Full name</label><input type="text" id="fullName" required autocomplete="name"></div>
       <div class="field"><label for="email">Email</label><input type="email" id="email" required autocomplete="email"></div>
       <div class="field"><label for="password">Temporary password</label><input type="password" id="password" required autocomplete="new-password" minlength="8"></div>
-      <div class="field"><label for="role">Role</label><select id="role"><option value="student" selected>Student</option><option value="admin">Admin</option></select></div>
+      <div class="field"><label for="role">Role</label><select id="role"><option value="student" selected>Student</option><option value="trainer">Trainer</option><option value="admin">Admin</option></select></div>
       <div class="form-error" id="formError"></div>
       <div class="modal-actions"><button type="button" class="btn-secondary" id="cancelAdd">Cancel</button><button type="submit" class="btn-primary" id="submitAdd">Add user</button></div>
     </form>
@@ -284,15 +289,22 @@ async function loadUsers(){
     const users=await res.json(); loadingEl.style.display='none';
     userCountEl.textContent=users.length+(users.length===1?' user':' users');
     if(users.length===0){emptyEl.style.display='block'; return;}
-    tableBody.innerHTML=users.map(u=>`
+    tableBody.innerHTML=users.map(u=>{
+      const contact=[u.email,u.phone].filter(Boolean).map(escapeHtml).join('<br>')||'<span class="profile-empty">No contact details</span>';
+      const place=[u.city,u.state_region,u.country].filter(Boolean).map(escapeHtml).join(', ')||'<span class="profile-empty">Not supplied</span>';
+      const background=[u.institution,u.department].filter(Boolean).map(escapeHtml).join(' · ')||'<span class="profile-empty">Not supplied</span>';
+      const goal=escapeHtml(u.learning_goal||'')||'<span class="profile-empty">Not supplied</span>';
+      return `
       <tr data-id="${u.id}">
-        <td>${escapeHtml(u.full_name)}</td>
-        <td>${escapeHtml(u.email)}</td>
+        <td><div class="student-contact"><b>${escapeHtml(u.full_name)}</b><small>${contact}</small></div></td>
         <td><span class="role-badge ${u.role}">${escapeHtml(u.role)}</span></td>
+        <td class="profile-cell">${place}</td>
+        <td class="profile-cell">${background}</td>
+        <td class="profile-cell">${goal}</td>
         <td>${formatDate(u.created_at)}</td>
         <td style="text-align:right;"><button class="icon-btn" data-delete="${u.id}">Delete</button></td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
   }catch(err){
     loadingEl.style.display='none'; errorEl.style.display='block';
     errorEl.textContent='Could not load users. Is the API server running on '+API_BASE+'?';
@@ -513,7 +525,7 @@ function openQuizEditor(opts){
 }
 loadUsers();
 </script>
-<script src="softmarc-common.js?v=13"></script>
+<script src="softmarc-common.js?v=32"></script>
 <script src="admin-assessment-editor.js?v=27"></script>
 <script src="admin-content-manager.js?v=18"></script>
 </body>

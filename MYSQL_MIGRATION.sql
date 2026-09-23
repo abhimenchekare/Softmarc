@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
   department      VARCHAR(255) DEFAULT NULL,
   institution     VARCHAR(255) DEFAULT NULL,
   city            VARCHAR(255) DEFAULT NULL,
+  country_code    VARCHAR(12) DEFAULT NULL,
+  country         VARCHAR(100) DEFAULT NULL,
+  state_region    VARCHAR(100) DEFAULT NULL,
+  learning_goal   VARCHAR(255) DEFAULT NULL,
   avatar_image    LONGTEXT DEFAULT NULL,
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -144,3 +148,57 @@ CREATE TABLE IF NOT EXISTS user_time (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY unique_user_day (student_id, day)
 );
+
+-- =============================================================
+-- v31 addition: public demo sign-up, trainer-owned batches and enrolment
+-- Existing users retain full access. New public registrations receive a
+-- student_access demo row; a batch enrolment switches their access to batch.
+-- =============================================================
+CREATE TABLE IF NOT EXISTS student_access (
+  student_id       INT NOT NULL PRIMARY KEY,
+  access_mode      VARCHAR(20) NOT NULL DEFAULT 'full', -- full | demo | batch
+  demo_course_id   INT DEFAULT NULL,
+  demo_topic_limit INT NOT NULL DEFAULT 2,
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_student_access_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_student_access_course FOREIGN KEY (demo_course_id) REFERENCES courses(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS batches (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  name            VARCHAR(255) NOT NULL,
+  course_id       INT NOT NULL,
+  trainer_id      INT NOT NULL,
+  invite_code     VARCHAR(32) NOT NULL UNIQUE,
+  start_date      DATE DEFAULT NULL,
+  end_date        DATE DEFAULT NULL,
+  status          VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_batches_trainer (trainer_id),
+  INDEX idx_batches_course (course_id),
+  CONSTRAINT fk_batch_course FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+  CONSTRAINT fk_batch_trainer FOREIGN KEY (trainer_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS batch_enrollments (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  batch_id      INT NOT NULL,
+  student_id    INT NOT NULL,
+  enrolled_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  status        VARCHAR(20) NOT NULL DEFAULT 'active',
+  UNIQUE KEY unique_batch_student (batch_id, student_id),
+  INDEX idx_enrolment_student (student_id),
+  CONSTRAINT fk_enrolment_batch FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
+  CONSTRAINT fk_enrolment_student FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+
+-- =============================================================
+-- v32 addition: richer student course-support profile.
+-- IF NOT EXISTS makes this safe for existing Hostinger databases.
+-- =============================================================
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country_code VARCHAR(12) DEFAULT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS state_region VARCHAR(100) DEFAULT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS learning_goal VARCHAR(255) DEFAULT NULL;

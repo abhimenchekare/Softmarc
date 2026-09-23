@@ -13,6 +13,7 @@
     setToken: set,
     user: user,
     isAdmin: function () { return user().role === 'admin'; },
+    isTrainer: function () { return user().role === 'trainer'; },
     isExpired: function () {
       var t = get(); if (!t) return true;
       try { var p = JSON.parse(atob(t.split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))); return !p.exp || p.exp < Date.now(); }
@@ -63,9 +64,13 @@
     if (a) window.SoftmarcAuth.clear();
   }, true);
 
-  // keep students out of the admin pages even before the first API answer
+  // Keep role-only workspaces out of the wrong account before the first API answer.
   document.addEventListener('DOMContentLoaded', function () {
+    var role=user().role || '';
     var adm = /(^|\/)(admin|analytics)\.html$/.test(location.pathname);
-    if (adm && !get()) { window.__smExpired = 1; location.href = 'index.html'; }
+    var trainer = /(^|\/)trainer_dashboard\.html$/.test(location.pathname);
+    if ((adm || trainer) && !get()) { window.__smExpired = 1; location.href = 'index.html'; return; }
+    if (adm && role !== 'admin') { location.href = role==='trainer' ? 'trainer_dashboard.html' : 'soft_dashboard.html'; return; }
+    if (trainer && role !== 'trainer' && role !== 'admin') location.href = 'soft_dashboard.html';
   });
 })();

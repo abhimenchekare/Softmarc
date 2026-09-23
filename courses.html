@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Softmarc — My Courses</title>
 <link rel="icon" type="image/png" href="favicon.png?v=17">
-<script src="softmarc-auth.js?v=23"></script>
+<script src="softmarc-auth.js?v=31"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -75,6 +75,15 @@ a{text-decoration:none;color:inherit;}
 .btn-primary:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(15,23,42,0.12);}
 .btn-secondary{background:var(--surface);color:var(--text-700);border-color:var(--border);}
 .btn-secondary:hover{background:var(--surface-2);}
+
+
+/* Discover courses quickly */
+.course-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;width:min(100%,620px);}
+.course-library-search{display:flex;align-items:center;gap:8px;min-width:min(100%,320px);flex:1;height:40px;padding:0 10px 0 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text-400);transition:border-color .16s,box-shadow .16s;}
+.course-library-search:focus-within{border-color:#38BDF8;box-shadow:0 0 0 3px rgba(14,165,233,.16);}
+.course-library-search svg{width:16px;height:16px;flex:0 0 16px;}.course-library-search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:var(--text-900);font:500 12.5px var(--font-body);}
+.course-library-search input::placeholder{color:var(--text-400);}.course-search-clear{border:0;background:transparent;color:var(--text-400);font:700 16px/1 var(--font-body);cursor:pointer;padding:4px;display:none;}.course-search-clear.show{display:block;}.course-search-clear:hover{color:var(--text-900);}
+.course-search-summary{font-size:11.5px;color:var(--text-500);margin:-8px 0 16px;min-height:17px;}.course-no-results{grid-column:1/-1;text-align:center;border:1px dashed var(--border-strong);border-radius:12px;padding:30px;color:var(--text-500);font-size:13px;background:var(--surface);}
 
 /* Subtopic view */
 .subtopic-header{
@@ -184,9 +193,17 @@ a{text-decoration:none;color:inherit;}
     <!-- Main courses grid -->
     <div id="mainView">
       <div class="page-header">
-        <div><h1>My Courses</h1><p>Click any main topic to open subtopics. Each subtopic has PDF, Video, MCQ, Exercise.</p></div>
-        <div class="tabs"><button class="tab on" data-filter="All">All</button><button class="tab" data-filter="In Progress">In Progress</button><button class="tab" data-filter="Completed">Completed</button></div>
+        <div><h1>My Courses</h1><p>Search every main course, then open its subtopics, video, PDF/PPT, MCQ and exercise.</p></div>
+        <div class="course-toolbar">
+          <label class="course-library-search" for="courseSearchInput">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input id="courseSearchInput" type="search" autocomplete="off" placeholder="Search main courses, skills or topics…">
+            <button id="courseSearchClear" class="course-search-clear" type="button" aria-label="Clear search">×</button>
+          </label>
+          <div class="tabs"><button class="tab on" data-filter="All">All</button><button class="tab" data-filter="In Progress">In Progress</button><button class="tab" data-filter="Completed">Completed</button></div>
+        </div>
       </div>
+      <div class="course-search-summary" id="courseSearchSummary" aria-live="polite"></div>
       <div class="grid-3" id="coursesGrid"></div>
     </div>
     <!-- Subtopic view -->
@@ -334,6 +351,25 @@ let currentExCourse = null, currentExIdx = null;
 let progressMap = new Map();
 
 // Main view - courses grid with real progress
+let activeCourseFilter='All';
+let courseSearchQuery='';
+function applyCourseFilters(){
+  const grid=document.getElementById('coursesGrid'); if(!grid) return;
+  const query=courseSearchQuery.trim().toLowerCase(); let visible=0;
+  grid.querySelectorAll('.course-card').forEach(card=>{
+    const text=(card.dataset.courseSearch||'').toLowerCase();
+    const status=card.dataset.courseStatus||'new';
+    const matchesText=!query || text.includes(query);
+    const matchesTab=activeCourseFilter==='All' || (activeCourseFilter==='In Progress'&&status==='progress') || (activeCourseFilter==='Completed'&&status==='completed');
+    const show=matchesText&&matchesTab; card.hidden=!show; if(show) visible++;
+  });
+  let empty=grid.querySelector('.course-no-results');
+  if(!empty){ empty=document.createElement('div'); empty.className='course-no-results'; empty.innerHTML='No courses match this search. Try another keyword or clear the filters.'; grid.appendChild(empty); }
+  empty.hidden=visible>0;
+  const summary=document.getElementById('courseSearchSummary');
+  if(summary) summary.textContent=query ? `${visible} course${visible===1?'':'s'} match “${courseSearchQuery.trim()}”.` : '';
+  const clear=document.getElementById('courseSearchClear'); if(clear) clear.classList.toggle('show',!!query);
+}
 async function renderCoursesReal(){
   const grid = document.getElementById('coursesGrid');
   grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';
@@ -359,7 +395,7 @@ async function renderCoursesReal(){
     const doneSet = progressMap.get(course.name) || new Set();
     const pct = course.modules>0 ? Math.min(100, Math.round(Math.min(doneSet.size, course.modules) / course.modules * 100)) : 0;
     const cardHtml = `
-      <div class="course-card" onclick="openSubtopics('${course.name}')">
+      <div class="course-card" data-course-status="${pct===100?'completed':pct>0?'progress':'new'}" data-course-search="${String(course.name+' '+course.tag).replace(/[&<>"']/g,'')}" onclick="openSubtopics('${course.name}')">
         <div class="course-image" style="background-image:url('${course.image || (window.SoftmarcContent && SoftmarcContent.defaultImage(course.name, course.tag))}')"></div>
         <span class="tag">${course.tag} · ${pct}%</span>
         <h3>${course.name}</h3>
@@ -370,6 +406,7 @@ async function renderCoursesReal(){
       </div>`;
     grid.insertAdjacentHTML('beforeend', cardHtml);
   });
+  applyCourseFilters();
 }
 
 // Subtopic view - Click subtopic opens NEW WINDOW with 4 buttons inside
@@ -439,23 +476,25 @@ if(courseParam){
   renderCoursesReal();
 }
 
-// Tab filter
+// Course search + status tabs — dashboard search lands here as ?q=...
+const searchParam=urlParams.get('q')||'';
+const courseSearchInput=document.getElementById('courseSearchInput');
+const courseSearchClear=document.getElementById('courseSearchClear');
+if(courseSearchInput){
+  courseSearchInput.value=searchParam; courseSearchQuery=searchParam;
+  courseSearchInput.addEventListener('input',()=>{ courseSearchQuery=courseSearchInput.value; applyCourseFilters(); });
+  courseSearchInput.addEventListener('search',()=>{ courseSearchQuery=courseSearchInput.value; applyCourseFilters(); });
+}
+if(courseSearchClear) courseSearchClear.addEventListener('click',()=>{ if(courseSearchInput){ courseSearchInput.value=''; courseSearchInput.focus(); } courseSearchQuery=''; applyCourseFilters(); });
 document.querySelectorAll('.tab').forEach(tab=>{
   tab.addEventListener('click', ()=>{
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
-    tab.classList.add('on');
-    const filter = tab.dataset.filter;
-    document.querySelectorAll('.course-card').forEach(card=>{
-      const pctText = card.querySelector('.pct').textContent;
-      if(filter==='All') card.style.display='';
-      else if(filter==='In Progress') card.style.display = pctText.includes('complete') || pctText.includes('In progress') ? '' : 'none';
-      else if(filter==='Completed') card.style.display = pctText.includes('Completed') ? '' : 'none';
-    });
+    tab.classList.add('on'); activeCourseFilter=tab.dataset.filter||'All'; applyCourseFilters();
   });
 });
 
 function openLesson(course, module){ window.location.href = `lesson.html?course=${encodeURIComponent(course)}&module=${module}`; }
 </script>
-<script src="softmarc-common.js"></script>
+<script src="softmarc-common.js?v=32"></script>
 </body>
 </html>

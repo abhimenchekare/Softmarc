@@ -20,6 +20,19 @@
   document.querySelectorAll('.user-mini-name,#sidebarName').forEach(el=>el.textContent=user.full_name||user.email||'Softmarc User');
   document.querySelectorAll('.user-mini-role').forEach(el=>el.textContent=user.role||'Student');
   document.querySelectorAll('#adminLink').forEach(el=>{ el.style.display=(user.role==='admin')?'flex':'none'; });
+  // Trainer Hub is deliberately separate from Admin Panel. Trainers see only their own batches;
+  // admins see the same page in read-only oversight mode across all trainers.
+  if(user.role==='trainer' || user.role==='admin'){
+    // Put the link INSIDE the existing Account <nav>. Appending directly to .sidebar-nav
+    // bypasses the page's .nav a / .nav a svg sizing rules and creates an oversized icon.
+    document.querySelectorAll('.sidebar-nav').forEach(sidebar=>{
+      if(sidebar.querySelector('[data-trainer-hub]')) return;
+      const navs=sidebar.querySelectorAll('nav.nav'); const target=navs[navs.length-1]; if(!target) return;
+      const link=document.createElement('a'); link.href='trainer_dashboard.html'; link.dataset.trainerHub='1';
+      link.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V10l8-5 8 5v11"/><path d="M9 21v-7h6v7"/><path d="M3 10h18"/><path d="M8 5V3h8v2"/></svg><span>'+(user.role==='admin'?'Batch Oversight':'Trainer Hub')+'</span>';
+      const logout=target.querySelector('#logoutBtn'); target.insertBefore(link,logout||null);
+    });
+  }
 
   // Make top-right profile circle redirect to profile page.
   document.querySelectorAll('#avatarInitials,.avatar-top').forEach(el=>{

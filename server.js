@@ -157,6 +157,84 @@ if (DB_MISSING.length) {
 }
 
 // =============================================================
+// Demo access + trainer batch enrolment
+// =============================================================
+let accessTablesReady = null;
+function ensureAccessTables() {
+  if (!accessTablesReady) accessTablesReady = Promise.all([
+    pool.query(`CREATE TABLE IF NOT EXISTS student_access (
+      student_id INT NOT NULL PRIMARY KEY, access_mode VARCHAR(20) NOT NULL DEFAULT 'full',
+      demo_course_id INT DEFAULT NULL, demo_topic_limit INT NOT NULL DEFAULT 2,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_access_mode (access_mode)
+    )`),
+    pool.query(`CREATE TABLE IF NOT EXISTS batches (
+      id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, course_id INT NOT NULL,
+      trainer_id INT NOT NULL, invite_code VARCHAR(32) NOT NULL UNIQUE,
+      start_date DATE DEFAULT NULL, end_date DATE DEFAULT NULL, status VARCHAR(20) NOT NULL DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_batches_trainer (trainer_id), INDEX idx_batches_course (course_id)
+    )`),
+    pool.query(`CREATE TABLE IF NOT EXISTS batch_enrollments (
+      id INT AUTO_INCREMENT PRIMARY KEY, batch_id INT NOT NULL, student_id INT NOT NULL,
+      enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, status VARCHAR(20) NOT NULL DEFAULT 'active',
+      UNIQUE KEY unique_batch_student (batch_id, student_id), INDEX idx_enrolment_student (student_id)
+    )`)
+  ]).catch(err => { accessTablesReady = null; throw err; });
+  return accessTablesReady;
+}
+// Existing Hostinger databases may predate the detailed self-enrolment fields.
+// The server adds them safely as soon as the updated app starts; the SQL migration mirrors this.
+let studentProfileColumnsReady=null;
+function ensureStudentProfileColumns(){
+  if(!studentProfileColumnsReady) studentProfileColumnsReady=(async()=>{
+    const [columns]=await pool.query(`SELECT COLUMN_NAME AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users'`);
+    const have=new Set(columns.map(c=>c.n));
+    const wanted=[['country_code','VARCHAR(12) DEFAULT NULL'],['country','VARCHAR(100) DEFAULT NULL'],['state_region','VARCHAR(100) DEFAULT NULL'],['learning_goal','VARCHAR(255) DEFAULT NULL']];
+    for(const [name,definition] of wanted) if(!have.has(name)) await pool.query(`ALTER TABLE users ADD COLUMN ${name} ${definition}`);
+  })().catch(err=>{studentProfileColumnsReady=null;throw err;});
+  return studentProfileColumnsReady;
+}
+function publicUser(user, access) {
+  return { id:user.id, full_name:user.full_name, email:user.email, role:user.role, phone:user.phone,
+    country_code:user.country_code, country:user.country, state_region:user.state_region, city:user.city,
+    department:user.department, institution:user.institution, learning_goal:user.learning_goal, avatar_image:user.avatar_image,
+    access_mode:(access && access.access_mode) || 'full', demo_course_id:(access && access.demo_course_id) || null };
+}
+async function accessForStudent(studentId) {
+  await ensureAccessTables();
+  const [rows] = await pool.query('SELECT access_mode, demo_course_id, demo_topic_limit FROM student_access WHERE student_id=?', [studentId]);
+  return rows[0] || { access_mode:'full', demo_course_id:null, demo_topic_limit:2 };
+}
+async function permittedCourseIds(auth) {
+  if (!auth || auth.role !== 'student') return null;
+  const access = await accessForStudent(auth.uid);
+  if (access.access_mode === 'demo') return { access, ids:access.demo_course_id ? [Number(access.demo_course_id)] : [] };
+  if (access.access_mode === 'batch') {
+    const [rows] = await pool.query(`SELECT DISTINCT b.course_id FROM batch_enrollments e
+      JOIN batches b ON b.id=e.batch_id WHERE e.student_id=? AND e.status='active' AND b.status='active'`, [auth.uid]);
+    return { access, ids:rows.map(r=>Number(r.course_id)) };
+  }
+  return { access, ids:null };
+}
+async function mayStudy(auth, courseName, moduleIndex) {
+  if (!auth || auth.role !== 'student') return true;
+  const permitted = await permittedCourseIds(auth);
+  if (permitted.ids === null) return true;
+  const [rows] = await pool.query('SELECT id FROM courses WHERE title=? LIMIT 1', [courseName]);
+  if (!rows.length || !permitted.ids.includes(Number(rows[0].id))) return false;
+  return !(permitted.access.access_mode === 'demo' && Number(moduleIndex) >= Number(permitted.access.demo_topic_limit || 2));
+}
+function inviteCode() { return 'SM-' + crypto.randomBytes(4).toString('hex').toUpperCase(); }
+async function ownBatchOrAdmin(auth, batchId) {
+  const [rows] = await pool.query('SELECT * FROM batches WHERE id=?', [batchId]);
+  const batch=rows[0];
+  if (!batch) return null;
+  if (auth.role !== 'admin' && Number(batch.trainer_id) !== Number(auth.uid)) return false;
+  return batch;
+}
+
+// =============================================================
 // CORS Headers
 // =============================================================
 // ---------- signed session tokens (no extra npm package, no DB table) ----------
@@ -181,7 +259,7 @@ if (AUTH.ephemeral) console.warn('[Auth] Cannot persist signing key — sessions
 
 function signToken(user) {
   const body = Buffer.from(JSON.stringify({
-    uid: user.id, role: user.role === 'admin' ? 'admin' : 'student', exp: Date.now() + TOKEN_TTL_MS
+    uid: user.id, role: (user.role === 'admin' || user.role === 'trainer') ? user.role : 'student', exp: Date.now() + TOKEN_TTL_MS
   })).toString('base64url');
   const sig = crypto.createHmac('sha256', AUTH.secret).update(body).digest('base64url');
   return body + '.' + sig;
@@ -206,8 +284,7 @@ function needSignIn(req, res) {
   res.status(401).json({ error: 'Please sign in again.', code: 'auth_required' });
 }
 // who may touch what
-const PUB = [[/^POST$/, /^\/login$/], [/^GET$/, /^\/(health|config)$/], [/^GET$/, /^\/courses(\/\d+)?$/],
-  [/^GET$/, /^\/quizzes(\/\d+)?$/], [/^GET$/, /^\/quizzes\/\d+\/paper$/]];   // /paper = questions WITHOUT the answers
+const PUB = [[/^POST$/, /^\/(login|signup)$/], [/^GET$/, /^\/(health|config)$/]]; // course and quiz data require a signed account
 const ADMIN = [[/^GET$/, /^\/(users|submissions|analytics\/summary)$/], [/^POST$/, /^\/(config|upload|users|courses|quizzes)$/],
   [/^GET$/, /^\/quizzes\/\d+\/questions$/],                       // correct answers: admin only
   [/^PUT$/, /^\/quizzes\/\d+\/assessment$/],                       // one-save quiz editor
@@ -237,6 +314,8 @@ app.use('/api', (req, res, next) => {
   const selfRow = /^\/users\/\d+$/.test(p) && cid === a.uid;
   if (ADMIN.some(r => r[0].test(req.method) && r[1].test(p)) && a.role !== 'admin' && !selfRow)
     return res.status(403).json({ error: 'Admin access required.', code: 'admin_required' });
+  if ((/^\/(trainer|batches)(?:\/|$)/.test(p)) && !['trainer','admin'].includes(a.role) && p !== '/batches/join')
+    return res.status(403).json({ error: 'Trainer or admin access required.', code: 'trainer_required' });
   if (SCOPED.some(re => re.test(p)) && !selfRow) {
     if (cid && cid !== a.uid && a.role !== 'admin')
       return res.status(403).json({ error: 'That record belongs to another account.', code: 'forbidden' });
@@ -325,7 +404,7 @@ app.get('/health', healthHandler);
 
 app.get('/api/users', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, full_name, email, role, phone, department, institution, city, avatar_image, created_at FROM users ORDER BY created_at DESC');
+    const [rows] = await pool.query('SELECT id, full_name, email, role, phone, country_code, country, state_region, department, institution, city, learning_goal, avatar_image, created_at FROM users ORDER BY created_at DESC');
     res.json(rows);
   } catch (err) {
     console.error(err);
@@ -335,7 +414,7 @@ app.get('/api/users', async (req, res) => {
 
 app.get('/api/users/:id', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, full_name, email, role, phone, department, institution, city, avatar_image, created_at FROM users WHERE id = ?', [req.params.id]);
+    const [rows] = await pool.query('SELECT id, full_name, email, role, phone, country_code, country, state_region, department, institution, city, learning_goal, avatar_image, created_at FROM users WHERE id = ?', [req.params.id]);
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(rows[0]);
   } catch (err) {
@@ -385,29 +464,66 @@ app.post('/api/login', async (req, res) => {
     if (!match) { noteTry(tkey); return res.status(401).json({ error: 'Invalid email or password' }); }
     tries.delete(tkey);
     const token = signToken(user);
+    const access = user.role === 'student' ? await accessForStudent(user.id) : { access_mode:'full' };
 
-    res.json({
-      token,
-      token_expires_at: new Date(Date.now() + TOKEN_TTL_MS).toISOString(),
-      id: user.id,
-      full_name: user.full_name,
-      email: user.email,
-      role: user.role,
-      phone: user.phone,
-      department: user.department,
-      institution: user.institution,
-      city: user.city,
-      avatar_image: user.avatar_image
-    });
+    res.json(Object.assign({ token, token_expires_at: new Date(Date.now() + TOKEN_TTL_MS).toISOString() }, publicUser(user, access)));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
   }
 });
 
+// Public registration is intentionally student-only. It can never accept a role from the browser.
+app.post('/api/signup', async (req, res) => {
+  const full_name=String((req.body||{}).full_name||'').trim();
+  const email=String((req.body||{}).email||'').trim().toLowerCase();
+  const password=String((req.body||{}).password||'');
+  const country_code=String((req.body||{}).country_code||'').trim();
+  const phone=String((req.body||{}).phone||'').trim();
+  const country=String((req.body||{}).country||'').trim();
+  const city=String((req.body||{}).city||'').trim();
+  const state_region=String((req.body||{}).state_region||'').trim();
+  const department=String((req.body||{}).department||'').trim();
+  const institution=String((req.body||{}).institution||'').trim();
+  const learning_goal=String((req.body||{}).learning_goal||'').trim();
+  const invite_code=String((req.body||{}).invite_code||'').trim().toUpperCase();
+  if (full_name.length < 2 || full_name.length > 120) return res.status(400).json({ error:'Enter your full name (2–120 characters).' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return res.status(400).json({ error:'Enter a valid email address.' });
+  if (!/^\+\d{1,4}$/.test(country_code) || !/^[0-9() .-]{6,20}$/.test(phone)) return res.status(400).json({ error:'Enter a valid mobile number with a country code.' });
+  if (!country || country.length>100 || !city || city.length>100 || state_region.length>100 || department.length>150 || institution.length>255 || learning_goal.length>255) return res.status(400).json({ error:'Check your country, city and profile details.' });
+  const pwErr=passwordProblem(password); if (pwErr) return res.status(400).json({ error:pwErr });
+  try {
+    await Promise.all([ensureAccessTables(),ensureStudentProfileColumns()]);
+    const password_hash=await bcrypt.hash(password, 10);
+    const [created]=await pool.query(`INSERT INTO users (full_name,email,password_hash,role,phone,country_code,country,city,state_region,department,institution,learning_goal)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,[full_name,email,password_hash,'student',country_code+' '+phone,country_code,country,city,state_region||null,department||null,institution||null,learning_goal||null]);
+    const student_id=created.insertId;
+    let access={access_mode:'demo',demo_course_id:null,demo_topic_limit:2}, joinedBatch=null;
+    if(invite_code){
+      const [batches]=await pool.query("SELECT * FROM batches WHERE invite_code=? AND status='active'",[invite_code]);
+      if(!batches.length) { await pool.query('DELETE FROM users WHERE id=?',[student_id]); return res.status(400).json({error:'That batch code is not active. You can leave it blank to start the demo.'}); }
+      joinedBatch=batches[0];
+      await pool.query("INSERT INTO batch_enrollments (batch_id,student_id,status) VALUES (?,?,'active')",[joinedBatch.id,student_id]);
+      access={access_mode:'batch',demo_course_id:null,demo_topic_limit:2};
+    } else {
+      const [courses]=await pool.query("SELECT id FROM courses WHERE status='active' ORDER BY display_order ASC,id ASC LIMIT 1");
+      access.demo_course_id=courses.length?courses[0].id:null;
+    }
+    await pool.query(`INSERT INTO student_access (student_id,access_mode,demo_course_id,demo_topic_limit)
+      VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE access_mode=VALUES(access_mode),demo_course_id=VALUES(demo_course_id),demo_topic_limit=VALUES(demo_topic_limit)`,
+      [student_id,access.access_mode,access.demo_course_id,2]);
+    const user={id:student_id,full_name,email,role:'student',phone:country_code+' '+phone,country_code,country,city,state_region,department,institution,learning_goal};
+    res.status(201).json(Object.assign({token:signToken(user), token_expires_at:new Date(Date.now()+TOKEN_TTL_MS).toISOString(), joined_batch:joinedBatch?{id:joinedBatch.id,name:joinedBatch.name}:null},publicUser(user,access)));
+  } catch(err) {
+    if(err.code==='ER_DUP_ENTRY') return res.status(409).json({error:'An account already exists for this email. Please sign in instead.'});
+    console.error('signup failed:',err); res.status(500).json({error:'Could not create your account. Please try again.'});
+  }
+});
+
 app.post('/api/users', async (req, res) => {
   const { full_name, email, password, role } = req.body;
   if (!full_name || !email || !password) return res.status(400).json({ error: 'Name, email, and password required' });
+  const safeRole=['student','trainer','admin'].includes(role) ? role : 'student';
   const pwErr = passwordProblem(password);
   if (pwErr) return res.status(400).json({ error: pwErr });
 
@@ -415,8 +531,9 @@ app.post('/api/users', async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
       'INSERT INTO users (full_name, email, password_hash, role) VALUES (?, ?, ?, ?)',
-      [full_name, email, password_hash, role || 'student']
+      [full_name, email, password_hash, safeRole]
     );
+    if(safeRole==='student') { await ensureAccessTables(); await pool.query("INSERT INTO student_access (student_id,access_mode) VALUES (?,'full')", [result.insertId]); }
     const [user] = await pool.query('SELECT id, full_name, email, role, created_at FROM users WHERE id = ?', [result.insertId]);
     res.status(201).json(user[0]);
   } catch (err) {
@@ -433,7 +550,7 @@ app.put('/api/users/:id/profile', async (req, res) => {
       'UPDATE users SET full_name = COALESCE(?, full_name), email = COALESCE(?, email), phone = ?, department = ?, institution = ?, city = ?, avatar_image = COALESCE(?, avatar_image) WHERE id = ?',
       [full_name, email, phone, department, institution, city, avatar_image, req.params.id]
     );
-    const [user] = await pool.query('SELECT id, full_name, email, role, phone, department, institution, city, avatar_image, created_at FROM users WHERE id = ?', [req.params.id]);
+    const [user] = await pool.query('SELECT id, full_name, email, role, phone, country_code, country, state_region, department, institution, city, learning_goal, avatar_image, created_at FROM users WHERE id = ?', [req.params.id]);
     if (user.length === 0) return res.status(404).json({ error: 'User not found' });
     res.json(user[0]);
   } catch (err) {
@@ -500,42 +617,40 @@ app.delete('/api/users/:id', async (req, res) => {
 
 app.get('/api/courses', async (req, res) => {
   try {
-    const [courses] = await pool.query('SELECT * FROM courses WHERE status = ? ORDER BY display_order ASC, id ASC', ['active']);
-    
-    if (courses.length > 0) {
-      const courseIds = courses.map(c => c.id);
-      const [subtopics] = await pool.query('SELECT * FROM subtopics WHERE course_id IN (?) ORDER BY display_order ASC, id ASC', [courseIds]);
-      
-      const subMap = new Map();
-      subtopics.forEach(s => {
-        if (!subMap.has(s.course_id)) subMap.set(s.course_id, []);
-        subMap.get(s.course_id).push(s);
-      });
-      
-      courses.forEach(c => {
-        c.subtopics = subMap.get(c.id) || [];
+    // A signed demo/batch student receives only server-authorised courses and topics.
+    const permitted=await permittedCourseIds(req.auth);
+    if(permitted && permitted.ids.length===0) return res.json([]);
+    let sql="SELECT * FROM courses WHERE status='active'"; const args=[];
+    if(permitted && permitted.ids!==null){ sql+=' AND id IN (?)'; args.push(permitted.ids); }
+    sql+=' ORDER BY display_order ASC,id ASC';
+    const [courses]=await pool.query(sql,args);
+    if(courses.length){
+      const ids=courses.map(c=>c.id);
+      const [allTopics]=await pool.query('SELECT * FROM subtopics WHERE course_id IN (?) ORDER BY display_order ASC,id ASC',[ids]);
+      const byCourse=new Map(); allTopics.forEach(topic=>{ if(!byCourse.has(topic.course_id)) byCourse.set(topic.course_id,[]); byCourse.get(topic.course_id).push(topic); });
+      courses.forEach(course=>{
+        let topics=byCourse.get(course.id)||[];
+        if(permitted && permitted.access.access_mode==='demo' && Number(course.id)===Number(permitted.access.demo_course_id)) topics=topics.slice(0,Math.max(0,Number(permitted.access.demo_topic_limit)||2));
+        course.subtopics=topics;
       });
     }
-    
     res.json(courses);
-  } catch (err) {
-    if (err.code === 'ER_NO_SUCH_TABLE') return res.json([]);
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch courses', detail: err.message });
+  } catch(err){
+    if(err.code==='ER_NO_SUCH_TABLE') return res.json([]);
+    console.error(err); res.status(500).json({error:'Failed to fetch courses',detail:err.message});
   }
 });
 
-app.get('/api/courses/:id', async (req, res) => {
-  try {
-    const [courses] = await pool.query('SELECT * FROM courses WHERE id = ?', [req.params.id]);
-    if (courses.length === 0) return res.status(404).json({ error: 'Course not found' });
-    
-    const [subtopics] = await pool.query('SELECT * FROM subtopics WHERE course_id = ? ORDER BY display_order ASC', [req.params.id]);
-    courses[0].subtopics = subtopics;
+app.get('/api/courses/:id', async (req,res)=>{
+  try{
+    const permitted=await permittedCourseIds(req.auth);
+    if(permitted && permitted.ids!==null && !permitted.ids.includes(Number(req.params.id))) return res.status(403).json({error:'This course is not included in your current access.',code:'course_locked'});
+    const [courses]=await pool.query('SELECT * FROM courses WHERE id=?',[req.params.id]);
+    if(!courses.length) return res.status(404).json({error:'Course not found'});
+    const [topics]=await pool.query('SELECT * FROM subtopics WHERE course_id=? ORDER BY display_order ASC,id ASC',[req.params.id]);
+    courses[0].subtopics=(permitted && permitted.access.access_mode==='demo') ? topics.slice(0,Math.max(0,Number(permitted.access.demo_topic_limit)||2)) : topics;
     res.json(courses[0]);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch course' });
-  }
+  }catch(err){res.status(500).json({error:'Failed to fetch course'});}
 });
 
 app.post('/api/courses', async (req, res) => {
@@ -583,6 +698,106 @@ app.delete('/api/courses/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete course' });
   }
+});
+
+
+// =============================================================
+// TRAINER BATCHES & ENROLMENT
+// =============================================================
+async function batchRowsFor(auth) {
+  await ensureAccessTables();
+  const own=auth.role==='trainer';
+  const where=own ? 'WHERE b.trainer_id=?' : '';
+  const args=own?[auth.uid]:[];
+  const [rows]=await pool.query(`SELECT b.*, c.title AS course_title, c.tag AS course_tag,
+      u.full_name AS trainer_name, COUNT(DISTINCT e.student_id) AS enrolled_count,
+      COALESCE(ROUND(AVG(CASE WHEN topics.topic_count>0 THEN COALESCE(done.done_count,0)*100/topics.topic_count ELSE 0 END)),0) AS average_progress
+    FROM batches b JOIN courses c ON c.id=b.course_id JOIN users u ON u.id=b.trainer_id
+    LEFT JOIN batch_enrollments e ON e.batch_id=b.id AND e.status='active'
+    LEFT JOIN (SELECT course_id,COUNT(*) AS topic_count FROM subtopics GROUP BY course_id) topics ON topics.course_id=c.id
+    LEFT JOIN (SELECT lp.student_id,lp.course_name,COUNT(DISTINCT lp.module_index) AS done_count FROM lesson_progress lp GROUP BY lp.student_id,lp.course_name) done ON done.student_id=e.student_id AND done.course_name=c.title
+    ${where} GROUP BY b.id ORDER BY CASE b.status WHEN 'active' THEN 0 ELSE 1 END,b.created_at DESC`,args);
+  return rows.map(r=>Object.assign(r,{enrolled_count:Number(r.enrolled_count)||0,average_progress:Number(r.average_progress)||0}));
+}
+app.get('/api/trainer/dashboard', async (req,res)=>{
+  try{
+    const batches=await batchRowsFor(req.auth);
+    const students=batches.reduce((sum,b)=>sum+b.enrolled_count,0);
+    const avg=batches.length?Math.round(batches.reduce((sum,b)=>sum+b.average_progress,0)/batches.length):0;
+    res.json({mode:req.auth.role==='admin'?'oversight':'trainer',batches,summary:{batches:batches.length,students,average_progress:avg}});
+  }catch(err){console.error('trainer dashboard:',err);res.status(500).json({error:'Could not load trainer dashboard'});}
+});
+app.get('/api/trainer/trainers', async (req,res)=>{
+  if(req.auth.role!=='admin') return res.status(403).json({error:'Admin access required.',code:'admin_required'});
+  try{ await ensureAccessTables(); const [rows]=await pool.query("SELECT id,full_name,email FROM users WHERE role='trainer' ORDER BY full_name");res.json(rows); }
+  catch(err){res.status(500).json({error:'Could not load trainers'});}
+});
+app.get('/api/batches', async (req,res)=>{
+  try{res.json(await batchRowsFor(req.auth));}catch(err){res.status(500).json({error:'Could not load batches'});}
+});
+app.post('/api/batches', async (req,res)=>{
+  const b=req.body||{}, name=String(b.name||'').trim(), courseId=Number(b.course_id), startDate=b.start_date||null,endDate=b.end_date||null;
+  if(name.length<2||name.length>255||!courseId) return res.status(400).json({error:'Give the batch a name and choose a course.'});
+  let trainerId=req.auth.uid;
+  if(req.auth.role==='admin') trainerId=Number(b.trainer_id);
+  if(!trainerId) return res.status(400).json({error:'Choose the trainer who owns this batch.'});
+  try{
+    await ensureAccessTables();
+    const [[trainer],[course]] = await Promise.all([
+      pool.query("SELECT id FROM users WHERE id=? AND role='trainer'",[trainerId]), pool.query("SELECT id FROM courses WHERE id=? AND status='active'",[courseId])
+    ]);
+    if(!trainer.length) return res.status(400).json({error:'Choose a valid trainer account.'});
+    if(!course.length) return res.status(400).json({error:'Choose an active course.'});
+    let code=inviteCode();
+    for(let i=0;i<4;i++){ const [taken]=await pool.query('SELECT id FROM batches WHERE invite_code=?',[code]); if(!taken.length) break; code=inviteCode(); }
+    const [created]=await pool.query('INSERT INTO batches (name,course_id,trainer_id,invite_code,start_date,end_date) VALUES (?,?,?,?,?,?)',[name,courseId,trainerId,code,startDate,endDate]);
+    const [rows]=await pool.query('SELECT * FROM batches WHERE id=?',[created.insertId]); res.status(201).json(rows[0]);
+  }catch(err){console.error('batch create:',err);res.status(500).json({error:'Could not create batch'});}
+});
+app.get('/api/batches/:id/students', async (req,res)=>{
+  try{
+    await ensureAccessTables(); const batch=await ownBatchOrAdmin(req.auth,Number(req.params.id));
+    if(batch===false) return res.status(403).json({error:'This batch belongs to another trainer.',code:'batch_forbidden'}); if(!batch) return res.status(404).json({error:'Batch not found'});
+    const [[course],[topicRows]] = await Promise.all([pool.query('SELECT title FROM courses WHERE id=?',[batch.course_id]),pool.query('SELECT COUNT(*) AS total FROM subtopics WHERE course_id=?',[batch.course_id])]);
+    const [students]=await pool.query(`SELECT u.id,u.full_name,u.email,e.enrolled_at,e.status,COUNT(DISTINCT lp.module_index) AS completed_topics
+      FROM batch_enrollments e JOIN users u ON u.id=e.student_id LEFT JOIN lesson_progress lp ON lp.student_id=u.id AND lp.course_name=?
+      WHERE e.batch_id=? GROUP BY u.id,e.id ORDER BY u.full_name`,[course[0]&&course[0].title||'',batch.id]);
+    const total=Number(topicRows[0].total)||0;
+    res.json({batch,course_title:course[0]&&course[0].title||'',topic_count:total,students:students.map(x=>Object.assign(x,{completed_topics:Number(x.completed_topics)||0,progress:total?Math.min(100,Math.round((Number(x.completed_topics)||0)*100/total)):0}))});
+  }catch(err){console.error('batch students:',err);res.status(500).json({error:'Could not load batch students'});}
+});
+app.post('/api/batches/:id/enrollments', async (req,res)=>{
+  const email=String((req.body||{}).student_email||'').trim().toLowerCase();
+  if(!email) return res.status(400).json({error:'Enter the student email address.'});
+  try{
+    await ensureAccessTables();const batch=await ownBatchOrAdmin(req.auth,Number(req.params.id));
+    if(batch===false) return res.status(403).json({error:'This batch belongs to another trainer.',code:'batch_forbidden'});if(!batch) return res.status(404).json({error:'Batch not found'});
+    const [users]=await pool.query("SELECT id,full_name,email FROM users WHERE email=? AND role='student'",[email]);
+    if(!users.length) return res.status(404).json({error:'No student account exists for that email. Ask them to create their demo account first.'});
+    const student=users[0];
+    await pool.query("INSERT INTO batch_enrollments (batch_id,student_id,status) VALUES (?,?,'active') ON DUPLICATE KEY UPDATE status='active'",[batch.id,student.id]);
+    await pool.query("INSERT INTO student_access (student_id,access_mode,demo_course_id,demo_topic_limit) VALUES (?,'batch',NULL,2) ON DUPLICATE KEY UPDATE access_mode='batch'",[student.id]);
+    res.status(201).json({enrolled:true,student});
+  }catch(err){console.error('enrol student:',err);res.status(500).json({error:'Could not enrol that student'});}
+});
+app.delete('/api/batches/:id/enrollments/:studentId', async (req,res)=>{
+  try{
+    await ensureAccessTables();const batch=await ownBatchOrAdmin(req.auth,Number(req.params.id));
+    if(batch===false) return res.status(403).json({error:'This batch belongs to another trainer.',code:'batch_forbidden'});if(!batch)return res.status(404).json({error:'Batch not found'});
+    const studentId=Number(req.params.studentId);await pool.query('DELETE FROM batch_enrollments WHERE batch_id=? AND student_id=?',[batch.id,studentId]);
+    const [still]=await pool.query("SELECT 1 FROM batch_enrollments WHERE student_id=? AND status='active' LIMIT 1",[studentId]);
+    if(!still.length){const [first]=await pool.query("SELECT id FROM courses WHERE status='active' ORDER BY display_order,id LIMIT 1");await pool.query("INSERT INTO student_access (student_id,access_mode,demo_course_id,demo_topic_limit) VALUES (?,'demo',?,2) ON DUPLICATE KEY UPDATE access_mode='demo',demo_course_id=VALUES(demo_course_id)",[studentId,first.length?first[0].id:null]);}
+    res.json({removed:true});
+  }catch(err){res.status(500).json({error:'Could not remove student from batch'});}
+});
+// A student may self-enrol using a trainer's current invite code. The access change is server-owned.
+app.post('/api/batches/join', async (req,res)=>{
+  const code=String((req.body||{}).invite_code||'').trim().toUpperCase();
+  if(req.auth.role!=='student') return res.status(403).json({error:'Only student accounts can join a batch.'}); if(!code) return res.status(400).json({error:'Enter a batch code.'});
+  try{await ensureAccessTables();const [batches]=await pool.query("SELECT id,name,course_id FROM batches WHERE invite_code=? AND status='active'",[code]);if(!batches.length)return res.status(404).json({error:'That batch code is invalid or no longer active.'});const batch=batches[0];
+    await pool.query("INSERT INTO batch_enrollments (batch_id,student_id,status) VALUES (?,?,'active') ON DUPLICATE KEY UPDATE status='active'",[batch.id,req.auth.uid]);
+    await pool.query("INSERT INTO student_access (student_id,access_mode,demo_course_id,demo_topic_limit) VALUES (?,'batch',NULL,2) ON DUPLICATE KEY UPDATE access_mode='batch'",[req.auth.uid]);res.json({joined:true,batch:{id:batch.id,name:batch.name}});
+  }catch(err){res.status(500).json({error:'Could not join this batch'});}
 });
 
 // =============================================================
@@ -878,6 +1093,7 @@ app.get('/api/progress/course', async (req, res) => {
 app.post('/api/progress', async (req, res) => {
   const { student_id, course_name, module_index } = req.body;
   try {
+    if(!(await mayStudy(req.auth,course_name,module_index))) return res.status(403).json({error:'This lesson is outside your current course access.',code:'course_locked'});
     await pool.query(
       'INSERT IGNORE INTO lesson_progress (student_id, course_name, module_index) VALUES (?, ?, ?)',
       [student_id, course_name, module_index]
@@ -1283,6 +1499,7 @@ app.get('/api/steps', async (req, res) => {
   try {
     const student_id = parseInt(req.query.student_id, 10);
     if (!student_id) return res.status(400).json({ error: 'student_id required' });
+    if(req.query.course_name && !(await mayStudy(req.auth,req.query.course_name,0))) return res.status(403).json({error:'This course is outside your current access.',code:'course_locked'});
     await ensureStepsTable();
     let sql = 'SELECT module_index, step, pct, completed_at FROM lesson_steps WHERE student_id=?';
     const args = [student_id];
@@ -1305,6 +1522,7 @@ app.post('/api/steps', async (req, res) => {
     if (!student_id || !course_name || isNaN(module_index) || !STEP_ORDER.includes(step)) {
       return res.status(400).json({ error: 'student_id, course_name, module_index and a valid step (video|pdf|mcq|ex) are required' });
     }
+    if (!(await mayStudy(req.auth,course_name,module_index))) return res.status(403).json({error:'This lesson is outside your current course access.',code:'course_locked'});
     const pct = Math.max(0, Math.min(100, parseInt(b.pct, 10) || 100));
     await ensureStepsTable();
     const cfg = readStepConfig();
@@ -1375,6 +1593,8 @@ const SERVER = app.listen(PORT, '0.0.0.0', async () => {
   console.log(`📍 Health: http://localhost:${PORT}/health\n`);
   try { await ensureStepsTable(); console.log('[DB] lesson_steps table ready'); } catch (e) { console.warn('[DB] lesson_steps ensure failed (retries on first use):', e.message); }
   try { await ensureTimeTable(); console.log('[DB] user_time table ready'); } catch (e) { console.warn('[DB] user_time ensure failed (retries on first use):', e.message); }
+  try { await ensureAccessTables(); console.log('[DB] trainer/batch tables ready'); } catch (e) { console.warn('[DB] trainer/batch ensure failed (retries on first use):', e.message); }
+  try { await ensureStudentProfileColumns(); console.log('[DB] student profile columns ready'); } catch (e) { console.warn('[DB] student profile ensure failed (retries on signup):', e.message); }
 });
 SERVER.on('error', listenError);
 
