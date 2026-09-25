@@ -120,6 +120,8 @@ html[data-theme="dark"] .resource-complete-pill,body[data-theme="dark"] .resourc
 .lv-empty p{font-size:13px;line-height:1.55;color:var(--text-600,#475569);margin:0 0 8px}
 .lv-empty button{margin-top:4px;border:1px solid var(--border,#cbd5e1);background:var(--surface-hover,#f1f5f9);color:var(--text-900,#0f172a);border-radius:9px;padding:8px 13px;font:800 12.5px var(--font-body);cursor:pointer}
 .lv-empty button:hover{border-color:#0A1930}
+/* A course with no published subtopics must never be rendered inside the video player's overlay. */
+.course-empty-state{max-width:680px;margin:64px auto;padding:34px 36px;border:1px dashed var(--border);border-radius:18px;background:var(--surface);box-shadow:var(--shadow);text-align:center}.course-empty-icon{width:48px;height:48px;margin:0 auto 15px;border-radius:13px;display:grid;place-items:center;background:#E0F2FE;color:#0369A1}.course-empty-icon svg{width:24px;height:24px}.course-empty-state h2{font:700 21px var(--font-display);letter-spacing:-.4px;color:var(--text-900);margin:0}.course-empty-state p{max-width:510px;margin:10px auto 0;color:var(--text-500);font-size:13px;line-height:1.6}.course-empty-state .empty-actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:21px}.course-empty-state .btn{justify-content:center}.course-empty-active .resource-header,.course-empty-active .big-grid,.course-empty-active .content-view{display:none!important}@media(max-width:600px){.course-empty-state{margin:24px 0;padding:26px 20px}}
 </style>
 <link rel="stylesheet" href="softmarc-unified.css">
 
@@ -411,7 +413,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
     <div class="resource-header">
       <div class="resource-header-left">
         <h1 id="lessonTitle">Loading... <span id="lessonMeta">Module 1 of 7</span></h1>
-        <p id="heroSummary">Select a resource type below. Video will show only this particular subtopic's uploaded video.</p>
+        <p id="heroSummary">Open the learning materials for this subtopic. When several videos or documents exist, choose the one you need from the materials panel.</p>
         <div id="moduleCompletePill" class="resource-complete-pill">✓ Subtopic completed</div>
       </div>
       <button class="btn btn-secondary" onclick="window.location.href='courses.html?course='+encodeURIComponent(courseName)">← Back to Subtopics</button>
@@ -423,7 +425,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
         <div class="big-icon">🎥</div>
         <div class="big-content">
           <div class="big-title">Video</div>
-          <div class="big-desc">Only this subtopic's uploaded video</div>
+          <div class="big-desc">Open this subtopic's video playlist</div>
           <div class="big-meta"><span id="videoDurMeta">15 min</span> • MP4 HD</div>
           <span class="complete-badge">✓ Complete</span>
         </div>
@@ -431,8 +433,8 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
       <button class="big-btn pdf" id="pdfResourceBtn" onclick="openResource('pdf')">
         <div class="big-icon">📄</div>
         <div class="big-content">
-          <div class="big-title">PDF</div>
-          <div class="big-desc">Technical notes & drawings</div>
+          <div class="big-title">PDF / PPTX</div>
+          <div class="big-desc">Open this subtopic's PDF / PPTX materials</div>
           <div class="big-meta">PDF Guide</div>
           <span class="complete-badge">✓ Complete</span>
         </div>
@@ -469,7 +471,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
             <div class="lv-hprog"><div class="lv-bar"><i id="lvBarFill"></i></div><span class="lv-pct" id="lvPct">0% Complete</span></div>
           </div>
           <div class="lv-head-right">
-            <button class="lv-btn lv-mini" id="lvPanelToggle">☰ Course Progress</button>
+            <button class="lv-btn lv-mini" id="lvPanelToggle">☰ Materials</button>
             <button class="lv-btn" onclick="showBigButtons()">← Back to Subtopics</button>
           </div>
         </div>
@@ -527,16 +529,9 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
             </div>
           </div>
 
-          <aside class="lv-card lv-panel" id="lvPanel" aria-label="Course progress">
-            <div class="lv-panel-head"><b>Course Progress</b><span class="lv-count" data-lp="count"></span><button class="lv-x" id="lvPanelClose" aria-label="Close panel">✕</button></div>
-            <div class="lv-panel-body">
-              <div data-lp="sum"></div>
-              <div class="lp-sec">This lesson — required order</div>
-              <div class="lp-steps" data-lp="steps"></div>
-              <div class="lv-grp" style="cursor:default"><span class="gv">▾</span><b data-lp="course">Course</b><span class="gn" data-lp="allcount"></span></div>
-              <div class="lv-lessons" data-lp="lessons"></div>
-              <div data-lp="groups"></div>
-            </div>
+          <aside class="lv-card lv-panel" id="lvPanel" aria-label="Subtopic videos">
+            <div class="lv-panel-head"><b>Subtopic videos</b><span class="lv-count" data-material-count="video"></span><button class="lv-x" id="lvPanelClose" aria-label="Close materials">✕</button></div>
+            <div class="lv-panel-body"><p class="lp-sec" data-material-note="video">Running video</p><div class="lp-steps" data-material-list="video"></div></div>
           </aside>
         </div><!-- /lv-cols -->
 
@@ -556,7 +551,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
             <div class="lv-hprog"><div class="lv-bar"><i id="pvBarFill"></i></div><span class="lv-pct" id="pvPct">0% Complete</span></div>
           </div>
           <div class="lv-head-right">
-            <button class="lv-btn lv-mini" id="pvPanelToggle">☰ Course Progress</button>
+            <button class="lv-btn lv-mini" id="pvPanelToggle">☰ Materials</button>
             <button class="lv-btn" onclick="showBigButtons()">← Back to Subtopics</button>
           </div>
         </div>
@@ -637,16 +632,9 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
             </div>
           </div>
 
-          <aside class="lv-card lv-panel" id="pvPanel" aria-label="Course progress">
-            <div class="lv-panel-head"><b>Course Progress</b><span class="lv-count" data-lp="count"></span><button class="lv-x" id="pvPanelClose" aria-label="Close panel">✕</button></div>
-            <div class="lv-panel-body">
-              <div data-lp="sum"></div>
-              <div class="lp-sec">This lesson — required order</div>
-              <div class="lp-steps" data-lp="steps"></div>
-              <div class="lv-grp" style="cursor:default"><span class="gv">▾</span><b data-lp="course">Course</b><span class="gn" data-lp="allcount"></span></div>
-              <div class="lv-lessons" data-lp="lessons"></div>
-              <div data-lp="groups"></div>
-            </div>
+          <aside class="lv-card lv-panel" id="pvPanel" aria-label="Subtopic documents">
+            <div class="lv-panel-head"><b>PDF &amp; presentations</b><span class="lv-count" data-material-count="document"></span><button class="lv-x" id="pvPanelClose" aria-label="Close materials">✕</button></div>
+            <div class="lv-panel-body"><p class="lp-sec" data-material-note="document">Running document</p><div class="lp-steps" data-material-list="document"></div></div>
           </aside>
         </div><!-- /pv lv-cols -->
 
@@ -666,7 +654,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
   </div>
 </main>
 <div class="toast" id="toast"></div>
-<script src="softmarc-content.js?v=14"></script>
+<script src="softmarc-content.js?v=39"></script>
 <script>
 // Auth
 const _raw = localStorage.getItem('softmarc_user');
@@ -725,14 +713,28 @@ const modules = [];
 let currentMod = { title: 'Loading\u2026', dur: '', videoUrl: '', pdfUrl: '', exercise: '' };
 let contentKnown = false;            // false until the database has answered for this page
 let contentState = '';
-function signature(){ return JSON.stringify([modules.map(m => [m.title, m.videoUrl, m.pdfUrl, m.exercise]), currentMod && currentMod.title]); }
+function materialList(mod, kind){
+  const stored=Array.isArray(mod&&mod.resources)?mod.resources:[];
+  const list=stored.filter(r=>(r.resource_type||r.type)===(kind==='video'?'video':'document')).map((r,i)=>({id:r.id||('db-'+kind+'-'+i),kind,title:r.title||'',url:r.file_url||r.url||'',order:Number(r.display_order)||0})).filter(r=>r.url);
+  const legacy=kind==='video'?String((mod&&mod.videoUrl)||'').trim():String((mod&&mod.pdfUrl)||'').trim();
+  if(legacy&&!list.some(r=>r.url===legacy))list.push({id:'legacy-'+kind,kind,title:'',url:legacy,order:-1});
+  return list.sort((a,b)=>a.order-b.order||String(a.title).localeCompare(String(b.title)));
+}
+function preparePlaylist(mod){
+  if(!mod)return mod;
+  const videos=materialList(mod,'video'),docs=materialList(mod,'document');
+  if(videos.length&&!mod.videoUrl)mod.videoUrl=videos[0].url;
+  if(docs.length&&!mod.pdfUrl)mod.pdfUrl=docs[0].url;
+  return mod;
+}
+function signature(){ return JSON.stringify([modules.map(m => [m.title, m.videoUrl, m.pdfUrl, (m.resources||[]).map(r=>[r.id,r.file_url]) ,m.exercise]), currentMod && currentMod.title]); }
 function adoptCourseContent(){
   const before = contentState;
   canonicaliseCourseName();
   const rows = __courseRows(courseName);
   modules.length = 0;
-  (rows || []).forEach(m => modules.push(Object.assign({}, m)));
-  currentMod = modules[moduleIdx] || (modules.length
+  (rows || []).forEach(m => modules.push(preparePlaylist(Object.assign({}, m))));
+  currentMod = preparePlaylist(modules[moduleIdx]) || (modules.length
     ? { title: 'Unknown', dur: '', videoUrl: '', pdfUrl: '', exercise: '' }
     : { title: courseName || 'This lesson', dur: '', videoUrl: '', pdfUrl: '', exercise: '' });
   contentKnown = true;
@@ -742,15 +744,14 @@ function adoptCourseContent(){
   return contentState !== before;
 }
 function renderNoContent(){
-  const host = document.querySelector('.lv-main') || document.querySelector('main') || document.body;
-  let el = document.getElementById('lvNoContent');
-  if (!contentKnown || modules.length) { if (el) el.remove(); return; }
-  if (!el) { el = document.createElement('div'); el.id = 'lvNoContent'; el.className = 'lv-empty'; host.insertBefore(el, host.firstChild); }
-  el.innerHTML = '<h3>Nothing to open here yet</h3><p>This course has no lessons in the database yet, or the video/PDF was not saved on its subtopic.</p>' +
-    '<p>If you are the trainer: <b>Course Manager \u2192 Subtopics</b> (add the subtopic and press Save), then <b>Videos, PDF & Exercises</b> \u2192 press the Save button for that item and wait for \u201cFile is reachable\u201d.</p>' +
-    '<button type="button">Check again</button>';
-  const btn = el.querySelector('button');
-  if (btn) btn.onclick = function(){ location.reload(); };
+  const noSubtopics=contentKnown&&!modules.length;
+  document.body.classList.toggle('course-empty-active',noSubtopics);
+  let el=document.getElementById('lvNoContent');
+  if(!noSubtopics){if(el)el.remove();return;}
+  const host=document.querySelector('.content')||document.querySelector('main')||document.body;
+  if(!el){el=document.createElement('section');el.id='lvNoContent';el.className='course-empty-state';host.insertBefore(el,host.firstChild);}
+  const canManage=_user&&_user.role==='admin';
+  el.innerHTML='<div class="course-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div><h2>No subtopics published yet</h2><p>This course does not have a published subtopic or learning material yet. Once a subtopic and its video, PDF, or PowerPoint are added, the lesson player will open normally.</p><div class="empty-actions"><a class="btn btn-secondary" href="courses.html?course='+encodeURIComponent(courseName)+'">← Back to My Courses</a>'+(canManage?'<a class="btn btn-primary" href="admin.html">Open Course Manager</a>':'')+'</div>';
 }
 adoptCourseContent();
 
@@ -830,12 +831,14 @@ function updateCompletionUI(){
 }
 
 function showBigButtons(){
+  if(!modules.length){renderNoContent();return;}
   document.getElementById('bigGrid').style.display='grid';
   document.querySelectorAll('.content-view').forEach(v=>v.classList.remove('active'));
   document.getElementById('lessonTitle').textContent = currentMod.title;
 }
 
 function openResource(type){
+  if(!modules.length){renderNoContent();return;}
   document.getElementById('bigGrid').style.display='none';
   document.querySelectorAll('.content-view').forEach(v=>v.classList.remove('active'));
   if(type==='video'){
@@ -932,7 +935,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   function buildHeader(){
     var m=currentMod||{};
     var set=function(id,v){var e=$(id);if(e)e.textContent=v;};
-    set('lvTopicName',courseName||'Main Topic');
+    set('lvTopicName',m.mainTopic||courseName||'Main Topic');
     set('lvSubName',m.title||'Lesson');
     set('lvInfoTitle',m.title||'Lesson');
     var desc=m.description||m.summary||'';
@@ -1235,7 +1238,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   }
   function buildHead(){
     var m=cur();
-    $('pvKicker').textContent=courseName||'Main Topic';
+    $('pvKicker').textContent=m.mainTopic||courseName||'Main Topic';
     $('pvTitle').textContent=(m.title||'Lesson')+' — PDF';
     $('pvInfoTitle').textContent=m.title||'PDF Lesson';
     var desc=m.description||m.summary||'';
@@ -1405,7 +1408,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
         try{ $('pvViewer').classList.add('pptbroken'); }catch(e){}
         status('The slides could not be read from the server',
           'The path '+absUrl(url).replace(/^https?:\/\/[^/]+/,'')+' answered '+(reach.status||'nothing')+
-          '. In Course Manager \u2192 \u201CVideos, PDF & Exercises\u201D check the PDF/PPT path, or upload the file again.', false);
+          '. In Course Manager \u2192 \u201CSubtopic Materials\u201D check the PDF/PPT path, or upload the file again.', false);
         startTimer(); syncUI(); return;
       }
       setPptFrame();
@@ -1692,97 +1695,26 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
   }
 
   /* ---------- shared panel ---------- */
+  function resourceIcon(kind){return kind==='video'?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';}
+  function resourceName(item,kind,index){return item.title||((kind==='video'?'Video ':'Document ')+(index+1));}
+  function chosenMaterialId(kind){return window.__softmarcMaterialSelection&&window.__softmarcMaterialSelection[kind];}
+  function chooseMaterial(kind,id){
+    var list=materialList(currentMod,kind),item=list.filter(function(x){return String(x.id)===String(id);})[0];if(!item)return;
+    window.__softmarcMaterialSelection=window.__softmarcMaterialSelection||{};window.__softmarcMaterialSelection[kind]=item.id;
+    if(kind==='video')currentMod.videoUrl=item.url;else currentMod.pdfUrl=item.url;
+    if(kind==='video')openResource('video');else openResource('pdf');
+  }
   function renderPanel(root){
-    if(!root||!ready)return;
-    var q=function(sel){return root.querySelector(sel);};
-    var act=(PV&&PV.classList.contains('active'))?'pdf':((V&&V.classList.contains('active'))?'video':null);
-    var reqd=required(moduleIdx);
-    var rows=STEPS.map(function(s,ix){return {n:ix+1,icon:s.icon,kicker:s.name,k:s.k,type:s.k==='ex'?'exercise':s.k,title:(typeof currentMod!=='undefined'&&currentMod&&currentMod.title)||''};});
-    var nx=modules[moduleIdx+1];
-    rows.push({n:5,icon:nx?'➜':'🎓',kicker:nx?'Next Subtopic':'Course Finish',k:'__next',type:null,title:nx?nx.title:'Certificate & feedback'});
-    var doneN=0,html='';
-    rows.forEach(function(r){
-      var cur=r.k===act,dn=false,lock='';
-      if(r.k==='__next'){lock=lessonComplete(moduleIdx)?'':'Locked';}
-      else{dn=stepDone(moduleIdx,r.k);lock=dn?'':blockReason(moduleIdx,r.k);}
-      if(dn)doneN++;
-      if(r.k==='__next'&&!lock)doneN++;
-      var mcqAuto=(r.k==='mcq'&&dn&&!mcqRequired()&&!(map[moduleIdx]&&map[moduleIdx].mcq));
-      var pill=r.k==='__next'
-        ? (lock?'<span class="lp-pill pl">🔒 Locked</span>':'<span class="lp-pill pa">'+(nx?'Open →':'Continue →')+'</span>')
-        : (dn?(mcqAuto?'<span class="lp-pill pl">No quiz set</span>':'<span class="lp-pill pc">✓ Completed</span>')
-          :(lock?'<span class="lp-pill pl">🔒 Locked</span>'
-            :(cur?'<span class="lp-pill pi">In Progress</span>'
-              :(reqd[r.k]?'<span class="lp-pill pa">🔓 Available</span>':'<span class="lp-pill pl">Not required</span>'))));
-      var meta=(r.k==='video'&&reqd.video&&!dn&&stepPct(moduleIdx,'video')>2)?'<span class="lp-k" style="letter-spacing:0;text-transform:none;color:var(--lv-accent)">'+stepPct(moduleIdx,'video')+'% watched</span>':'';
-      html+='<button class="lp-step'+(cur?' current':'')+(dn?' done':'')+(lock?' locked':'')+'" data-step="'+r.k+'"'+(lock?' data-tip="'+esc(lock)+'"':'')+'>'
-        +'<span class="lp-n">'+(r.n<10?'0':'')+r.n+'</span>'
-        +'<span class="lp-ico">'+(r.k==='__next'?r.icon:(lock?'🔒':(dn?'✓':r.icon)))+'</span>'
-        +'<span class="lp-main"><span class="lp-k">'+esc(r.kicker)+'</span><span class="lp-t">'+esc(r.title)+'</span>'+meta+'</span>'
-        +pill+'</button>';
-    });
-    var sb=q('[data-lp="steps"]');
-    if(sb){
-      sb.innerHTML=html;
-      sb.querySelectorAll('.lp-step').forEach(function(b){
-        b.onclick=function(){
-          var k=b.getAttribute('data-step');
-          closeDrawer(root);
-          if(k==='__next'){
-            if(!lessonComplete(moduleIdx)){toast('🔒 Locked — complete every step of this lesson first.');return;}
-            if(nx)location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+(moduleIdx+1);
-            else location.href='certificates.html';
-            return;
-          }
-          var why=blockReason(moduleIdx,k);
-          if(why){toast('🔒 Locked — '+why);return;}
-          var s=STEPS.filter(function(x){return x.k===k;})[0];
-          if(s&&k!==act)openResource(s.type);
-        };
-      });
-    }
-    var tot=rows.length, pct=Math.round(doneN/tot*100);
-    var sum=q('[data-lp="sum"]');
-    if(sum)sum.innerHTML='<div class="lp-sum"><div class="lp-sum-row"><span><b>'+doneN+'</b> / '+tot+' Completed</span><span>'+pct+'%</span></div><div class="lv-bar"><i style="width:'+pct+'%"></i></div></div>';
-    var cnt=q('[data-lp="count"]'); if(cnt)cnt.textContent=doneN+'/'+tot;
-    /* all lessons with locks */
-    var lh='';
-    for(var i=0;i<modules.length;i++){
-      var m=modules[i],dnL=lessonComplete(i),unL=unlocked(i),curL=i===moduleIdx;
-      var lr=unL?'':(blockReason(i,'video')||('Finish lesson '+i+' first.'));
-      lh+='<button class="lv-lesson'+(curL?' current':'')+(dnL?' done':'')+(unL?'':' locked')+'" data-i="'+i+'"'+(lr?' data-tip="'+esc(lr)+'"':'')+'>'
-        +'<span class="lv-st">'+(dnL?'✓':(unL?(curL?'▶':''):'🔒'))+'</span>'
-        +'<span class="lv-lico">'+((m.videoUrl||'').trim()?'🎥':((m.pdfUrl||'').trim()?'📄':'·'))+'</span>'
-        +'<span class="lv-lmain"><span class="lv-lt">'+((i+1)+'. '+esc(m.title))+'</span>'
-        +'<span class="lv-lm">'+(esc(m.dur||'15 min')+(dnL?' · complete':(unL?'':' · 🔒 locked')))+'</span></span>'
-        +(dnL?'<span class="lv-lpill pc">Completed</span>':(curL?'<span class="lv-lpill pi">In Progress</span>':''))
-        +'</button>';
-    }
-    var lb=q('[data-lp="lessons"]');
-    if(lb){
-      lb.innerHTML=lh;
-      lb.querySelectorAll('.lv-lesson').forEach(function(b){
-        b.onclick=function(){
-          var i=+b.getAttribute('data-i'); if(isNaN(i))return;
-          closeDrawer(root);
-          if(i===moduleIdx)return;
-          if(!unlocked(i)){toast('🔒 Lesson '+(i+1)+' is locked — '+ (blockReason(i,'video')||'finish earlier lessons first.'));return;}
-          location.href='lesson.html?course='+encodeURIComponent(courseName)+'&module='+i;
-        };
-      });
-    }
-    var ac=q('[data-lp="allcount"]'); if(ac)ac.textContent=modules.length+' Lessons';
-    var co=q('[data-lp="course"]'); if(co)co.textContent=courseName||'Course';
-    var others=[];
-    try{ if(window.SoftmarcContent&&SoftmarcContent.getCourses){others=SoftmarcContent.getCourses().filter(function(c){return c&&c.title&&c.title!==courseName;});} }catch(e){}
-    var g=q('[data-lp="groups"]');
-    if(g){
-      g.innerHTML=others.map(function(c){
-        var k=(c.subtopics&&c.subtopics.length)||0;
-        return '<button class="lv-grp" data-c="'+esc(c.title)+'"><span class="gv">▸</span><b>'+esc(c.title)+'</b><span class="gn">'+(k?k+' Lessons':'Course')+'</span></button>';
-      }).join('');
-      g.querySelectorAll('button.lv-grp').forEach(function(b){b.onclick=function(){location.href='courses.html?course='+encodeURIComponent(b.getAttribute('data-c'));};});
-    }
+    if(!root)return;
+    var kind=root===PV?'document':'video', list=materialList(currentMod,kind),selected=chosenMaterialId(kind);
+    if(!selected&&list[0]){selected=list[0].id;window.__softmarcMaterialSelection=window.__softmarcMaterialSelection||{};window.__softmarcMaterialSelection[kind]=selected;}
+    var box=root.querySelector('[data-material-list="'+kind+'"]'),note=root.querySelector('[data-material-note="'+kind+'"]'),count=root.querySelector('[data-material-count="'+kind+'"]');
+    if(count)count.textContent=list.length?String(list.length):'0';
+    if(note)note.textContent=list.length>1?(kind==='video'?list.length+' videos in this subtopic — choose one to play.':list.length+' PDFs / presentations in this subtopic — choose one to open.'):(kind==='video'?'Running video':'Running document');
+    if(!box)return;
+    if(!list.length){box.innerHTML='<div class="empty-state">No '+(kind==='video'?'video':'PDF or PPTX')+' has been added to this subtopic yet.</div>';return;}
+    box.innerHTML=list.map(function(item,i){var active=String(item.id)===String(selected),ext=/\.pptx(?:[?#].*)?$/i.test(item.url)?'Presentation':(kind==='video'?'Video':'PDF');return '<button class="lp-step '+(active?'current':'')+'" data-material="'+esc(item.id)+'"><span class="lp-n">'+String(i+1).padStart(2,'0')+'</span><span class="lp-ico">'+resourceIcon(kind)+'</span><span class="lp-main"><span class="lp-k">'+ext+'</span><span class="lp-t">'+esc(resourceName(item,kind,i))+'</span></span><span class="lp-pill '+(active?'pi':'pa')+'">'+(active?(kind==='video'?'Playing':'Open'):'Open →')+'</span></button>';}).join('');
+    box.querySelectorAll('[data-material]').forEach(function(button){button.onclick=function(){var id=button.getAttribute('data-material');if(String(id)!==String(selected))chooseMaterial(kind,id);};});
   }
   function closeDrawer(root){
     if(!root)return;

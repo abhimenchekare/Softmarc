@@ -195,6 +195,70 @@ function ensureStudentProfileColumns(){
   })().catch(err=>{studentProfileColumnsReady=null;throw err;});
   return studentProfileColumnsReady;
 }
+
+
+// A course has main subtopics, and each main subtopic can organise child subtopics.
+// Existing rows remain main subtopics (parent_subtopic_id is NULL).
+let subtopicHierarchyReady=null;
+function ensureSubtopicHierarchyColumn(){
+  if(!subtopicHierarchyReady) subtopicHierarchyReady=(async()=>{
+    const [cols]=await pool.query(`SELECT COLUMN_NAME AS n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='subtopics'`);
+    const have=new Set(cols.map(c=>c.n));
+    if(!have.has('parent_subtopic_id')) await pool.query('ALTER TABLE subtopics ADD COLUMN parent_subtopic_id INT NULL AFTER course_id');
+    const [indexes]=await pool.query(`SELECT INDEX_NAME AS n FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='subtopics' AND INDEX_NAME='idx_subtopics_parent'`);
+    if(!indexes.length) await pool.query('CREATE INDEX idx_subtopics_parent ON subtopics (course_id,parent_subtopic_id,display_order,id)');
+  })().catch(err=>{subtopicHierarchyReady=null;throw err;});
+  return subtopicHierarchyReady;
+}
+async function validateSubtopicParent(courseId,parentId){
+  if(parentId===undefined||parentId===null||parentId==='') return null;
+  const id=Number(parentId);if(!Number.isInteger(id)||id<1) throw Object.assign(new Error('Choose a valid main subtopic.'),{status:400});
+  const [rows]=await pool.query('SELECT id,course_id,parent_subtopic_id FROM subtopics WHERE id=?',[id]);
+  if(!rows.length||Number(rows[0].course_id)!==Number(courseId)||rows[0].parent_subtopic_id!==null) throw Object.assign(new Error('Choose a main subtopic from this course.'),{status:400});
+  return id;
+}
+
+
+// Demo access is two main subtopics, including all child subtopics inside those two groups.
+function demoVisibleSubtopics(topics,limit){
+  const rows=topics||[], roots=rows.filter(t=>t.parent_subtopic_id===null||t.parent_subtopic_id===undefined||t.parent_subtopic_id==='');
+  const chosen=new Set(roots.slice(0,Math.max(0,Number(limit)||2)).map(t=>Number(t.id)));
+  const hasChild=new Set(rows.filter(t=>t.parent_subtopic_id!==null&&t.parent_subtopic_id!==undefined&&t.parent_subtopic_id!=='').map(t=>Number(t.parent_subtopic_id)));
+  return rows.filter(t=>{
+    const parent=t.parent_subtopic_id;
+    if(parent!==null&&parent!==undefined&&parent!=='') return chosen.has(Number(parent));
+    return chosen.has(Number(t.id)) && !hasChild.has(Number(t.id));
+  });
+}
+
+// A subtopic can hold a playlist of videos and a library of PDF/PPTX documents.
+// The legacy video_url/pdf_url columns remain supported for existing courses.
+let subtopicResourcesReady=null;
+function ensureSubtopicResourcesTable(){
+  if(!subtopicResourcesReady) subtopicResourcesReady=pool.query(`CREATE TABLE IF NOT EXISTS subtopic_resources (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    subtopic_id INT NOT NULL,
+    resource_type VARCHAR(16) NOT NULL,
+    title VARCHAR(255) NOT NULL DEFAULT '',
+    file_url TEXT NOT NULL,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_subtopic_resources (subtopic_id, display_order, id),
+    CONSTRAINT fk_subtopic_resources_subtopic FOREIGN KEY (subtopic_id) REFERENCES subtopics(id) ON DELETE CASCADE
+  )`).catch(err=>{subtopicResourcesReady=null;throw err;});
+  return subtopicResourcesReady;
+}
+async function addResourcesToSubtopics(topics){
+  await ensureSubtopicResourcesTable();
+  if(!topics || !topics.length) return topics||[];
+  const ids=topics.map(t=>Number(t.id)).filter(Boolean);
+  const [rows]=ids.length ? await pool.query('SELECT * FROM subtopic_resources WHERE subtopic_id IN (?) ORDER BY display_order ASC,id ASC',[ids]) : [[]];
+  const byId=new Map(); (rows||[]).forEach(row=>{if(!byId.has(Number(row.subtopic_id)))byId.set(Number(row.subtopic_id),[]);byId.get(Number(row.subtopic_id)).push(row);});
+  topics.forEach(topic=>{topic.resources=byId.get(Number(topic.id))||[];});
+  return topics;
+}
+
 function publicUser(user, access) {
   return { id:user.id, full_name:user.full_name, email:user.email, role:user.role, phone:user.phone,
     country_code:user.country_code, country:user.country, state_region:user.state_region, city:user.city,
@@ -223,7 +287,10 @@ async function mayStudy(auth, courseName, moduleIndex) {
   if (permitted.ids === null) return true;
   const [rows] = await pool.query('SELECT id FROM courses WHERE title=? LIMIT 1', [courseName]);
   if (!rows.length || !permitted.ids.includes(Number(rows[0].id))) return false;
-  return !(permitted.access.access_mode === 'demo' && Number(moduleIndex) >= Number(permitted.access.demo_topic_limit || 2));
+  if(permitted.access.access_mode!=='demo') return true;
+  await ensureSubtopicHierarchyColumn();
+  const [topics]=await pool.query('SELECT id,parent_subtopic_id,display_order FROM subtopics WHERE course_id=? ORDER BY display_order ASC,id ASC',[rows[0].id]);
+  return Number(moduleIndex)>=0 && Number(moduleIndex)<demoVisibleSubtopics(topics,permitted.access.demo_topic_limit).length;
 }
 function inviteCode() { return 'SM-' + crypto.randomBytes(4).toString('hex').toUpperCase(); }
 async function ownBatchOrAdmin(auth, batchId) {
@@ -288,7 +355,8 @@ const PUB = [[/^POST$/, /^\/(login|signup)$/], [/^GET$/, /^\/(health|config)$/]]
 const ADMIN = [[/^GET$/, /^\/(users|submissions|analytics\/summary)$/], [/^POST$/, /^\/(config|upload|users|courses|quizzes)$/],
   [/^GET$/, /^\/quizzes\/\d+\/questions$/],                       // correct answers: admin only
   [/^PUT$/, /^\/quizzes\/\d+\/assessment$/],                       // one-save quiz editor
-  [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
+  [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^POST$/, /^\/subtopics\/\d+\/resources$/],
+  [/^(PUT|DELETE)$/, /^\/subtopic-resources\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
   [/^DELETE$/, /^\/users\/\d+$/]];
 const SCOPED = [/^\/(progress|time|steps)/, /^\/users\/\d+/, /^\/quizzes\/\d+\/submit$/];
 function claimedId(req) {
@@ -617,6 +685,7 @@ app.delete('/api/users/:id', async (req, res) => {
 
 app.get('/api/courses', async (req, res) => {
   try {
+    await ensureSubtopicHierarchyColumn();
     // A signed demo/batch student receives only server-authorised courses and topics.
     const permitted=await permittedCourseIds(req.auth);
     if(permitted && permitted.ids.length===0) return res.json([]);
@@ -627,10 +696,11 @@ app.get('/api/courses', async (req, res) => {
     if(courses.length){
       const ids=courses.map(c=>c.id);
       const [allTopics]=await pool.query('SELECT * FROM subtopics WHERE course_id IN (?) ORDER BY display_order ASC,id ASC',[ids]);
+      await addResourcesToSubtopics(allTopics);
       const byCourse=new Map(); allTopics.forEach(topic=>{ if(!byCourse.has(topic.course_id)) byCourse.set(topic.course_id,[]); byCourse.get(topic.course_id).push(topic); });
       courses.forEach(course=>{
         let topics=byCourse.get(course.id)||[];
-        if(permitted && permitted.access.access_mode==='demo' && Number(course.id)===Number(permitted.access.demo_course_id)) topics=topics.slice(0,Math.max(0,Number(permitted.access.demo_topic_limit)||2));
+        if(permitted && permitted.access.access_mode==='demo' && Number(course.id)===Number(permitted.access.demo_course_id)) topics=demoVisibleSubtopics(topics,permitted.access.demo_topic_limit);
         course.subtopics=topics;
       });
     }
@@ -643,12 +713,14 @@ app.get('/api/courses', async (req, res) => {
 
 app.get('/api/courses/:id', async (req,res)=>{
   try{
+    await ensureSubtopicHierarchyColumn();
     const permitted=await permittedCourseIds(req.auth);
     if(permitted && permitted.ids!==null && !permitted.ids.includes(Number(req.params.id))) return res.status(403).json({error:'This course is not included in your current access.',code:'course_locked'});
     const [courses]=await pool.query('SELECT * FROM courses WHERE id=?',[req.params.id]);
     if(!courses.length) return res.status(404).json({error:'Course not found'});
     const [topics]=await pool.query('SELECT * FROM subtopics WHERE course_id=? ORDER BY display_order ASC,id ASC',[req.params.id]);
-    courses[0].subtopics=(permitted && permitted.access.access_mode==='demo') ? topics.slice(0,Math.max(0,Number(permitted.access.demo_topic_limit)||2)) : topics;
+    await addResourcesToSubtopics(topics);
+    courses[0].subtopics=(permitted && permitted.access.access_mode==='demo') ? demoVisibleSubtopics(topics,permitted.access.demo_topic_limit) : topics;
     res.json(courses[0]);
   }catch(err){res.status(500).json({error:'Failed to fetch course'});}
 });
@@ -805,45 +877,89 @@ app.post('/api/batches/join', async (req,res)=>{
 // =============================================================
 
 app.post('/api/courses/:id/subtopics', async (req, res) => {
-  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order } = req.body;
+  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order, parent_subtopic_id } = req.body;
   if (!title) return res.status(400).json({error: 'title is required'});
-
   try {
+    await ensureSubtopicHierarchyColumn();
+    const parentId=await validateSubtopicParent(req.params.id,parent_subtopic_id);
     const [result] = await pool.query(
-      'INSERT INTO subtopics (course_id, title, slug, dur, description, video_url, pdf_url, exercise, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [req.params.id, title, slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), dur || '15 min', description || '', video_url || '', pdf_url || '', exercise || '', display_order || 0]
+      'INSERT INTO subtopics (course_id, parent_subtopic_id, title, slug, dur, description, video_url, pdf_url, exercise, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [req.params.id,parentId,title,slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),dur || '15 min',description || '',video_url || '',pdf_url || '',exercise || '',display_order || 0]
     );
     const [sub] = await pool.query('SELECT * FROM subtopics WHERE id = ?', [result.insertId]);
     res.status(201).json(sub[0]);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create subtopic' });
+    res.status(err.status||500).json({ error: err.status ? err.message : 'Failed to create subtopic' });
   }
 });
 
 app.put('/api/subtopics/:id', async (req, res) => {
-  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order } = req.body;
+  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order, parent_subtopic_id } = req.body;
   try {
+    await ensureSubtopicHierarchyColumn();
+    const [old]=await pool.query('SELECT * FROM subtopics WHERE id=?',[req.params.id]);
+    if(!old.length) return res.status(404).json({ error: 'Subtopic not found' });
+    const parentId=parent_subtopic_id===undefined?undefined:await validateSubtopicParent(old[0].course_id,parent_subtopic_id);
+    if(parentId&&Number(parentId)===Number(req.params.id)) return res.status(400).json({error:'A subtopic cannot be its own parent.'});
     await pool.query(
-      'UPDATE subtopics SET title = COALESCE(?, title), slug = COALESCE(?, slug), dur = COALESCE(?, dur), description = COALESCE(?, description), video_url = COALESCE(?, video_url), pdf_url = COALESCE(?, pdf_url), exercise = COALESCE(?, exercise), display_order = COALESCE(?, display_order), updated_at = NOW() WHERE id = ?',
-      [title, slug, dur, description, video_url, pdf_url, exercise, display_order, req.params.id]
+      'UPDATE subtopics SET title = COALESCE(?, title), slug = COALESCE(?, slug), dur = COALESCE(?, dur), description = COALESCE(?, description), video_url = COALESCE(?, video_url), pdf_url = COALESCE(?, pdf_url), exercise = COALESCE(?, exercise), display_order = COALESCE(?, display_order), parent_subtopic_id = COALESCE(?, parent_subtopic_id), updated_at = NOW() WHERE id = ?',
+      [title,slug,dur,description,video_url,pdf_url,exercise,display_order,parentId===undefined?null:parentId,req.params.id]
     );
     const [sub] = await pool.query('SELECT * FROM subtopics WHERE id = ?', [req.params.id]);
-    if (sub.length === 0) return res.status(404).json({ error: 'Subtopic not found' });
     res.json(sub[0]);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to update subtopic' });
+    res.status(err.status||500).json({ error: err.status ? err.message : 'Failed to update subtopic' });
   }
 });
 
 app.delete('/api/subtopics/:id', async (req, res) => {
   try {
+    await ensureSubtopicHierarchyColumn();
     const [sub] = await pool.query('SELECT id, title FROM subtopics WHERE id = ?', [req.params.id]);
     if (sub.length === 0) return res.status(404).json({ error: 'Subtopic not found' });
+    const [children]=await pool.query('SELECT id FROM subtopics WHERE parent_subtopic_id=?',[req.params.id]);
+    if(children.length) await pool.query('DELETE FROM subtopics WHERE parent_subtopic_id=?',[req.params.id]);
     await pool.query('DELETE FROM subtopics WHERE id = ?', [req.params.id]);
-    res.json({ deleted: true, subtopic: sub[0] });
+    res.json({ deleted: true, subtopic: sub[0], deleted_children:children.length });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete subtopic' });
   }
+});
+
+// =============================================================
+// SUBTOPIC RESOURCE PLAYLISTS — multiple videos and PDF/PPTX per subtopic
+// =============================================================
+function resourceType(body){
+  const t=String((body||{}).resource_type||'').trim().toLowerCase();
+  return t==='video'||t==='document'?t:'';
+}
+function resourceFile(body){ return String((body||{}).file_url||'').trim(); }
+function resourceTitle(body,file){ return String((body||{}).title||'').trim().slice(0,255) || path.basename(String(file||'').split(/[?#]/)[0]) || 'Learning material'; }
+function isSupportedDocument(file){ return /\.(pdf|pptx)(?:[?#].*)?$/i.test(String(file||'')); }
+app.get('/api/subtopics/:id/resources', async (req,res)=>{
+  try{await ensureSubtopicResourcesTable();const [rows]=await pool.query('SELECT * FROM subtopic_resources WHERE subtopic_id=? ORDER BY display_order ASC,id ASC',[req.params.id]);res.json(rows);}
+  catch(err){res.status(500).json({error:'Failed to fetch subtopic resources'});}
+});
+app.post('/api/subtopics/:id/resources', async (req,res)=>{
+  const type=resourceType(req.body),file=resourceFile(req.body);
+  if(!type||!file) return res.status(400).json({error:'A resource type and file URL are required.'});
+  if(type==='document'&&!isSupportedDocument(file)) return res.status(400).json({error:'Documents must be PDF or PPTX files.'});
+  try{await ensureSubtopicResourcesTable();const [topic]=await pool.query('SELECT id FROM subtopics WHERE id=?',[req.params.id]);if(!topic.length)return res.status(404).json({error:'Subtopic not found'});
+    const order=Math.max(0,Number(req.body.display_order)||0),title=resourceTitle(req.body,file);
+    const [created]=await pool.query('INSERT INTO subtopic_resources (subtopic_id,resource_type,title,file_url,display_order) VALUES (?,?,?,?,?)',[req.params.id,type,title,file,order]);
+    const [rows]=await pool.query('SELECT * FROM subtopic_resources WHERE id=?',[created.insertId]);res.status(201).json(rows[0]);
+  }catch(err){console.error('resource create:',err);res.status(500).json({error:'Failed to add learning material'});}
+});
+app.put('/api/subtopic-resources/:id', async (req,res)=>{
+  const body=req.body||{},file=body.file_url===undefined?null:resourceFile(body);
+  if(file!==null&&!file) return res.status(400).json({error:'File URL cannot be empty.'});
+  if(file!==null&&body.resource_type==='document'&&!isSupportedDocument(file)) return res.status(400).json({error:'Documents must be PDF or PPTX files.'});
+  try{await ensureSubtopicResourcesTable();await pool.query('UPDATE subtopic_resources SET title=COALESCE(?,title),file_url=COALESCE(?,file_url),display_order=COALESCE(?,display_order),updated_at=NOW() WHERE id=?',[body.title===undefined?null:String(body.title).trim().slice(0,255),file,body.display_order===undefined?null:Math.max(0,Number(body.display_order)||0),req.params.id]);const [rows]=await pool.query('SELECT * FROM subtopic_resources WHERE id=?',[req.params.id]);if(!rows.length)return res.status(404).json({error:'Learning material not found'});res.json(rows[0]);}
+  catch(err){res.status(500).json({error:'Failed to update learning material'});}
+});
+app.delete('/api/subtopic-resources/:id', async (req,res)=>{
+  try{await ensureSubtopicResourcesTable();const [result]=await pool.query('DELETE FROM subtopic_resources WHERE id=?',[req.params.id]);if(!result.affectedRows)return res.status(404).json({error:'Learning material not found'});res.json({deleted:true,id:Number(req.params.id)});}
+  catch(err){res.status(500).json({error:'Failed to delete learning material'});}
 });
 
 // =============================================================
@@ -1595,6 +1711,8 @@ const SERVER = app.listen(PORT, '0.0.0.0', async () => {
   try { await ensureTimeTable(); console.log('[DB] user_time table ready'); } catch (e) { console.warn('[DB] user_time ensure failed (retries on first use):', e.message); }
   try { await ensureAccessTables(); console.log('[DB] trainer/batch tables ready'); } catch (e) { console.warn('[DB] trainer/batch ensure failed (retries on first use):', e.message); }
   try { await ensureStudentProfileColumns(); console.log('[DB] student profile columns ready'); } catch (e) { console.warn('[DB] student profile ensure failed (retries on signup):', e.message); }
+  try { await ensureSubtopicResourcesTable(); console.log('[DB] subtopic resource playlists ready'); } catch (e) { console.warn('[DB] resource playlist ensure failed (retries on first course read):', e.message); }
+  try { await ensureSubtopicHierarchyColumn(); console.log('[DB] nested subtopics ready'); } catch (e) { console.warn('[DB] nested subtopics ensure failed (retries on course read):', e.message); }
 });
 SERVER.on('error', listenError);
 

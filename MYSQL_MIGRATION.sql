@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS courses (
 CREATE TABLE IF NOT EXISTS subtopics (
   id              INT AUTO_INCREMENT PRIMARY KEY,
   course_id       INT NOT NULL,
+  parent_subtopic_id INT DEFAULT NULL, -- NULL = main subtopic; otherwise a child subtopic
   title           VARCHAR(500) NOT NULL,
   slug            VARCHAR(500) DEFAULT '',
   dur             VARCHAR(50) DEFAULT '15 min',
@@ -68,9 +69,20 @@ CREATE TABLE IF NOT EXISTS quizzes (
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- One assessment per subtopic: the app enforces this in the editor, the index just makes the
--- lookup cheap. Existing databases get these three columns automatically on first start.
-CREATE INDEX idx_quizzes_topic ON quizzes (course_id, module_index);   -- helps the course-filtered quiz list
+-- One assessment per subtopic: the app enforces this in the editor. This index only makes
+-- the filtered lookup faster. Create it only when it is not already present, so this full
+-- migration remains safe to re-run in Hostinger phpMyAdmin.
+SET @quiz_topic_index_exists := (
+  SELECT COUNT(*) FROM information_schema.statistics
+  WHERE table_schema = DATABASE() AND table_name = 'quizzes' AND index_name = 'idx_quizzes_topic'
+);
+SET @quiz_topic_index_sql := IF(@quiz_topic_index_exists = 0,
+  'CREATE INDEX idx_quizzes_topic ON quizzes (course_id, module_index)',
+  'SELECT 1'
+);
+PREPARE softmarc_quiz_index_stmt FROM @quiz_topic_index_sql;
+EXECUTE softmarc_quiz_index_stmt;
+DEALLOCATE PREPARE softmarc_quiz_index_stmt;
 
 -- 5. QUESTIONS TABLE
 CREATE TABLE IF NOT EXISTS questions (
@@ -202,3 +214,39 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS country_code VARCHAR(12) DEFAULT NULL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS state_region VARCHAR(100) DEFAULT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS learning_goal VARCHAR(255) DEFAULT NULL;
+
+-- =============================================================
+-- v36 addition: ordered material playlists for every subtopic.
+-- A subtopic may now contain any number of videos and PDF/PPTX resources.
+-- Existing video_url and pdf_url fields are retained for backward compatibility.
+-- =============================================================
+CREATE TABLE IF NOT EXISTS subtopic_resources (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  subtopic_id     INT NOT NULL,
+  resource_type   VARCHAR(16) NOT NULL, -- video | document
+  title           VARCHAR(255) NOT NULL DEFAULT '',
+  file_url        TEXT NOT NULL,
+  display_order   INT NOT NULL DEFAULT 0,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_subtopic_resources (subtopic_id, display_order, id),
+  CONSTRAINT fk_subtopic_resources_subtopic FOREIGN KEY (subtopic_id) REFERENCES subtopics(id) ON DELETE CASCADE
+);
+
+
+-- =============================================================
+-- v39 addition: a main subtopic may organise multiple child subtopics.
+-- Existing subtopics are kept as main subtopics (parent_subtopic_id = NULL).
+-- =============================================================
+ALTER TABLE subtopics ADD COLUMN IF NOT EXISTS parent_subtopic_id INT DEFAULT NULL AFTER course_id;
+SET @subtopic_parent_index_exists := (
+  SELECT COUNT(*) FROM information_schema.statistics
+  WHERE table_schema = DATABASE() AND table_name = 'subtopics' AND index_name = 'idx_subtopics_parent'
+);
+SET @subtopic_parent_index_sql := IF(@subtopic_parent_index_exists = 0,
+  'CREATE INDEX idx_subtopics_parent ON subtopics (course_id, parent_subtopic_id, display_order, id)',
+  'SELECT 1'
+);
+PREPARE softmarc_subtopic_parent_index_stmt FROM @subtopic_parent_index_sql;
+EXECUTE softmarc_subtopic_parent_index_stmt;
+DEALLOCATE PREPARE softmarc_subtopic_parent_index_stmt;

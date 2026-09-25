@@ -166,6 +166,7 @@ if (db) {
     CREATE TABLE IF NOT EXISTS subtopics (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       course_id INTEGER,
+      parent_subtopic_id INTEGER DEFAULT NULL,
       title TEXT NOT NULL,
       slug TEXT,
       dur TEXT DEFAULT '15 min',
@@ -179,6 +180,19 @@ if (db) {
       FOREIGN KEY (course_id) REFERENCES courses(id)
     );
     
+    CREATE TABLE IF NOT EXISTS subtopic_resources (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      subtopic_id INTEGER NOT NULL,
+      resource_type TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      file_url TEXT NOT NULL,
+      display_order INTEGER NOT NULL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (subtopic_id) REFERENCES subtopics(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_subtopic_resources ON subtopic_resources(subtopic_id,display_order,id);
+
     CREATE TABLE IF NOT EXISTS quizzes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       course_name TEXT,
@@ -236,6 +250,9 @@ if (db) {
   // Existing local databases also receive the richer signup fields without recreation.
   const localProfileColumns=new Set(db.prepare('PRAGMA table_info(users)').all().map(c=>c.name));
   [['country_code','TEXT'],['country','TEXT'],['state_region','TEXT'],['learning_goal','TEXT']].forEach(([name,type])=>{ if(!localProfileColumns.has(name)) db.exec('ALTER TABLE users ADD COLUMN '+name+' '+type); });
+  const localSubtopicColumns=new Set(db.prepare('PRAGMA table_info(subtopics)').all().map(c=>c.name));
+  if(!localSubtopicColumns.has('parent_subtopic_id')) db.exec('ALTER TABLE subtopics ADD COLUMN parent_subtopic_id INTEGER DEFAULT NULL');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_subtopics_parent ON subtopics(course_id,parent_subtopic_id,display_order,id)');
 
   // Create admin user if not exists
   const existing = db.prepare("SELECT id FROM users WHERE email = ?").get('admin@softmarc.com');
@@ -282,10 +299,12 @@ function localPermittedCourseIds(auth){
   if(access.access_mode==='batch') return {access,ids:db.prepare("SELECT DISTINCT b.course_id FROM batch_enrollments e JOIN batches b ON b.id=e.batch_id WHERE e.student_id=? AND e.status='active' AND b.status='active'").all(auth.uid).map(x=>Number(x.course_id))};
   return {access,ids:null};
 }
+function localDemoVisibleSubtopics(topics,limit){const rows=topics||[],roots=rows.filter(t=>t.parent_subtopic_id===null||t.parent_subtopic_id===undefined||t.parent_subtopic_id===''),chosen=new Set(roots.slice(0,Math.max(0,Number(limit)||2)).map(t=>Number(t.id))),hasChild=new Set(rows.filter(t=>t.parent_subtopic_id!==null&&t.parent_subtopic_id!==undefined&&t.parent_subtopic_id!=='').map(t=>Number(t.parent_subtopic_id)));return rows.filter(t=>{const parent=t.parent_subtopic_id;if(parent!==null&&parent!==undefined&&parent!=='')return chosen.has(Number(parent));return chosen.has(Number(t.id))&&!hasChild.has(Number(t.id));});}
+
 function localMayStudy(auth,courseName,moduleIndex){
   if(!auth||auth.role!=='student')return true; const p=localPermittedCourseIds(auth); if(p.ids===null)return true;
   const course=db.prepare('SELECT id FROM courses WHERE title=? LIMIT 1').get(courseName); if(!course||!p.ids.includes(Number(course.id)))return false;
-  return !(p.access.access_mode==='demo'&&Number(moduleIndex)>=Number(p.access.demo_topic_limit||2));
+  if(p.access.access_mode!=='demo')return true;const topics=db.prepare('SELECT id,parent_subtopic_id,display_order FROM subtopics WHERE course_id=? ORDER BY display_order,id').all(course.id);return Number(moduleIndex)>=0&&Number(moduleIndex)<localDemoVisibleSubtopics(topics,p.access.demo_topic_limit).length;
 }
 function localPublicUser(user,access){return {id:user.id,full_name:user.full_name,email:user.email,role:user.role,phone:user.phone,country_code:user.country_code,country:user.country,state_region:user.state_region,city:user.city,department:user.department,institution:user.institution,learning_goal:user.learning_goal,avatar_image:user.avatar_image,access_mode:(access&&access.access_mode)||'full',demo_course_id:(access&&access.demo_course_id)||null};}
 function localInviteCode(){return 'SM-'+crypto.randomBytes(4).toString('hex').toUpperCase();}
@@ -322,7 +341,8 @@ const PUB = [[/^POST$/, /^\/(login|signup)$/], [/^GET$/, /^\/(health|config)$/]]
 const ADMIN = [[/^GET$/, /^\/(users|submissions|analytics\/summary)$/], [/^POST$/, /^\/(config|upload|users|courses|quizzes)$/],
   [/^GET$/, /^\/quizzes\/\d+\/questions$/],                       // correct answers: admin only
   [/^PUT$/, /^\/quizzes\/\d+\/assessment$/],                       // one-save quiz editor
-  [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
+  [/^(PUT|DELETE)$/, /^\/courses\/\d+$/], [/^(PUT|DELETE)$/, /^\/subtopics\/\d+$/], [/^POST$/, /^\/subtopics\/\d+\/resources$/],
+  [/^(PUT|DELETE)$/, /^\/subtopic-resources\/\d+$/], [/^(PUT|DELETE)$/, /^\/quizzes\/\d+$/],
   [/^DELETE$/, /^\/users\/\d+$/]];
 const SCOPED = [/^\/(progress|time|steps)/, /^\/users\/\d+/, /^\/quizzes\/\d+\/submit$/];
 function claimedId(req) {
@@ -570,6 +590,9 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 });
 
+// Ordered video/document playlists attached to a single subtopic. Legacy fields stay supported.
+function localAddResources(topics){const ids=(topics||[]).map(t=>Number(t.id)).filter(Boolean);const by=new Map();if(ids.length){const rows=db.prepare('SELECT * FROM subtopic_resources WHERE subtopic_id IN ('+ids.map(()=>'?').join(',')+') ORDER BY display_order ASC,id ASC').all(...ids);rows.forEach(r=>{if(!by.has(Number(r.subtopic_id)))by.set(Number(r.subtopic_id),[]);by.get(Number(r.subtopic_id)).push(r);});}(topics||[]).forEach(t=>{t.resources=by.get(Number(t.id))||[];});return topics||[];}
+
 // =============================================================
 // COURSES
 // =============================================================
@@ -578,12 +601,12 @@ app.get('/api/courses', async (req,res)=>{
   try{
     const permitted=localPermittedCourseIds(req.auth);if(permitted&&permitted.ids.length===0)return res.json([]);
     let sql="SELECT * FROM courses WHERE status='active'",args=[];if(permitted&&permitted.ids!==null){sql+=' AND id IN ('+permitted.ids.map(()=>'?').join(',')+')';args=permitted.ids;}sql+=' ORDER BY display_order ASC,id ASC';
-    const courses=db.prepare(sql).all(...args);if(courses.length){const ids=courses.map(x=>x.id),topics=db.prepare('SELECT * FROM subtopics WHERE course_id IN ('+ids.map(()=>'?').join(',')+') ORDER BY display_order ASC,id ASC').all(...ids),by=new Map();topics.forEach(t=>{if(!by.has(t.course_id))by.set(t.course_id,[]);by.get(t.course_id).push(t);});courses.forEach(c=>{let ts=by.get(c.id)||[];if(permitted&&permitted.access.access_mode==='demo'&&Number(c.id)===Number(permitted.access.demo_course_id))ts=ts.slice(0,Math.max(0,Number(permitted.access.demo_topic_limit)||2));c.subtopics=ts;});}
+    const courses=db.prepare(sql).all(...args);if(courses.length){const ids=courses.map(x=>x.id),topics=db.prepare('SELECT * FROM subtopics WHERE course_id IN ('+ids.map(()=>'?').join(',')+') ORDER BY display_order ASC,id ASC').all(...ids),by=new Map();localAddResources(topics);topics.forEach(t=>{if(!by.has(t.course_id))by.set(t.course_id,[]);by.get(t.course_id).push(t);});courses.forEach(c=>{let ts=by.get(c.id)||[];if(permitted&&permitted.access.access_mode==='demo'&&Number(c.id)===Number(permitted.access.demo_course_id))ts=localDemoVisibleSubtopics(ts,permitted.access.demo_topic_limit);c.subtopics=ts;});}
     res.json(courses);
   }catch(err){console.error(err);res.status(500).json({error:'Failed to fetch courses',detail:err.message});}
 });
 app.get('/api/courses/:id', async(req,res)=>{
-  try{const permitted=localPermittedCourseIds(req.auth);if(permitted&&permitted.ids!==null&&!permitted.ids.includes(Number(req.params.id)))return res.status(403).json({error:'This course is not included in your current access.',code:'course_locked'});const course=db.prepare('SELECT * FROM courses WHERE id=?').get(req.params.id);if(!course)return res.status(404).json({error:'Course not found'});let topics=db.prepare('SELECT * FROM subtopics WHERE course_id=? ORDER BY display_order ASC,id ASC').all(req.params.id);if(permitted&&permitted.access.access_mode==='demo')topics=topics.slice(0,Math.max(0,Number(permitted.access.demo_topic_limit)||2));course.subtopics=topics;res.json(course);}catch(err){res.status(500).json({error:'Failed to fetch course'});}
+  try{const permitted=localPermittedCourseIds(req.auth);if(permitted&&permitted.ids!==null&&!permitted.ids.includes(Number(req.params.id)))return res.status(403).json({error:'This course is not included in your current access.',code:'course_locked'});const course=db.prepare('SELECT * FROM courses WHERE id=?').get(req.params.id);if(!course)return res.status(404).json({error:'Course not found'});let topics=db.prepare('SELECT * FROM subtopics WHERE course_id=? ORDER BY display_order ASC,id ASC').all(req.params.id);localAddResources(topics);if(permitted&&permitted.access.access_mode==='demo')topics=localDemoVisibleSubtopics(topics,permitted.access.demo_topic_limit);course.subtopics=topics;res.json(course);}catch(err){res.status(500).json({error:'Failed to fetch course'});}
 });
 
 app.post('/api/courses', async (req, res) => {
@@ -655,44 +678,43 @@ app.post('/api/batches/join',(req,res)=>{const code=String((req.body||{}).invite
 // =============================================================
 
 app.post('/api/courses/:id/subtopics', async (req, res) => {
-  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order } = req.body;
+  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order, parent_subtopic_id } = req.body;
   if (!title) return res.status(400).json({error: 'title is required'});
-
   try {
-    const result = db.prepare(
-      'INSERT INTO subtopics (course_id, title, slug, dur, description, video_url, pdf_url, exercise, display_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).run(req.params.id, title, slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-'), dur || '15 min', description || '', video_url || '', pdf_url || '', exercise || '', display_order || 0);
-    const sub = db.prepare('SELECT * FROM subtopics WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(sub);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to create subtopic' });
-  }
+    let parentId=null;
+    if(parent_subtopic_id!==undefined&&parent_subtopic_id!==null&&parent_subtopic_id!==''){
+      parentId=Number(parent_subtopic_id);const parent=db.prepare('SELECT id,course_id,parent_subtopic_id FROM subtopics WHERE id=?').get(parentId);
+      if(!parent||Number(parent.course_id)!==Number(req.params.id)||parent.parent_subtopic_id!==null)return res.status(400).json({error:'Choose a main subtopic from this course.'});
+    }
+    const result=db.prepare('INSERT INTO subtopics (course_id,parent_subtopic_id,title,slug,dur,description,video_url,pdf_url,exercise,display_order) VALUES (?,?,?,?,?,?,?,?,?,?)').run(req.params.id,parentId,title,slug||title.toLowerCase().replace(/[^a-z0-9]+/g,'-'),dur||'15 min',description||'',video_url||'',pdf_url||'',exercise||'',display_order||0);
+    const sub=db.prepare('SELECT * FROM subtopics WHERE id=?').get(result.lastInsertRowid);res.status(201).json(sub);
+  } catch (err) {res.status(500).json({error:'Failed to create subtopic'});}
 });
 
 app.put('/api/subtopics/:id', async (req, res) => {
-  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order } = req.body;
+  const { title, slug, dur, description, video_url, pdf_url, exercise, display_order, parent_subtopic_id } = req.body;
   try {
-    db.prepare(
-      "UPDATE subtopics SET title = COALESCE(?, title), slug = COALESCE(?, slug), dur = COALESCE(?, dur), description = COALESCE(?, description), video_url = COALESCE(?, video_url), pdf_url = COALESCE(?, pdf_url), exercise = COALESCE(?, exercise), display_order = COALESCE(?, display_order), updated_at = datetime('now') WHERE id = ?"
-    ).run(title, slug, dur, description, video_url, pdf_url, exercise, display_order, req.params.id);
-    const sub = db.prepare('SELECT * FROM subtopics WHERE id = ?').get(req.params.id);
-    if (!sub) return res.status(404).json({ error: 'Subtopic not found' });
-    res.json(sub);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update subtopic' });
-  }
+    const old=db.prepare('SELECT * FROM subtopics WHERE id=?').get(req.params.id);if(!old)return res.status(404).json({error:'Subtopic not found'});
+    let parentId=null;if(parent_subtopic_id!==undefined){if(parent_subtopic_id!==null&&parent_subtopic_id!==''){parentId=Number(parent_subtopic_id);const parent=db.prepare('SELECT id,course_id,parent_subtopic_id FROM subtopics WHERE id=?').get(parentId);if(!parent||Number(parent.course_id)!==Number(old.course_id)||parent.parent_subtopic_id!==null||Number(parentId)===Number(req.params.id))return res.status(400).json({error:'Choose a different main subtopic from this course.'});}else parentId=old.parent_subtopic_id;}
+    db.prepare("UPDATE subtopics SET title=COALESCE(?,title),slug=COALESCE(?,slug),dur=COALESCE(?,dur),description=COALESCE(?,description),video_url=COALESCE(?,video_url),pdf_url=COALESCE(?,pdf_url),exercise=COALESCE(?,exercise),display_order=COALESCE(?,display_order),parent_subtopic_id=COALESCE(?,parent_subtopic_id),updated_at=datetime('now') WHERE id=?").run(title,slug,dur,description,video_url,pdf_url,exercise,display_order,parent_subtopic_id===undefined?null:parentId,req.params.id);
+    res.json(db.prepare('SELECT * FROM subtopics WHERE id=?').get(req.params.id));
+  } catch (err) {res.status(500).json({error:'Failed to update subtopic'});}
 });
 
 app.delete('/api/subtopics/:id', async (req, res) => {
-  try {
-    const sub = db.prepare('SELECT id, title FROM subtopics WHERE id = ?').get(req.params.id);
-    if (!sub) return res.status(404).json({ error: 'Subtopic not found' });
-    db.prepare('DELETE FROM subtopics WHERE id = ?').run(req.params.id);
-    res.json({ deleted: true, subtopic: sub });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to delete subtopic' });
-  }
+  try {const sub=db.prepare('SELECT id,title FROM subtopics WHERE id=?').get(req.params.id);if(!sub)return res.status(404).json({error:'Subtopic not found'});const count=(db.prepare('SELECT COUNT(*) AS n FROM subtopics WHERE parent_subtopic_id=?').get(req.params.id)||{}).n||0;db.transaction(()=>{db.prepare('DELETE FROM subtopics WHERE parent_subtopic_id=?').run(req.params.id);db.prepare('DELETE FROM subtopics WHERE id=?').run(req.params.id);})();res.json({deleted:true,subtopic:sub,deleted_children:count});}
+  catch(err){res.status(500).json({error:'Failed to delete subtopic'});}
 });
+
+// =============================================================
+// SUBTOPIC RESOURCE PLAYLISTS — multiple videos and PDF/PPTX per subtopic
+// =============================================================
+function localResourceType(body){const t=String((body||{}).resource_type||'').trim().toLowerCase();return t==='video'||t==='document'?t:'';}
+function localDocumentOk(file){return /\.(pdf|pptx)(?:[?#].*)?$/i.test(String(file||''));}
+app.get('/api/subtopics/:id/resources',(req,res)=>{try{res.json(db.prepare('SELECT * FROM subtopic_resources WHERE subtopic_id=? ORDER BY display_order ASC,id ASC').all(req.params.id));}catch(e){res.status(500).json({error:'Failed to fetch subtopic resources'});}});
+app.post('/api/subtopics/:id/resources',(req,res)=>{const b=req.body||{},type=localResourceType(b),file=String(b.file_url||'').trim();if(!type||!file)return res.status(400).json({error:'A resource type and file URL are required.'});if(type==='document'&&!localDocumentOk(file))return res.status(400).json({error:'Documents must be PDF or PPTX files.'});try{const topic=db.prepare('SELECT id FROM subtopics WHERE id=?').get(req.params.id);if(!topic)return res.status(404).json({error:'Subtopic not found'});const title=String(b.title||'').trim().slice(0,255)||file.split(/[/?#]/).filter(Boolean).pop()||'Learning material',order=Math.max(0,Number(b.display_order)||0);const out=db.prepare('INSERT INTO subtopic_resources (subtopic_id,resource_type,title,file_url,display_order) VALUES (?,?,?,?,?)').run(req.params.id,type,title,file,order);res.status(201).json(db.prepare('SELECT * FROM subtopic_resources WHERE id=?').get(out.lastInsertRowid));}catch(e){res.status(500).json({error:'Failed to add learning material'});}});
+app.put('/api/subtopic-resources/:id',(req,res)=>{const b=req.body||{},file=b.file_url===undefined?null:String(b.file_url).trim();if(file!==null&&!file)return res.status(400).json({error:'File URL cannot be empty.'});try{db.prepare("UPDATE subtopic_resources SET title=COALESCE(?,title),file_url=COALESCE(?,file_url),display_order=COALESCE(?,display_order),updated_at=datetime('now') WHERE id=?").run(b.title===undefined?null:String(b.title).trim().slice(0,255),file,b.display_order===undefined?null:Math.max(0,Number(b.display_order)||0),req.params.id);const row=db.prepare('SELECT * FROM subtopic_resources WHERE id=?').get(req.params.id);if(!row)return res.status(404).json({error:'Learning material not found'});res.json(row);}catch(e){res.status(500).json({error:'Failed to update learning material'});}});
+app.delete('/api/subtopic-resources/:id',(req,res)=>{try{const r=db.prepare('DELETE FROM subtopic_resources WHERE id=?').run(req.params.id);if(!r.changes)return res.status(404).json({error:'Learning material not found'});res.json({deleted:true,id:Number(req.params.id)});}catch(e){res.status(500).json({error:'Failed to delete learning material'});}});
 
 // =============================================================
 // QUIZZES

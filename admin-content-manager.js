@@ -54,6 +54,17 @@
     return res.json();
   }
 
+  async function dbAddPlaylistResource(subtopicId, fields){
+    const res=await fetch(`${API_HOST}/subtopics/${subtopicId}/resources`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(fields)});
+    if(!res.ok) throw new Error((await res.json()).error||'Could not add material');
+    return res.json();
+  }
+  async function dbDeletePlaylistResource(id){
+    const res=await fetch(`${API_HOST}/subtopic-resources/${id}`,{method:'DELETE'});
+    if(!res.ok) throw new Error((await res.json()).error||'Could not remove material');
+    return res.json();
+  }
+
   // Upload a file to the server (videos/ or pdfs/ or images/). Returns saved path.
   async function uploadFile(kind, file){
     const fd = new FormData();
@@ -138,11 +149,13 @@
       subtopics: (c.subtopics||[]).map(s => ({
         id: s.slug || SoftmarcContent.slug(s.title),
         _database_id: s.id,
+        parentSubtopicId: s.parent_subtopic_id==null?null:Number(s.parent_subtopic_id),
         title: s.title,
         dur: s.dur || '15 min',
         description: s.description || '',
         videoUrl: s.video_url || '',
         pdfUrl: s.pdf_url || '',
+        resources: Array.isArray(s.resources)?s.resources.map(r=>({id:r.id,title:r.title||'',resource_type:r.resource_type||'',file_url:r.file_url||'',display_order:r.display_order||0})):[],
         exercise: s.exercise || ''
       }))
     }));
@@ -295,6 +308,7 @@
     '@keyframes cmErr{0%,60%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}100%{box-shadow:0 0 0 11px rgba(220,38,38,0)}}',
     /* ---- lists ---- */
     '.cm-list{display:flex;flex-direction:column;gap:8px;max-height:560px;overflow:auto;padding:2px;margin:-2px}',
+    '.cm-topic-tree{gap:12px}.cm-tree-main{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}.cm-tree-main>.cm-item{border:0;border-radius:0}.cm-tree-main.active>.cm-item{background:#F7F9FC}.cm-tree-children{padding:0 10px 10px 26px;display:grid;gap:6px}.cm-tree-child{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:7px;text-align:left;border:1px solid var(--border);border-radius:9px;padding:8px 9px;background:var(--surface-hover);color:var(--text-700);cursor:pointer}.cm-tree-child:hover,.cm-tree-child.active{border-color:#0A1930;background:#F7F9FC}.cm-tree-child>span{font:800 10px var(--font-mono);color:var(--text-500)}.cm-tree-child b{font-size:12px;color:var(--text-900);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cm-tree-child small{font-size:10px;color:var(--text-500)}.cm-tree-child .cm-chips{margin:0}',
     '.cm-item{border:1px solid var(--border);border-radius:12px;padding:11px 12px;background:var(--surface);display:flex;gap:11px;align-items:flex-start;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .12s}',
     '.cm-item:hover{border-color:#0A1930;transform:translateY(-1px);box-shadow:0 8px 18px -14px rgba(10,25,48,.8)}',
     '.cm-item:focus-visible{outline:3px solid rgba(37,99,235,.35);outline-offset:2px}',
@@ -328,6 +342,8 @@
     '.cm-resource-box b{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--text-500);margin:0}',
     '.cm-resource-box b svg{width:13px;height:13px}',
     '.cm-resource-box span{font-size:11.5px;color:var(--text-700);word-break:break-word;line-height:1.45}',
+    '.cm-resource-box span strong,.cm-resource-box span small{display:block}.cm-resource-box span strong{font-size:12px;color:var(--text-900)}.cm-resource-box span small{margin-top:2px;color:var(--text-500)}',
+    '.cm-resource-preview.cm-playlist{grid-template-columns:1fr;gap:8px}.cm-playlist .cm-resource-box{display:grid;grid-template-columns:125px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px}.cm-playlist .cm-resource-box em{font-style:normal}.cm-resource-delete{padding:7px 10px;font-size:11px}',
     '.cm-db-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:800;background:#DCFCE7;color:#166534;border:1px solid #BBF7D0}',
     '.cm-db-badge.error{background:#FEF2F2;color:#991B1B;border-color:#FECACA}',
     /* ---- dark ---- */
@@ -341,6 +357,7 @@
     'html[data-theme="dark"] .cm-status[data-kind="err"]{background:#240f12;color:#fca5a5;border-color:#7f1d1d}',
     /* ---- small screens ---- */
     '@media(max-width:1000px){.cm-grid{grid-template-columns:1fr}.content-manager{margin:0 20px 20px}.cm-resource-preview{grid-template-columns:1fr}.cm-quickbar{position:static}}',
+    '@media(max-width:560px){.cm-two{grid-template-columns:1fr}.cm-playlist .cm-resource-box{grid-template-columns:1fr;gap:6px}.cm-playlist .cm-resource-delete{justify-self:start}}',
     '@media (prefers-reduced-motion: reduce){.cm-shell *{animation:none!important;transition:none!important}}'
     ].join('');
     document.head.appendChild(st);
@@ -358,7 +375,7 @@
     const main=document.querySelector('main.main')||document.body;
     if($('secContent')) return;
     const sec=document.createElement('div'); sec.className='section-wrapper content-manager'; sec.id='secContent';
-    sec.innerHTML='<div class="cm-shell"><div class="cm-top"><div><h2>Course Manager <span class="cm-db-badge" id="cmDatabaseBadge">Database Sync</span></h2><p>Add topics, subtopics, videos, PDFs and PPTX slides. Changes sync to Database so ALL students see them.</p></div><div class="cm-status" id="cmStatus"></div></div><div class="cm-tabs" role="tablist"><button class="cm-tab active" data-cm-tab="topics">Main Topics</button><button class="cm-tab" data-cm-tab="subtopics">Subtopics</button><button class="cm-tab" data-cm-tab="resources">Videos, PDF & Exercises</button></div><section class="cm-panel active" id="cmPanelTopics"></section><section class="cm-panel" id="cmPanelSubtopics"></section><section class="cm-panel" id="cmPanelResources"></section></div>';
+    sec.innerHTML='<div class="cm-shell"><div class="cm-top"><div><h2>Course Manager <span class="cm-db-badge" id="cmDatabaseBadge">Database Sync</span></h2><p>Create a main topic, add any number of subtopics, then add ordered video and PDF/PPTX material to every subtopic. Changes sync to Database for every student.</p></div><div class="cm-status" id="cmStatus"></div></div><div class="cm-tabs" role="tablist"><button class="cm-tab active" data-cm-tab="topics">Main Topics</button><button class="cm-tab" data-cm-tab="subtopics">Subtopics</button><button class="cm-tab" data-cm-tab="resources">Subtopic Materials</button></div><section class="cm-panel active" id="cmPanelTopics"></section><section class="cm-panel" id="cmPanelSubtopics"></section><section class="cm-panel" id="cmPanelResources"></section></div>';
     main.appendChild(sec);
     sec.querySelectorAll('.cm-tab').forEach(b=>b.onclick=()=>setContentTab(b.dataset.cmTab));
   }
@@ -390,21 +407,34 @@
   function courseOptions(){
     return getCoursesForAdmin().map(c=>'<option value="'+esc(c.id)+'" '+(c.id===selectedCourseId?'selected':'')+'>'+esc(c.title)+'</option>').join('');
   }
+  function mainSubtopics(c){return (c?.subtopics||[]).filter(s=>s.parentSubtopicId==null);}
+  function childSubtopics(c,parent){return (c?.subtopics||[]).filter(s=>Number(s.parentSubtopicId)===Number(parent._database_id));}
+  function mainSubtopicMap(c){const m=new Map();mainSubtopics(c).forEach(x=>m.set(Number(x._database_id),x));return m;}
+  function materialSubtopics(c){const containers=new Set((c?.subtopics||[]).filter(s=>s.parentSubtopicId!=null).map(s=>Number(s.parentSubtopicId)));return (c?.subtopics||[]).filter(s=>!containers.has(Number(s._database_id)));}
   function subtopicOptions(c){
-    return (c?.subtopics||[]).map(s=>'<option value="'+esc(s.id)+'" '+(s.id===selectedSubtopicId?'selected':'')+'>'+esc(s.title)+'</option>').join('');
+    const parents=mainSubtopicMap(c);
+    return materialSubtopics(c).map(s=>{const p=s.parentSubtopicId?parents.get(Number(s.parentSubtopicId)):null;return '<option value="'+esc(s.id)+'" '+(s.id===selectedSubtopicId?'selected':'')+'>'+(p?esc(p.title)+' › ':'')+esc(s.title)+'</option>';}).join('');
   }
 
   function fileOf(u){ const t=String(u||'').split('?')[0]; const m=t.match(/\/([^\/]+)$/); return m?m[1]:t; }
+  function playlistItems(s){
+    const stored=Array.isArray(s&&s.resources)?s.resources:[];
+    const items=stored.map(r=>({id:r.id,kind:r.resource_type==='video'?'video':'document',title:r.title||fileOf(r.file_url),url:r.file_url||'',order:Number(r.display_order)||0,legacy:false}));
+    // Existing courses continue to work without an admin migration pass.
+    if(s&&s.videoUrl&&!items.some(x=>x.kind==='video'&&x.url===s.videoUrl))items.unshift({id:null,kind:'video',title:fileOf(s.videoUrl),url:s.videoUrl,order:-2,legacy:true});
+    if(s&&s.pdfUrl&&!items.some(x=>x.kind==='document'&&x.url===s.pdfUrl))items.push({id:null,kind:'document',title:fileOf(s.pdfUrl),url:s.pdfUrl,order:-1,legacy:true});
+    return items.sort((a,b)=>a.order-b.order||String(a.title).localeCompare(String(b.title)));
+  }
   function attachChips(s){
-    const v=String(s.videoUrl||'').trim(), d=String(s.pdfUrl||'').trim(), e=String(s.exercise||'').trim();
-    const one=(ic,lab,ok,title)=>'<span class="cm-chip '+(ok?'on':'off')+'" title="'+esc(title)+'">'+ic+lab+'</span>';
-    return '<span class="cm-chips">'+one(ICO.video,'video',v,v?'video: '+fileOf(v):'no video yet')+one(ICO.doc,'doc',d,d?'document: '+fileOf(d):'no PDF / PPT yet')+one(ICO.ex,'exercise',e,e?'exercise written':'no exercise yet')+'</span>';
+    const list=playlistItems(s),v=list.filter(x=>x.kind==='video').length,d=list.filter(x=>x.kind==='document').length,e=String(s.exercise||'').trim();
+    const one=(ic,lab,n)=>'<span class="cm-chip '+(n?'on':'off')+'" title="'+n+' attached">'+ic+lab+' '+n+'</span>';
+    return '<span class="cm-chips">'+one(ICO.video,'video',v)+one(ICO.doc,'doc',d)+one(ICO.ex,'exercise',e?1:0)+'</span>';
   }
   function coverage(c){
     const ss=(c&&c.subtopics)||[];
-    const withVideo=ss.filter(x=>String(x.videoUrl||'').trim()).length;
-    const withDoc=ss.filter(x=>String(x.pdfUrl||'').trim()).length;
-    return ss.length ? withVideo+'/'+ss.length+' videos · '+withDoc+'/'+ss.length+' documents' : 'no subtopics yet';
+    const videos=ss.reduce((n,x)=>n+playlistItems(x).filter(r=>r.kind==='video').length,0);
+    const docs=ss.reduce((n,x)=>n+playlistItems(x).filter(r=>r.kind==='document').length,0);
+    return ss.length ? ss.length+' subtopics · '+videos+' videos · '+docs+' documents' : 'no subtopics yet';
   }
 
   function renderTopics(){
@@ -493,41 +523,21 @@
   }
 
   function renderSubtopics(){
-    const el=$('cmPanelSubtopics'); if(!el) return;
-    const c=selectedCourse();
-    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmAddSubtopicTop">'+ICO.add+'Add Subtopic</button><button class="cm-btn danger" id="cmDeleteSubtopicTop">'+ICO.del+'Delete Selected Subtopic</button><span class="cm-note" style="margin-left:auto">'+((c&&c.subtopics&&c.subtopics.length)||0)+' subtopic'+(((c&&c.subtopics&&c.subtopics.length)||0)===1?'':'s')+' in '+(c?esc(c.title):'this topic')+'</span></div><div class="cm-grid"><div class="cm-card"><h3>Select Main Topic</h3><div class="cm-field"><label>Course</label><select id="cmSubCourseSelect">'+courseOptions()+'</select></div><div class="cm-list">'+((c?.subtopics||[]).map((s,i)=>'<div class="cm-item '+(s.id===selectedSubtopicId?'active':'')+'" data-sub="'+esc(s.id)+'"><div class="cm-num">'+(i+1)+'</div><div><strong>'+esc(s.title)+'</strong><span>'+esc(s.dur||'15 min')+' · '+esc(s.description||'No description')+' · '+(s._database_id?'Synced':'Local only')+'</span>'+attachChips(s)+'</div></div>').join('')||'<p class="cm-help">No subtopics yet.</p>')+'</div></div><div class="cm-card"><h3>Add Subtopic</h3><div class="cm-field"><label>Subtopic title</label><input id="cmSubTitle" placeholder="Enter subtopic title"></div><div class="cm-two"><div class="cm-field"><label>Duration</label><input id="cmSubDur" placeholder="20 min"></div><div class="cm-field"><label>Display order</label><input id="cmSubOrder" type="number" value="'+((c?.subtopics||[]).length+1)+'"></div></div><div class="cm-field"><label>Subtopic description</label><textarea id="cmSubDesc" placeholder="Brief description"></textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmAddSubtopic">'+ICO.add+'Add to Database</button><button class="cm-btn danger" id="cmDeleteSubtopic">'+ICO.del+'Delete from Database</button></div></div></div>';
-    $('cmSubCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;selectedSubtopicDatabaseId=null;renderAll();};
-    el.querySelectorAll('[data-sub]').forEach(i=>i.onclick=()=>{selectedSubtopicId=i.dataset.sub; selectedSubtopicDatabaseId=null; renderAll();});
-    const titleBox=$('cmSubTitle');
-    $('cmAddSubtopicTop').onclick=()=>{ if(titleBox && titleBox.value.trim()) addSubtopic(); else if(titleBox){ titleBox.focus(); note('Type the subtopic title first \u2014 it is the lesson name students see.','err'); } };
-    $('cmDeleteSubtopicTop').onclick=guard(deleteSubtopic,'cmDeleteSubtopicTop','cmDeleteSubtopic');
-    $('cmAddSubtopic').onclick=guard(addSubtopic,'cmAddSubtopic','cmAddSubtopicTop');
-    $('cmDeleteSubtopic').onclick=guard(deleteSubtopic,'cmDeleteSubtopic','cmDeleteSubtopicTop');
+    const el=$('cmPanelSubtopics');if(!el)return;const c=selectedCourse(),roots=mainSubtopics(c),total=(c?.subtopics||[]).length||0;
+    const tree=roots.map((main,i)=>{const children=childSubtopics(c,main);return '<div class="cm-tree-main '+(main.id===selectedSubtopicId?'active':'')+'" data-sub="'+esc(main.id)+'"><div class="cm-item"><div class="cm-num">'+(i+1)+'</div><div><strong>'+esc(main.title)+'</strong><span>Main subtopic · '+children.length+' child subtopic'+(children.length===1?'':'s')+'</span></div></div><div class="cm-tree-children">'+(children.length?children.map((child,j)=>'<button class="cm-tree-child '+(child.id===selectedSubtopicId?'active':'')+'" data-sub="'+esc(child.id)+'"><span>'+(i+1)+'.'+(j+1)+'</span><b>'+esc(child.title)+'</b><small>'+esc(child.dur||'15 min')+'</small>'+attachChips(child)+'</button>').join(''):'<p class="cm-help">No child subtopics yet. Choose this main subtopic in the form to add one.</p>')+'</div></div>';}).join('');
+    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmAddSubtopicTop">'+ICO.add+'Add subtopic</button><button class="cm-btn danger" id="cmDeleteSubtopicTop">'+ICO.del+'Delete selected</button><span class="cm-note" style="margin-left:auto">'+roots.length+' main subtopic'+(roots.length===1?'':'s')+' · '+total+' total in '+(c?esc(c.title):'this course')+'</span></div><div class="cm-grid"><div class="cm-card"><h3>Main subtopics &amp; children</h3><div class="cm-field"><label>Course / main topic</label><select id="cmSubCourseSelect">'+courseOptions()+'</select></div><div class="cm-list cm-topic-tree">'+(tree||'<p class="cm-help">No main subtopics yet. Add one from the form.</p>')+'</div></div><div class="cm-card"><h3>Add a subtopic</h3><div class="cm-field"><label>Place under</label><select id="cmSubParent"><option value="">Create as a main subtopic</option>'+roots.map(root=>'<option value="'+esc(root._database_id)+'" '+(root.id===selectedSubtopicId?'selected':'')+'>Child of: '+esc(root.title)+'</option>').join('')+'</select><p class="cm-note">Choose a main subtopic to create a child lesson under it. Leave this as “Create as a main subtopic” to add another main section.</p></div><div class="cm-field"><label>Subtopic title</label><input id="cmSubTitle" placeholder="Example: Line & Point"></div><div class="cm-two"><div class="cm-field"><label>Duration</label><input id="cmSubDur" placeholder="20 min"></div><div class="cm-field"><label>Display order</label><input id="cmSubOrder" type="number" min="0" value="'+total+'"></div></div><div class="cm-field"><label>Subtopic description</label><textarea id="cmSubDesc" placeholder="Brief lesson description"></textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmAddSubtopic">'+ICO.add+'Add to Database</button><button class="cm-btn danger" id="cmDeleteSubtopic">'+ICO.del+'Delete selected</button></div><p class="cm-help">Materials are attached to a child subtopic. A main subtopic becomes an organiser when child subtopics are added beneath it.</p></div></div>';
+    $('cmSubCourseSelect').onchange=e=>{creatingNewCourse=false;selectedCourseId=e.target.value;selectedSubtopicId=null;selectedSubtopicDatabaseId=null;renderAll();};
+    el.querySelectorAll('[data-sub]').forEach(i=>i.onclick=event=>{event.stopPropagation();selectedSubtopicId=i.dataset.sub;selectedSubtopicDatabaseId=null;renderAll();});
+    const titleBox=$('cmSubTitle');$('cmAddSubtopicTop').onclick=()=>{if(titleBox&&titleBox.value.trim())addSubtopic();else if(titleBox){titleBox.focus();note('Type the subtopic title first.','err');}};
+    $('cmDeleteSubtopicTop').onclick=guard(deleteSubtopic,'cmDeleteSubtopicTop','cmDeleteSubtopic');$('cmAddSubtopic').onclick=guard(addSubtopic,'cmAddSubtopic','cmAddSubtopicTop');$('cmDeleteSubtopic').onclick=guard(deleteSubtopic,'cmDeleteSubtopic','cmDeleteSubtopicTop');
   }
 
   async function addSubtopic(){
-    const titleEl=$('cmSubTitle'); const title=titleEl.value.trim();
-    if(!title){ note('A subtopic needs a title before it can be added.','err'); titleEl.focus(); return; }
-    const c=selectedCourse(); if(!c){ note('Choose a main topic at the top of this panel first.','err'); return; }
-    const fields = {
-      title,
-      slug: SoftmarcContent.slug(title),
-      dur: $('cmSubDur').value.trim()||'15 min',
-      description: $('cmSubDesc').value.trim(),
-      display_order: Number($('cmSubOrder').value || (c.subtopics||[]).length + 1)
-    };
-    try {
-      showStatus('Adding subtopic...');
-      const courseId = c._database_id;
-      if(!courseId) throw new Error('Save the course first.');
-      await dbCreateSubtopic(courseId, fields);
-      selectedSubtopicId = SoftmarcContent.slug(title);
-      await renderAll();
-      showStatus('Subtopic added! Now attach its video and document in "Videos, PDF & Exercises".');
-      try{ $('cmSubTitle').value=''; $('cmSubDesc').value=''; }catch(e){}
-    } catch(err) {
-      showError('Failed: '+err.message);
-    }
+    const titleEl=$('cmSubTitle'),title=titleEl.value.trim();if(!title){note('A subtopic needs a title before it can be added.','err');titleEl.focus();return;}
+    const c=selectedCourse();if(!c){note('Choose a main topic at the top of this panel first.','err');return;}
+    const parentValue=$('cmSubParent').value;
+    const fields={title,slug:SoftmarcContent.slug(title),dur:$('cmSubDur').value.trim()||'15 min',description:$('cmSubDesc').value.trim(),display_order:Number($('cmSubOrder').value||(c.subtopics||[]).length),parent_subtopic_id:parentValue?Number(parentValue):null};
+    try{showStatus('Adding subtopic...');if(!c._database_id)throw new Error('Save the course first.');const made=await dbCreateSubtopic(c._database_id,fields);selectedSubtopicId=made.slug||SoftmarcContent.slug(title);await renderAll();showStatus('✅ '+(parentValue?'Child subtopic':'Main subtopic')+' added. Select a lesson subtopic in Subtopic Materials to attach videos, PDFs or PPTX files.','ok');}catch(err){showError('Failed: '+err.message);}
   }
 
   async function deleteSubtopic(){
@@ -545,19 +555,54 @@
     }
   }
 
-  function renderResources(){
-    const el=$('cmPanelResources'); if(!el) return;
-    const c=selectedCourse(); const st=selectedSubtopic();
-    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmSaveVideoTop">'+ICO.video+'Save Video</button><button class="cm-btn primary" id="cmSavePdfTop">'+ICO.doc+'Save PDF / PPTX</button><button class="cm-btn primary" id="cmSaveExerciseTop">'+ICO.ex+'Save Exercise</button><span class="cm-note" style="margin-left:auto">Saving is per item — the other two stay untouched</span></div><div class="cm-card"><h3>Videos, PDF & Exercises</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box '+(st.videoUrl?'set':'missing')+'"><b>'+ICO.video+'Video</b><span>'+esc(st.videoUrl?fileOf(st.videoUrl):'no video yet — learners see the document only')+'</span></div><div class="cm-resource-box '+(st.pdfUrl?'set':'missing')+'"><b>'+ICO.doc+'PDF / PPTX</b><span>'+esc(st.pdfUrl?fileOf(st.pdfUrl):'no document yet')+'</span></div><div class="cm-resource-box '+(st.exercise?'set':'missing')+'"><b>'+ICO.ex+'Exercise</b><span>'+esc(st.exercise?String(st.exercise).slice(0,90):'no exercise text')+'</span></div></div><div class="cm-field"><label>Video URL / path</label><input id="cmVideoUrl" value="'+esc(st.videoUrl||'')+'" placeholder="Video URL or videos/lesson.mp4"><div class="cm-upload-row" style="margin-top:8px"><div><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin-bottom:4px">Or upload video file (up to 1 GB — needs a minute for big files, keep the page open)</label><input id="cmVideoFile" type="file" accept="video/*,.mp4,.webm,.m4v,.mov"></div></div></div><div class="cm-field"><label>PDF / PPTX URL / path</label><input id="cmPdfUrl" value="'+esc(st.pdfUrl||'')+'" placeholder="pdfs/notes.pdf or pdfs/animated-deck.pptx"><label style="display:block;font-size:12px;font-weight:800;color:var(--text-500);margin:8px 0 4px">Upload PDF or PowerPoint — PDF / PPTX only (up to 1 GB; .ppt is not supported)</label><input id="cmPdfFile" type="file" accept="application/pdf,.pdf,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"><p class="cm-note"><b>Animated PPT?</b> Upload the saved <b>.pptx</b> file here. Students see it inside the lesson PPT screen — do not upload old <b>.ppt</b> files.</p></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn primary" id="cmSaveVideo">'+ICO.video+'Save Video</button><button class="cm-btn primary" id="cmSavePdf">'+ICO.doc+'Save PDF / PPTX</button><button class="cm-btn primary" id="cmSaveExercise">'+ICO.ex+'Save Exercise</button></div>':'<p class="cm-help">Pick a subtopic first \u2014 the Videos, PDF &amp; Exercises tab always writes to the subtopic shown here.</p>')+'</div>';
-    $('cmResCourseSelect').onchange=e=>{creatingNewCourse=false; selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
-    const vf=$('cmVideoFile'); if(vf) vf.onchange=startUpload('video','cmVideoUrl');
-    const pf=$('cmPdfFile'); if(pf) pf.onchange=startUpload('pdf','cmPdfUrl');
-    const subSel=$('cmResSubSelect'); if(subSel) subSel.onchange=e=>{selectedSubtopicId=e.target.value;renderAll();};
-    const cap = t => t[0].toUpperCase()+t.slice(1);
-    ['video','pdf','exercise'].forEach(t=>{
-      const ids=['cmSave'+cap(t), 'cmSave'+cap(t)+'Top'];
-      ids.forEach(id=>{ const b=$(id); if(b) b.onclick=guard(()=>saveResources(t), ids[0], ids[1]); });
-    });
+  function resourceLabel(kind){return kind==='video'?'Video':'PDF / PPTX';}
+  function resourceIcon(kind){return kind==='video'?ICO.video:ICO.doc;}
+  function resourceRow(item){
+    return '<div class="cm-resource-box set"><b>'+resourceIcon(item.kind)+esc(resourceLabel(item.kind))+'</b><span><strong>'+esc(item.title||fileOf(item.url))+'</strong><small>'+esc(fileOf(item.url))+(item.legacy?' · legacy material':' · position '+(item.order+1))+'</small></span>'+(item.legacy?'<button class="cm-btn danger cm-resource-delete" type="button" data-clear-legacy="'+item.kind+'">Remove</button>':'<button class="cm-btn danger cm-resource-delete" type="button" data-resource-delete="'+esc(item.id)+'">Remove</button>')+'</div>';
+  }
+  async function addPlaylistMaterial(kind, fileOverride){
+    const st=selectedSubtopic();
+    if(!st||!st._database_id){note('Choose and save a subtopic first, then add its learning materials.','err');return;}
+    const file=String(fileOverride!==undefined?fileOverride:($('cmMaterialUrl')&&$('cmMaterialUrl').value)||'').trim();
+    const title=String(($('cmMaterialTitle')&&$('cmMaterialTitle').value)||'').trim();
+    const order=Math.max(0,Number(($('cmMaterialOrder')&&$('cmMaterialOrder').value)||playlistItems(st).length)||0);
+    if(!file){note('Paste a file path or upload a file before adding the '+resourceLabel(kind).toLowerCase()+'.','err');return;}
+    if(kind==='document'&&!/\.(pdf|pptx)(?:[?#].*)?$/i.test(file)){note('Use a PDF or PPTX for document material. Old .ppt files are not supported.','err');return;}
+    await dbAddPlaylistResource(st._database_id,{resource_type:kind,file_url:file,title:title||fileOf(file),display_order:order});
+    await renderAll();setStatus('✅ '+resourceLabel(kind)+' added to “'+st.title+'”.','ok');
+  }
+  function startPlaylistUpload(kind){
+    return async event=>{
+      const file=event.target.files&&event.target.files[0];if(!file)return;
+      const st=selectedSubtopic();if(!st||!st._database_id){note('Choose and save the subtopic before uploading.','err');event.target.value='';return;}
+      const mb=Math.round(file.size/104857.6)/10;
+      try{setStatus('Uploading '+resourceLabel(kind)+' ('+mb+' MB)… keep this page open.','info');const path=await uploadFile(kind==='video'?'video':'pdf',file);const title=$('cmMaterialTitle');if(title&&!title.value.trim())title.value=file.name;await addPlaylistMaterial(kind,path);}
+      catch(err){showError('Upload failed: '+err.message);}finally{event.target.value='';}
+    };
+  }
+  async function removePlaylistMaterial(id){
+    if(!confirm('Remove this material from the selected subtopic? The uploaded file is kept on the server, but students will no longer see it.'))return;
+    await dbDeletePlaylistResource(id);await renderAll();setStatus('✅ Material removed from this subtopic.','ok');
+  }
+  async function clearLegacyMaterial(kind){
+    const st=selectedSubtopic();if(!st||!st._database_id)return;
+    if(!confirm('Remove this legacy '+resourceLabel(kind).toLowerCase()+' from the selected subtopic?'))return;
+    await dbUpdateSubtopic(st._database_id,kind==='video'?{video_url:''}:{pdf_url:''});
+    await renderAll();setStatus('✅ Legacy '+resourceLabel(kind).toLowerCase()+' removed from this subtopic.','ok');
+  }
+  function renderResources(){ 
+    const el=$('cmPanelResources');if(!el)return;const c=selectedCourse();let st=selectedSubtopic();const leaves=materialSubtopics(c);if(st&&childSubtopics(c,st).length&&leaves.length){selectedSubtopicId=leaves[0].id;st=selectedSubtopic();}const items=st?playlistItems(st):[];
+    const videoCount=items.filter(x=>x.kind==='video').length,docCount=items.filter(x=>x.kind==='document').length;
+    el.innerHTML='<div class="cm-quickbar"><button class="cm-btn primary" id="cmAddVideoTop">'+ICO.video+'Add video</button><button class="cm-btn primary" id="cmAddDocumentTop">'+ICO.doc+'Add PDF / PPTX</button><span class="cm-note" style="margin-left:auto">Each item is added separately and appears in the student playlist</span></div><div class="cm-card"><h3>Subtopic Materials</h3><div class="cm-two"><div class="cm-field"><label>Main topic</label><select id="cmResCourseSelect">'+courseOptions()+'</select></div><div class="cm-field"><label>Subtopic</label><select id="cmResSubSelect">'+subtopicOptions(c)+'</select></div></div>'+(st?'<div class="cm-resource-preview"><div class="cm-resource-box '+(videoCount?'set':'missing')+'"><b>'+ICO.video+'Videos</b><span>'+videoCount+' video'+(videoCount===1?'':'s')+' in this subtopic</span></div><div class="cm-resource-box '+(docCount?'set':'missing')+'"><b>'+ICO.doc+'PDF / PPTX</b><span>'+docCount+' document'+(docCount===1?'':'s')+' in this subtopic</span></div><div class="cm-resource-box '+(st.exercise?'set':'missing')+'"><b>'+ICO.ex+'Exercise</b><span>'+esc(st.exercise?'Exercise attached':'No exercise text')+'</span></div></div><div class="cm-field"><label>Material title</label><input id="cmMaterialTitle" placeholder="Example: Line tool demonstration"></div><div class="cm-two"><div class="cm-field"><label>File URL / path</label><input id="cmMaterialUrl" placeholder="videos/line-demo.mp4 or pdfs/line-notes.pdf"></div><div class="cm-field"><label>Playlist position</label><input id="cmMaterialOrder" type="number" min="0" value="'+items.length+'"><p class="cm-note">0 is first</p></div></div><div class="cm-two"><div class="cm-field"><label>Upload video</label><input id="cmPlaylistVideoFile" type="file" accept="video/*,.mp4,.webm,.m4v,.mov"></div><div class="cm-field"><label>Upload PDF or PowerPoint</label><input id="cmPlaylistDocumentFile" type="file" accept="application/pdf,.pdf,.pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"><p class="cm-note">Use saved <b>.pptx</b> for presentations with animations/video. Students open one selected deck at a time in the lesson screen.</p></div></div><div class="cm-actions"><button class="cm-btn primary" id="cmAddVideo">'+ICO.video+'Add video</button><button class="cm-btn primary" id="cmAddDocument">'+ICO.doc+'Add PDF / PPTX</button></div><div class="cm-field"><label>Current subtopic playlist</label><div class="cm-resource-preview cm-playlist">'+(items.length?items.map(resourceRow).join(''):'<p class="cm-help">No materials yet. Add as many videos and PDF/PPTX files as this subtopic needs.</p>')+'</div></div><div class="cm-field"><label>Exercise</label><textarea id="cmExercise">'+esc(st.exercise||'')+'</textarea></div><div class="cm-actions"><button class="cm-btn" id="cmSaveExercise">'+ICO.ex+'Save Exercise</button></div>':'<p class="cm-help">Create a main topic, then add one or more subtopics. Select a saved subtopic here to add its videos and documents.</p>')+'</div>';
+    $('cmResCourseSelect').onchange=e=>{creatingNewCourse=false;selectedCourseId=e.target.value;selectedSubtopicId=null;renderAll();};
+    const subSel=$('cmResSubSelect');if(subSel)subSel.onchange=e=>{selectedSubtopicId=e.target.value;renderAll();};
+    const addVideo=()=>addPlaylistMaterial('video');const addDocument=()=>addPlaylistMaterial('document');
+    ['cmAddVideo','cmAddVideoTop'].forEach(id=>{const b=$(id);if(b)b.onclick=guard(addVideo,'cmAddVideo','cmAddVideoTop');});
+    ['cmAddDocument','cmAddDocumentTop'].forEach(id=>{const b=$(id);if(b)b.onclick=guard(addDocument,'cmAddDocument','cmAddDocumentTop');});
+    const vf=$('cmPlaylistVideoFile');if(vf)vf.onchange=startPlaylistUpload('video');const df=$('cmPlaylistDocumentFile');if(df)df.onchange=startPlaylistUpload('document');
+    el.querySelectorAll('[data-resource-delete]').forEach(b=>b.onclick=()=>removePlaylistMaterial(b.dataset.resourceDelete).catch(err=>showError('Could not remove material: '+err.message)));
+    el.querySelectorAll('[data-clear-legacy]').forEach(b=>b.onclick=()=>clearLegacyMaterial(b.dataset.clearLegacy).catch(err=>showError('Could not remove material: '+err.message)));
+    const ex=$('cmSaveExercise');if(ex)ex.onclick=guard(()=>saveResources('exercise'),'cmSaveExercise');
   }
 
   async function saveResources(type, forcedVal, target){
@@ -624,7 +669,7 @@
       document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('on'));
       $('secContent').classList.add('active'); $('tabBtnContent').classList.add('on');
       const title=$('adminHeaderTitle'); if(title) title.textContent='Course Manager';
-      const sub=$('adminHeaderSub'); if(sub) sub.textContent='Add topics, subtopics, videos, PDFs';
+      const sub=$('adminHeaderSub'); if(sub) sub.textContent='Create main topics, add subtopics, then build each subtopic playlist.';
       const add=$('openAddModal'); if(add) add.style.display='none';
       await renderAll(); return;
     }

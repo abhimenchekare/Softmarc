@@ -7,7 +7,7 @@
   // =============================================================
 
   // v2 key: an older, poisoned cache must never be able to hide a file the trainer just added
-  const KEY='softmarc_courses_v2';
+  const KEY='softmarc_courses_v3';
   const MAX_CACHE_AGE=10*60*1000;   // localStorage is a stop-gap, not the source of truth
   const API_HOST='/api'; // Same origin on Vercel
   const API={};
@@ -31,11 +31,15 @@
     const tag=c.tag||c.category||'Course';
     const subs=(c.subtopics||c.modulesList||c.modules||[]).map((m,idx)=>({
       id:m.id||slug(m.title||('subtopic-'+idx)),
+      parentSubtopicId:m.parentSubtopicId||m.parent_subtopic_id||null,
+      mainTopic:m.mainTopic||m.main_topic||'',
       title:m.title||('Subtopic '+(idx+1)),
       dur:m.dur||m.duration||'15 min',
       description:m.description||'',
       videoUrl:m.videoUrl||m.video_url||'',
       pdfUrl:m.pdfUrl||m.pdf_url||'',
+      // New ordered playlist; old one-video/one-document values are retained as a fallback.
+      resources:Array.isArray(m.resources)?m.resources.map(r=>({id:r.id,title:r.title||'',resource_type:r.resource_type||r.type||'',file_url:r.file_url||r.url||'',display_order:r.display_order||0})):[],
       exercise:m.exercise||m.exercise_instructions||''
     }));
     return {
@@ -54,15 +58,21 @@
 
   // Convert Database row format to our internal format
   function databaseToInternal(courseRow){
-    const subs=(courseRow.subtopics||[]).map(s=>({
+    const source=courseRow.subtopics||[];
+    const byId=new Map(source.map(s=>[Number(s.id),s]));
+    const containers=new Set(source.filter(s=>s.parent_subtopic_id!==null&&s.parent_subtopic_id!==undefined&&s.parent_subtopic_id!=='').map(s=>Number(s.parent_subtopic_id)));
+    // A main subtopic with children is a grouping label; student lessons are its child subtopics.
+    const subs=source.filter(s=>!containers.has(Number(s.id))).map(s=>({
       id: s.slug || slug(s.title),
       title: s.title,
+      mainTopic: s.parent_subtopic_id ? ((byId.get(Number(s.parent_subtopic_id))||{}).title||'') : '',
+      parentSubtopicId: s.parent_subtopic_id||null,
       dur: s.dur || '15 min',
       description: s.description || '',
       videoUrl: s.video_url || '',
       pdfUrl: s.pdf_url || '',
+      resources: Array.isArray(s.resources)?s.resources.map(r=>({id:r.id,title:r.title||'',resource_type:r.resource_type||'',file_url:r.file_url||'',display_order:r.display_order||0})):[],
       exercise: s.exercise || '',
-      // Keep Database IDs for updates
       _database_id: s.id
     }));
     return {
@@ -206,7 +216,7 @@
     const obj={};
     API.getCourses(fallbackCourseData).forEach(c=>{
       const rows=c.subtopics.map(st=>({
-        title:st.title,dur:st.dur,videoUrl:st.videoUrl,pdfUrl:st.pdfUrl,exercise:st.exercise,description:st.description,
+        title:st.title,mainTopic:st.mainTopic||'',parentSubtopicId:st.parentSubtopicId||null,dur:st.dur,videoUrl:st.videoUrl,pdfUrl:st.pdfUrl,resources:st.resources||[],exercise:st.exercise,description:st.description,
         _sub_id:st._database_id||null
       }));
       obj[c.title]=rows;
