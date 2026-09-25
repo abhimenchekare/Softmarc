@@ -7,7 +7,7 @@
   // =============================================================
 
   // v2 key: an older, poisoned cache must never be able to hide a file the trainer just added
-  const KEY='softmarc_courses_v3';
+  const KEY='softmarc_courses_v4';
   const MAX_CACHE_AGE=10*60*1000;   // localStorage is a stop-gap, not the source of truth
   const API_HOST='/api'; // Same origin on Vercel
   const API={};
@@ -52,6 +52,7 @@
       status:c.status||'active',
       display_order:c.display_order??i,
       subtopics:subs,
+      mainSubtopics: Array.isArray(c.mainSubtopics)?c.mainSubtopics:subs.map((sub,index)=>({id:sub._database_id||sub.id,title:sub.title,dur:sub.dur||'',description:sub.description||'',children:[Object.assign({moduleIndex:index},sub)]})), 
       assessments:c.assessments||[]
     };
   }
@@ -60,36 +61,31 @@
   function databaseToInternal(courseRow){
     const source=courseRow.subtopics||[];
     const byId=new Map(source.map(s=>[Number(s.id),s]));
-    const containers=new Set(source.filter(s=>s.parent_subtopic_id!==null&&s.parent_subtopic_id!==undefined&&s.parent_subtopic_id!=='').map(s=>Number(s.parent_subtopic_id)));
-    // A main subtopic with children is a grouping label; student lessons are its child subtopics.
-    const subs=source.filter(s=>!containers.has(Number(s.id))).map(s=>({
-      id: s.slug || slug(s.title),
-      title: s.title,
-      mainTopic: s.parent_subtopic_id ? ((byId.get(Number(s.parent_subtopic_id))||{}).title||'') : '',
-      parentSubtopicId: s.parent_subtopic_id||null,
-      dur: s.dur || '15 min',
-      description: s.description || '',
-      videoUrl: s.video_url || '',
-      pdfUrl: s.pdf_url || '',
+    const childByParent=new Map();
+    source.forEach(s=>{if(s.parent_subtopic_id!==null&&s.parent_subtopic_id!==undefined&&s.parent_subtopic_id!==''){const p=Number(s.parent_subtopic_id);if(!childByParent.has(p))childByParent.set(p,[]);childByParent.get(p).push(s);}});
+    const containers=new Set(childByParent.keys());
+    const makeLesson=(s,parent)=>({
+      id: s.slug || slug(s.title), title: s.title,
+      mainTopic: parent?parent.title:'', parentSubtopicId: s.parent_subtopic_id||null,
+      dur: s.dur || '15 min', description: s.description || '', videoUrl: s.video_url || '', pdfUrl: s.pdf_url || '',
       resources: Array.isArray(s.resources)?s.resources.map(r=>({id:r.id,title:r.title||'',resource_type:r.resource_type||'',file_url:r.file_url||'',display_order:r.display_order||0})):[],
-      exercise: s.exercise || '',
-      _database_id: s.id
-    }));
+      exercise: s.exercise || '', _database_id: s.id
+    });
+    // A parent is an organiser; only its child subtopics are playable lessons. A legacy root
+    // without children remains playable and is presented as a one-item main-subtopic group.
+    const leaves=source.filter(s=>!containers.has(Number(s.id))).map(s=>makeLesson(s,s.parent_subtopic_id?byId.get(Number(s.parent_subtopic_id)):null));
+    const leafIndex=new Map(leaves.map((x,i)=>[Number(x._database_id),i]));
+    const roots=source.filter(s=>s.parent_subtopic_id===null||s.parent_subtopic_id===undefined||s.parent_subtopic_id===''||!byId.has(Number(s.parent_subtopic_id)));
+    const mainSubtopics=roots.map(root=>{
+      const rawChildren=childByParent.get(Number(root.id))||[root];
+      const children=rawChildren.map(row=>{const lesson=makeLesson(row,row===root?null:root);lesson.moduleIndex=leafIndex.get(Number(row.id));return lesson;}).filter(row=>row.moduleIndex!==undefined);
+      return {id:root.id,title:root.title,dur:root.dur||'',description:root.description||'',children};
+    });
     return {
-      id: courseRow.slug || slug(courseRow.title),
-      _database_id: courseRow.id,
-      title: courseRow.title,
-      slug: courseRow.slug,
-      tag: courseRow.tag || 'Course',
-      short_description: courseRow.short_description || '',
-      description: courseRow.description || '',
-      duration_hours: courseRow.duration_hours || 10,
-      level: courseRow.level || 'Beginner',
-      image: courseRow.image || svgImage(courseRow.title, courseRow.tag),
-      status: courseRow.status || 'active',
-      display_order: courseRow.display_order || 0,
-      subtopics: subs,
-      assessments: []
+      id: courseRow.slug || slug(courseRow.title), _database_id: courseRow.id, title: courseRow.title, slug: courseRow.slug,
+      tag: courseRow.tag || 'Course', short_description: courseRow.short_description || '', description: courseRow.description || courseRow.short_description || '',
+      duration_hours: courseRow.duration_hours || 10, level: courseRow.level || 'Beginner', image: courseRow.image || svgImage(courseRow.title, courseRow.tag),
+      status: courseRow.status || 'active', display_order: courseRow.display_order || 0, subtopics: leaves, mainSubtopics, assessments: []
     };
   }
 

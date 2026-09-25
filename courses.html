@@ -209,10 +209,18 @@ a{text-decoration:none;color:inherit;}
     <!-- Subtopic view -->
     <div id="subtopicView" style="display:none;">
       <div class="subtopic-header">
-        <div><h2 id="subCourseTitle">CATIA V5 Part Design</h2><p id="subCourseMeta">12 modules · Progress synced · Click Video to play your uploaded video</p></div>
+        <div><h2 id="subCourseTitle">Course</h2><p id="subCourseMeta">Select a main subtopic to see its child subtopics.</p></div>
         <button class="btn btn-secondary" onclick="showMainView()">← Back to courses</button>
       </div>
       <div class="subtopic-list" id="subtopicList"></div>
+    </div>
+    <!-- Second page: children of one selected main subtopic. Only a child lesson opens the resource screen. -->
+    <div id="innerSubtopicView" style="display:none;">
+      <div class="subtopic-header">
+        <div><h2 id="innerSubtopicTitle">Subtopics</h2><p id="innerSubtopicMeta">Choose a subtopic to open its learning materials.</p></div>
+        <button class="btn btn-secondary" onclick="showMainSubtopicView()">← Back to main subtopics</button>
+      </div>
+      <div class="subtopic-list" id="innerSubtopicList"></div>
     </div>
   </div>
 </main>
@@ -235,7 +243,7 @@ a{text-decoration:none;color:inherit;}
   </div>
 </div>
 
-<script src="softmarc-content.js?v=39"></script>
+<script src="softmarc-content.js?v=40"></script>
 <script>
 // Theme
 const htmlEl=document.documentElement;
@@ -347,8 +355,17 @@ if(window.SoftmarcContent){
 }
 
 let activeCourseName = null;
+let activeMainSubtopicIndex = null;
 let currentExCourse = null, currentExIdx = null;
 let progressMap = new Map();
+
+function courseGroups(courseName){
+  let course=null;
+  try{course=window.SoftmarcContent&&SoftmarcContent.findCourse?SoftmarcContent.findCourse(courseName):null;}catch(e){}
+  if(course&&Array.isArray(course.mainSubtopics)&&course.mainSubtopics.length)return course.mainSubtopics;
+  // Older/locally saved courses still get the same two-click path: each old lesson becomes a main group with one child lesson.
+  return (COURSE_DATA[courseName]||[]).map((lesson,index)=>({id:lesson._database_id||lesson.id||index,title:lesson.title,dur:lesson.dur||'',description:lesson.description||'',children:[Object.assign({moduleIndex:index},lesson)]}));
+}
 
 // Main view - courses grid with real progress
 let activeCourseFilter='All';
@@ -366,102 +383,43 @@ function applyCourseFilters(){
   let empty=grid.querySelector('.course-no-results');
   if(!empty){ empty=document.createElement('div'); empty.className='course-no-results'; empty.innerHTML='No courses match this search. Try another keyword or clear the filters.'; grid.appendChild(empty); }
   empty.hidden=visible>0;
-  const summary=document.getElementById('courseSearchSummary');
-  if(summary) summary.textContent=query ? `${visible} course${visible===1?'':'s'} match “${courseSearchQuery.trim()}”.` : '';
+  const summary=document.getElementById('courseSearchSummary'); if(summary) summary.textContent=query ? `${visible} course${visible===1?'':'s'} match “${courseSearchQuery.trim()}”.` : '';
   const clear=document.getElementById('courseSearchClear'); if(clear) clear.classList.toggle('show',!!query);
 }
 async function renderCoursesReal(){
-  const grid = document.getElementById('coursesGrid');
-  grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';
-  progressMap = new Map();
-  try{
-    const res = await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);
-    if(!res.ok) throw new Error('progress failed');
-    const rows = await res.json();
-    rows.forEach(r=>{
-      if(!progressMap.has(r.course_name)) progressMap.set(r.course_name, new Set());
-      progressMap.get(r.course_name).add(r.module_index);
-    });
-  }catch(err){
-    console.warn('Fallback to localStorage', err);
-    COURSE_DEFS.forEach(c=>{
-      const doneList = JSON.parse(localStorage.getItem('done_'+c.name) || '[]');
-      progressMap.set(c.name, new Set(doneList));
-    });
-  }
-
-  grid.innerHTML = '';
-  COURSE_DEFS.forEach(course=>{
-    const doneSet = progressMap.get(course.name) || new Set();
-    const pct = course.modules>0 ? Math.min(100, Math.round(Math.min(doneSet.size, course.modules) / course.modules * 100)) : 0;
-    const cardHtml = `
-      <div class="course-card" data-course-status="${pct===100?'completed':pct>0?'progress':'new'}" data-course-search="${String(course.name+' '+course.tag).replace(/[&<>"']/g,'')}" onclick="openSubtopics('${course.name}')">
-        <div class="course-image" style="background-image:url('${course.image || (window.SoftmarcContent && SoftmarcContent.defaultImage(course.name, course.tag))}')"></div>
-        <span class="tag">${course.tag} · ${pct}%</span>
-        <h3>${course.name}</h3>
-        <div class="meta">${course.modules} subtopics · ${course.hours} hrs · ${pct===100?'Completed':'In progress'}</div>
-        <div class="progress-track"><div class="progress-fill ${pct===100?'done':''}" style="width:${pct}%"></div></div>
-        <div class="pct">${pct===100?'✅ Completed':pct===0?'Not started':`${pct}% complete · Real DB`} → Click to open subtopics</div>
-        <button class="btn btn-primary" onclick="event.stopPropagation(); openSubtopics('${course.name}')">Open Subtopics</button>
-      </div>`;
-    grid.insertAdjacentHTML('beforeend', cardHtml);
-  });
+  const grid = document.getElementById('coursesGrid');grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';progressMap = new Map();
+  try{const res=await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);if(!res.ok)throw new Error('progress failed');const rows=await res.json();rows.forEach(r=>{if(!progressMap.has(r.course_name))progressMap.set(r.course_name,new Set());progressMap.get(r.course_name).add(r.module_index);});}
+  catch(err){console.warn('Fallback to localStorage',err);COURSE_DEFS.forEach(c=>progressMap.set(c.name,new Set(JSON.parse(localStorage.getItem('done_'+c.name)||'[]'))));}
+  grid.innerHTML='';
+  COURSE_DEFS.forEach(course=>{const doneSet=progressMap.get(course.name)||new Set(),pct=course.modules>0?Math.min(100,Math.round(Math.min(doneSet.size,course.modules)/course.modules*100)):0;grid.insertAdjacentHTML('beforeend',`<div class="course-card" data-course-status="${pct===100?'completed':pct>0?'progress':'new'}" data-course-search="${String(course.name+' '+course.tag).replace(/[&<>"']/g,'')}" onclick="openSubtopics('${course.name}')"><div class="course-image" style="background-image:url('${course.image||(window.SoftmarcContent&&SoftmarcContent.defaultImage(course.name,course.tag))}')"></div><span class="tag">${course.tag} · ${pct}%</span><h3>${course.name}</h3><div class="meta">${course.modules} lessons · ${course.hours} hrs · ${pct===100?'Completed':'In progress'}</div><div class="progress-track"><div class="progress-fill ${pct===100?'done':''}" style="width:${pct}%"></div></div><div class="pct">${pct===100?'✅ Completed':pct===0?'Not started':`${pct}% complete · Real DB`} → Open main subtopics</div><button class="btn btn-primary" onclick="event.stopPropagation();openSubtopics('${course.name}')">Open Main Subtopics</button></div>`);});
   applyCourseFilters();
 }
 
-// Subtopic view - Click subtopic opens NEW WINDOW with 4 buttons inside
+// Step 1: course -> page of main subtopics.
 function openSubtopics(courseName){
-  activeCourseName = courseName;
-  const modules = COURSE_DATA[courseName] || [];
-  const doneSet = progressMap.get(courseName) || new Set();
-  
-  document.getElementById('mainView').style.display='none';
-  document.getElementById('subtopicView').style.display='block';
-  document.getElementById('breadcrumb').innerHTML = `<a href="soft_dashboard.html">Dashboard</a> / <a href="#" onclick="showMainView()">My Courses</a> / <strong>${courseName}</strong>`;
-  document.getElementById('subCourseTitle').textContent = courseName;
-  document.getElementById('subCourseMeta').textContent = `${modules.length} subtopics · ${doneSet.size} completed · Click any subtopic to open resource window`;
-
-  const list = document.getElementById('subtopicList');
-  list.innerHTML = '';
-  
-  modules.forEach((mod, idx)=>{
-    const isDone = doneSet.has(idx);
-    // Each subtopic is clickable and opens NEW WINDOW (lesson.html)
-    // That new window will have 4 buttons: PDF, Videos, MCQ, Exercises
-    const item = `
-      <div class="subtopic-item" onclick="openSubtopicWindow('${courseName}', ${idx})" style="cursor:pointer;">
-        <div class="sub-num ${isDone?'done':''}">${isDone?'✓':idx+1}</div>
-        <div class="sub-info">
-          <h4>${mod.title}</h4>
-          <div class="sub-meta">${mod.dur} · Subtopic ${idx+1} · ${isDone?'Completed':'Click to open resource window'}</div>
-        </div>
-        <div class="sub-actions">
-          <button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="event.stopPropagation(); openSubtopicWindow('${courseName}', ${idx})">Open →</button>
-        </div>
-      </div>`;
-    list.insertAdjacentHTML('beforeend', item);
-  });
+  activeCourseName=courseName;activeMainSubtopicIndex=null;const groups=courseGroups(courseName),doneSet=progressMap.get(courseName)||new Set();
+  document.getElementById('mainView').style.display='none';document.getElementById('innerSubtopicView').style.display='none';document.getElementById('subtopicView').style.display='block';
+  document.getElementById('breadcrumb').innerHTML=`<a href="soft_dashboard.html">Dashboard</a> / <a href="#" onclick="showMainView()">My Courses</a> / <strong>${courseName}</strong>`;
+  document.getElementById('subCourseTitle').textContent=courseName;document.getElementById('subCourseMeta').textContent=`${groups.length} main subtopic${groups.length===1?'':'s'} · Select one to see its child subtopics`;
+  const list=document.getElementById('subtopicList');list.innerHTML='';
+  if(!groups.length){list.innerHTML='<div class="course-no-results">No main subtopics are published yet.</div>';return;}
+  groups.forEach((group,index)=>{const complete=group.children.length&&group.children.every(child=>doneSet.has(child.moduleIndex));list.insertAdjacentHTML('beforeend',`<div class="subtopic-item" onclick="openInnerSubtopics('${courseName}',${index})" style="cursor:pointer;"><div class="sub-num ${complete?'done':''}">${complete?'✓':index+1}</div><div class="sub-info"><h4>${group.title}</h4><div class="sub-meta">${group.children.length} child subtopic${group.children.length===1?'':'s'} · ${group.description||'Open to view subtopics'}</div></div><div class="sub-actions"><button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="event.stopPropagation();openInnerSubtopics('${courseName}',${index})">View Subtopics →</button></div></div>`);});
 }
 
-function showMainView(){
-  document.getElementById('subtopicView').style.display='none';
-  document.getElementById('mainView').style.display='block';
-  document.getElementById('breadcrumb').innerHTML = `<a href="soft_dashboard.html">Dashboard</a> / <strong>My Courses</strong>`;
+// Step 2: selected main subtopic -> separate child-subtopic page.
+function openInnerSubtopics(courseName,groupIndex){
+  activeCourseName=courseName;activeMainSubtopicIndex=Number(groupIndex);const group=courseGroups(courseName)[activeMainSubtopicIndex];if(!group)return showMainSubtopicView();const doneSet=progressMap.get(courseName)||new Set();
+  document.getElementById('subtopicView').style.display='none';document.getElementById('innerSubtopicView').style.display='block';
+  document.getElementById('breadcrumb').innerHTML=`<a href="soft_dashboard.html">Dashboard</a> / <a href="#" onclick="showMainView()">My Courses</a> / <a href="#" onclick="showMainSubtopicView()">${courseName}</a> / <strong>${group.title}</strong>`;
+  document.getElementById('innerSubtopicTitle').textContent=group.title;document.getElementById('innerSubtopicMeta').textContent=`${group.children.length} subtopic${group.children.length===1?'':'s'} · Choose one to open videos, PDF/PPT, MCQ and exercises.`;
+  const list=document.getElementById('innerSubtopicList');list.innerHTML='';
+  group.children.forEach((child,index)=>{const done=doneSet.has(child.moduleIndex);list.insertAdjacentHTML('beforeend',`<div class="subtopic-item" onclick="openSubtopicWindow('${courseName}',${child.moduleIndex})" style="cursor:pointer;"><div class="sub-num ${done?'done':''}">${done?'✓':index+1}</div><div class="sub-info"><h4>${child.title}</h4><div class="sub-meta">${child.dur||'15 min'} · ${done?'Completed':'Open learning materials'}</div></div><div class="sub-actions"><button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="event.stopPropagation();openSubtopicWindow('${courseName}',${child.moduleIndex})">Open →</button></div></div>`);});
 }
-
-// NEW WINDOW - This window has 4 buttons: PDF, Videos, MCQ, Exercises
-// When you click Video inside, ONLY that subtopic's video appears (not dashboard)
-function openSubtopicWindow(courseName, idx){
-  window.location.href = `lesson.html?course=${encodeURIComponent(courseName)}&module=${idx}`;
-}
-
-function openSubtopicResource(courseName, idx, type){
-  if(type==='mcq'){
-    window.location.href = `assessments.html?course=${encodeURIComponent(courseName)}&module=${idx}`;
-  } else {
-    window.location.href = `lesson.html?course=${encodeURIComponent(courseName)}&module=${idx}&type=${type}`;
-  }
-}
+function showMainSubtopicView(){if(activeCourseName)openSubtopics(activeCourseName);else showMainView();}
+function showMainView(){document.getElementById('subtopicView').style.display='none';document.getElementById('innerSubtopicView').style.display='none';document.getElementById('mainView').style.display='block';document.getElementById('breadcrumb').innerHTML='<a href="soft_dashboard.html">Dashboard</a> / <strong>My Courses</strong>';}
+// Step 3: only a child subtopic opens the resource page.
+function openSubtopicWindow(courseName,idx){window.location.href=`lesson.html?course=${encodeURIComponent(courseName)}&module=${idx}`;}
+function openSubtopicResource(courseName,idx,type){if(type==='mcq')window.location.href=`assessments.html?course=${encodeURIComponent(courseName)}&module=${idx}`;else window.location.href=`lesson.html?course=${encodeURIComponent(courseName)}&module=${idx}&type=${type}`;}
 
 // Check URL param ?course=...
 const urlParams = new URLSearchParams(window.location.search);

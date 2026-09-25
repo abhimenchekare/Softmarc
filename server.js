@@ -223,12 +223,15 @@ async function validateSubtopicParent(courseId,parentId){
 function demoVisibleSubtopics(topics,limit){
   const rows=topics||[], roots=rows.filter(t=>t.parent_subtopic_id===null||t.parent_subtopic_id===undefined||t.parent_subtopic_id==='');
   const chosen=new Set(roots.slice(0,Math.max(0,Number(limit)||2)).map(t=>Number(t.id)));
-  const hasChild=new Set(rows.filter(t=>t.parent_subtopic_id!==null&&t.parent_subtopic_id!==undefined&&t.parent_subtopic_id!=='').map(t=>Number(t.parent_subtopic_id)));
   return rows.filter(t=>{
     const parent=t.parent_subtopic_id;
     if(parent!==null&&parent!==undefined&&parent!=='') return chosen.has(Number(parent));
-    return chosen.has(Number(t.id)) && !hasChild.has(Number(t.id));
+    return chosen.has(Number(t.id));
   });
+}
+function playableSubtopics(topics){
+  const containers=new Set((topics||[]).filter(t=>t.parent_subtopic_id!==null&&t.parent_subtopic_id!==undefined&&t.parent_subtopic_id!=='').map(t=>Number(t.parent_subtopic_id)));
+  return (topics||[]).filter(t=>!containers.has(Number(t.id)));
 }
 
 // A subtopic can hold a playlist of videos and a library of PDF/PPTX documents.
@@ -290,7 +293,7 @@ async function mayStudy(auth, courseName, moduleIndex) {
   if(permitted.access.access_mode!=='demo') return true;
   await ensureSubtopicHierarchyColumn();
   const [topics]=await pool.query('SELECT id,parent_subtopic_id,display_order FROM subtopics WHERE course_id=? ORDER BY display_order ASC,id ASC',[rows[0].id]);
-  return Number(moduleIndex)>=0 && Number(moduleIndex)<demoVisibleSubtopics(topics,permitted.access.demo_topic_limit).length;
+  return Number(moduleIndex)>=0 && Number(moduleIndex)<playableSubtopics(demoVisibleSubtopics(topics,permitted.access.demo_topic_limit)).length;
 }
 function inviteCode() { return 'SM-' + crypto.randomBytes(4).toString('hex').toUpperCase(); }
 async function ownBatchOrAdmin(auth, batchId) {
