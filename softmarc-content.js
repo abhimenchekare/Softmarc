@@ -7,7 +7,7 @@
   // =============================================================
 
   // v2 key: an older, poisoned cache must never be able to hide a file the trainer just added
-  const KEY='softmarc_courses_v4';
+  const KEY='softmarc_courses_v5';
   const MAX_CACHE_AGE=10*60*1000;   // localStorage is a stop-gap, not the source of truth
   const API_HOST='/api'; // Same origin on Vercel
   const API={};
@@ -110,7 +110,8 @@
   const settled = new Promise(res => { _settled = res; });
 
   API.getCourses = function(courseData, defs){
-    // If we already have cached courses from Database, return them
+    // Once the database has answered, including with an empty catalogue, that answer wins.
+    if(_fromDatabase && Array.isArray(_coursesCache)) return _coursesCache;
     if(_coursesCache && _coursesCache.length) return _coursesCache;
 
     // Try localStorage as immediate fallback (so page renders fast)
@@ -155,7 +156,12 @@
           // Dispatch event so pages can re-render
           window.dispatchEvent(new CustomEvent('softmarc-courses-uploaded', { detail: _coursesCache }));
         } else {
-          _fromDatabase = true;   // an empty database is still an answer — pages must say "nothing yet"
+          // An empty database is an authoritative answer, never a reason to keep rendering an
+          // old localStorage or hardcoded catalogue from a previous session.
+          _coursesCache = [];
+          _fromDatabase = true;
+          try{ localStorage.setItem(KEY, JSON.stringify({at:Date.now(), courses:[]})); }catch(e){}
+          window.dispatchEvent(new CustomEvent('softmarc-courses-uploaded', { detail: [] }));
           console.log('[SoftmarcContent] Database has no courses yet');
         }
       })

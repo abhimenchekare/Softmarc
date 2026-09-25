@@ -243,7 +243,7 @@ a{text-decoration:none;color:inherit;}
   </div>
 </div>
 
-<script src="softmarc-content.js?v=40"></script>
+<script src="softmarc-content.js?v=41"></script>
 <script>
 // Theme
 const htmlEl=document.documentElement;
@@ -354,6 +354,19 @@ if(window.SoftmarcContent){
   COURSE_DEFS.splice(0, COURSE_DEFS.length, ...__defs);
 }
 
+// Course catalogue must always render the server's answer, not the first localStorage/fallback
+// snapshot. Rebuild both maps every time the shared content service has fresh data.
+function syncCourseCatalogueFromServer(){
+  if(!window.SoftmarcContent) return;
+  const latest=SoftmarcContent.getCourseDataObject(null);
+  if(latest && typeof latest==='object'){
+    Object.keys(COURSE_DATA).forEach(k=>delete COURSE_DATA[k]);
+    Object.assign(COURSE_DATA,latest);
+  }
+  const defs=SoftmarcContent.getCourseDefs([],null);
+  if(Array.isArray(defs)) COURSE_DEFS.splice(0,COURSE_DEFS.length,...defs);
+}
+
 let activeCourseName = null;
 let activeMainSubtopicIndex = null;
 let currentExCourse = null, currentExIdx = null;
@@ -387,7 +400,14 @@ function applyCourseFilters(){
   const clear=document.getElementById('courseSearchClear'); if(clear) clear.classList.toggle('show',!!query);
 }
 async function renderCoursesReal(){
-  const grid = document.getElementById('coursesGrid');grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';progressMap = new Map();
+  const grid = document.getElementById('coursesGrid');
+  // Never flash an old course tree while the current database answer is still in flight.
+  if(window.SoftmarcContent&&!SoftmarcContent.fromDatabase()){
+    grid.innerHTML='<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading the latest courses…</div>';
+    try{await SoftmarcContent.ready(6000);}catch(e){}
+    syncCourseCatalogueFromServer();
+  }
+  grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';progressMap = new Map();
   try{const res=await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);if(!res.ok)throw new Error('progress failed');const rows=await res.json();rows.forEach(r=>{if(!progressMap.has(r.course_name))progressMap.set(r.course_name,new Set());progressMap.get(r.course_name).add(r.module_index);});}
   catch(err){console.warn('Fallback to localStorage',err);COURSE_DEFS.forEach(c=>progressMap.set(c.name,new Set(JSON.parse(localStorage.getItem('done_'+c.name)||'[]'))));}
   grid.innerHTML='';
@@ -424,7 +444,7 @@ function openSubtopicResource(courseName,idx,type){if(type==='mcq')window.locati
 // Check URL param ?course=...
 const urlParams = new URLSearchParams(window.location.search);
 const courseParam = urlParams.get('course');
-window.addEventListener('softmarc-courses-uploaded', ()=>{ renderCoursesReal(); });
+window.addEventListener('softmarc-courses-uploaded', ()=>{ syncCourseCatalogueFromServer(); renderCoursesReal(); });
 if(courseParam){
   // Need to wait for progress to load first
   renderCoursesReal().then(()=>{
