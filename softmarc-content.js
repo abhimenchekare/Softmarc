@@ -7,7 +7,7 @@
   // =============================================================
 
   // v2 key: an older, poisoned cache must never be able to hide a file the trainer just added
-  const KEY='softmarc_courses_v5';
+  const KEY='softmarc_courses_v6';
   const MAX_CACHE_AGE=10*60*1000;   // localStorage is a stop-gap, not the source of truth
   const API_HOST='/api'; // Same origin on Vercel
   const API={};
@@ -25,23 +25,74 @@
   // There is deliberately NO hardcoded course list: if the database has no content yet,
   // the pages say so instead of showing demo videos and PDFs that a learner cannot watch.
 
+  // Every course uses one self-referencing subtopic table. A topic can therefore have
+  // as many child pages as it needs, at any depth. Only terminal pages are lessons.
+  function topicDatabaseId(row){
+    const value=row&&((row._database_id!==undefined&&row._database_id!==null)?row._database_id:((row.database_id!==undefined&&row.database_id!==null)?row.database_id:row.id));
+    return (typeof value==='number'||(/^\d+$/.test(String(value||'')))) ? Number(value) : null;
+  }
+  function topicKey(row,index){
+    const db=topicDatabaseId(row);
+    return db!==null?'db:'+db:'key:'+(row&&row.id?String(row.id):slug((row&&row.title)||('subtopic-'+index))+'-'+index);
+  }
+  function parentTopicKey(row,all){
+    const parent=row&&((row.parentSubtopicId!==undefined&&row.parentSubtopicId!==null&&row.parentSubtopicId!=='')?row.parentSubtopicId:row.parent_subtopic_id);
+    if(parent===undefined||parent===null||parent==='') return null;
+    const match=(all||[]).find(x=>Number(topicDatabaseId(x))===Number(parent));
+    return match ? topicKey(match,all.indexOf(match)) : null;
+  }
+  function normaliseSubtopic(m,idx){
+    const db=topicDatabaseId(m);
+    const parent=(m&&((m.parentSubtopicId!==undefined&&m.parentSubtopicId!==null&&m.parentSubtopicId!=='')?m.parentSubtopicId:m.parent_subtopic_id));
+    return {
+      id:String((m&&m.id)!==undefined?(m.id):(db!==null?db:slug((m&&m.title)||('subtopic-'+idx)))),
+      _database_id:db,
+      parentSubtopicId:(parent===undefined||parent===null||parent==='')?null:Number(parent),
+      mainTopic:(m&&((m.mainTopic!==undefined)?m.mainTopic:m.main_topic))||'',
+      title:(m&&m.title)||('Subtopic '+(idx+1)),
+      dur:(m&&(m.dur||m.duration))||'15 min',
+      description:(m&&m.description)||'',
+      videoUrl:(m&&(m.videoUrl||m.video_url))||'',
+      pdfUrl:(m&&(m.pdfUrl||m.pdf_url))||'',
+      resources:Array.isArray(m&&m.resources)?m.resources.map(r=>({id:r.id,title:r.title||'',resource_type:r.resource_type||r.type||'',file_url:r.file_url||r.url||'',display_order:r.display_order||0})):[],
+      exercise:(m&&(m.exercise||m.exercise_instructions))||''
+    };
+  }
+  function buildTopicStructure(rows){
+    const all=(rows||[]).map((row,index)=>Object.assign({},row,{_topicKey:topicKey(row,index)}));
+    const byKey=new Map(all.map(row=>[row._topicKey,row]));
+    const children=new Map();
+    all.forEach(row=>{
+      const parent=parentTopicKey(row,all);
+      if(parent&&parent!==row._topicKey&&byKey.has(parent)){
+        if(!children.has(parent)) children.set(parent,[]);
+        children.get(parent).push(row);
+      }
+    });
+    const roots=all.filter(row=>{
+      const parent=parentTopicKey(row,all);
+      return !parent||parent===row._topicKey||!byKey.has(parent);
+    });
+    const leaves=all.filter(row=>!(children.get(row._topicKey)||[]).length);
+    const leafIndex=new Map(leaves.map((row,index)=>[row._topicKey,index]));
+    function nodeFor(row){
+      const node=Object.assign({},row);
+      const nested=(children.get(row._topicKey)||[]).map(nodeFor);
+      delete node._topicKey;
+      node.nodeKey=row._topicKey;
+      node.children=nested;
+      if(!nested.length) node.moduleIndex=leafIndex.get(row._topicKey);
+      return node;
+    }
+    return { roots:roots.map(nodeFor), leaves:leaves.map((row,index)=>Object.assign({},row,{moduleIndex:index,nodeKey:row._topicKey})) };
+  }
+
   function normaliseCourse(c,i){
     const title=c.title||c.name||'Untitled Course';
     const id=c.id||slug(title);
     const tag=c.tag||c.category||'Course';
-    const subs=(c.subtopics||c.modulesList||c.modules||[]).map((m,idx)=>({
-      id:m.id||slug(m.title||('subtopic-'+idx)),
-      parentSubtopicId:m.parentSubtopicId||m.parent_subtopic_id||null,
-      mainTopic:m.mainTopic||m.main_topic||'',
-      title:m.title||('Subtopic '+(idx+1)),
-      dur:m.dur||m.duration||'15 min',
-      description:m.description||'',
-      videoUrl:m.videoUrl||m.video_url||'',
-      pdfUrl:m.pdfUrl||m.pdf_url||'',
-      // New ordered playlist; old one-video/one-document values are retained as a fallback.
-      resources:Array.isArray(m.resources)?m.resources.map(r=>({id:r.id,title:r.title||'',resource_type:r.resource_type||r.type||'',file_url:r.file_url||r.url||'',display_order:r.display_order||0})):[],
-      exercise:m.exercise||m.exercise_instructions||''
-    }));
+    const source=c.subtopics||c.modulesList||c.modules||[];
+    const structure=buildTopicStructure(source.map(normaliseSubtopic));
     return {
       id,title,slug:c.slug||slug(title),tag,
       short_description:c.short_description||c.description||`${title} automotive learning path`,
@@ -51,41 +102,23 @@
       image:c.image||c.preview_image||c.banner_image||svgImage(title,tag),
       status:c.status||'active',
       display_order:c.display_order??i,
-      subtopics:subs,
-      mainSubtopics: Array.isArray(c.mainSubtopics)?c.mainSubtopics:subs.map((sub,index)=>({id:sub._database_id||sub.id,title:sub.title,dur:sub.dur||'',description:sub.description||'',children:[Object.assign({moduleIndex:index},sub)]})), 
+      // Flat terminal lessons power existing lesson/progress URLs. topicTree powers unlimited navigation pages.
+      subtopics:structure.leaves,
+      topicTree:structure.roots,
+      mainSubtopics:structure.roots,
       assessments:c.assessments||[]
     };
   }
 
-  // Convert Database row format to our internal format
+  // Convert Database row format to the common unlimited-depth tree format.
   function databaseToInternal(courseRow){
-    const source=courseRow.subtopics||[];
-    const byId=new Map(source.map(s=>[Number(s.id),s]));
-    const childByParent=new Map();
-    source.forEach(s=>{if(s.parent_subtopic_id!==null&&s.parent_subtopic_id!==undefined&&s.parent_subtopic_id!==''){const p=Number(s.parent_subtopic_id);if(!childByParent.has(p))childByParent.set(p,[]);childByParent.get(p).push(s);}});
-    const containers=new Set(childByParent.keys());
-    const makeLesson=(s,parent)=>({
-      id: s.slug || slug(s.title), title: s.title,
-      mainTopic: parent?parent.title:'', parentSubtopicId: s.parent_subtopic_id||null,
-      dur: s.dur || '15 min', description: s.description || '', videoUrl: s.video_url || '', pdfUrl: s.pdf_url || '',
-      resources: Array.isArray(s.resources)?s.resources.map(r=>({id:r.id,title:r.title||'',resource_type:r.resource_type||'',file_url:r.file_url||'',display_order:r.display_order||0})):[],
-      exercise: s.exercise || '', _database_id: s.id
-    });
-    // A parent is an organiser; only its child subtopics are playable lessons. A legacy root
-    // without children remains playable and is presented as a one-item main-subtopic group.
-    const leaves=source.filter(s=>!containers.has(Number(s.id))).map(s=>makeLesson(s,s.parent_subtopic_id?byId.get(Number(s.parent_subtopic_id)):null));
-    const leafIndex=new Map(leaves.map((x,i)=>[Number(x._database_id),i]));
-    const roots=source.filter(s=>s.parent_subtopic_id===null||s.parent_subtopic_id===undefined||s.parent_subtopic_id===''||!byId.has(Number(s.parent_subtopic_id)));
-    const mainSubtopics=roots.map(root=>{
-      const rawChildren=childByParent.get(Number(root.id))||[root];
-      const children=rawChildren.map(row=>{const lesson=makeLesson(row,row===root?null:root);lesson.moduleIndex=leafIndex.get(Number(row.id));return lesson;}).filter(row=>row.moduleIndex!==undefined);
-      return {id:root.id,title:root.title,dur:root.dur||'',description:root.description||'',children};
-    });
+    const structure=buildTopicStructure((courseRow.subtopics||[]).map(normaliseSubtopic));
     return {
       id: courseRow.slug || slug(courseRow.title), _database_id: courseRow.id, title: courseRow.title, slug: courseRow.slug,
       tag: courseRow.tag || 'Course', short_description: courseRow.short_description || '', description: courseRow.description || courseRow.short_description || '',
       duration_hours: courseRow.duration_hours || 10, level: courseRow.level || 'Beginner', image: courseRow.image || svgImage(courseRow.title, courseRow.tag),
-      status: courseRow.status || 'active', display_order: courseRow.display_order || 0, subtopics: leaves, mainSubtopics, assessments: []
+      status: courseRow.status || 'active', display_order: courseRow.display_order || 0,
+      subtopics:structure.leaves, topicTree:structure.roots, mainSubtopics:structure.roots, assessments: []
     };
   }
 

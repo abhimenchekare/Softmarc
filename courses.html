@@ -206,21 +206,13 @@ a{text-decoration:none;color:inherit;}
       <div class="course-search-summary" id="courseSearchSummary" aria-live="polite"></div>
       <div class="grid-3" id="coursesGrid"></div>
     </div>
-    <!-- Subtopic view -->
+    <!-- One reusable subtopic page renders as many nested levels as this course needs. -->
     <div id="subtopicView" style="display:none;">
       <div class="subtopic-header">
-        <div><h2 id="subCourseTitle">Course</h2><p id="subCourseMeta">Select a main subtopic to see its child subtopics.</p></div>
-        <button class="btn btn-secondary" onclick="showMainView()">← Back to courses</button>
+        <div><h2 id="subCourseTitle">Course</h2><p id="subCourseMeta">Choose a subtopic. If it contains more subtopics, the next page opens.</p></div>
+        <button class="btn btn-secondary" id="subtopicBack" type="button">← Back to courses</button>
       </div>
       <div class="subtopic-list" id="subtopicList"></div>
-    </div>
-    <!-- Second page: children of one selected main subtopic. Only a child lesson opens the resource screen. -->
-    <div id="innerSubtopicView" style="display:none;">
-      <div class="subtopic-header">
-        <div><h2 id="innerSubtopicTitle">Subtopics</h2><p id="innerSubtopicMeta">Choose a subtopic to open its learning materials.</p></div>
-        <button class="btn btn-secondary" onclick="showMainSubtopicView()">← Back to main subtopics</button>
-      </div>
-      <div class="subtopic-list" id="innerSubtopicList"></div>
     </div>
   </div>
 </main>
@@ -243,7 +235,7 @@ a{text-decoration:none;color:inherit;}
   </div>
 </div>
 
-<script src="softmarc-content.js?v=41"></script>
+<script src="softmarc-content.js?v=43"></script>
 <script>
 // Theme
 const htmlEl=document.documentElement;
@@ -368,19 +360,11 @@ function syncCourseCatalogueFromServer(){
 }
 
 let activeCourseName = null;
-let activeMainSubtopicIndex = null;
+let activeTopicTrail = [];
 let currentExCourse = null, currentExIdx = null;
 let progressMap = new Map();
 
-function courseGroups(courseName){
-  let course=null;
-  try{course=window.SoftmarcContent&&SoftmarcContent.findCourse?SoftmarcContent.findCourse(courseName):null;}catch(e){}
-  if(course&&Array.isArray(course.mainSubtopics)&&course.mainSubtopics.length)return course.mainSubtopics;
-  // Older/locally saved courses still get the same two-click path: each old lesson becomes a main group with one child lesson.
-  return (COURSE_DATA[courseName]||[]).map((lesson,index)=>({id:lesson._database_id||lesson.id||index,title:lesson.title,dur:lesson.dur||'',description:lesson.description||'',children:[Object.assign({moduleIndex:index},lesson)]}));
-}
-
-// Main view - courses grid with real progress
+// Main course catalogue with real progress. It stays separate from the reusable unlimited-depth topic page.
 let activeCourseFilter='All';
 let courseSearchQuery='';
 function applyCourseFilters(){
@@ -411,33 +395,62 @@ async function renderCoursesReal(){
   try{const res=await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);if(!res.ok)throw new Error('progress failed');const rows=await res.json();rows.forEach(r=>{if(!progressMap.has(r.course_name))progressMap.set(r.course_name,new Set());progressMap.get(r.course_name).add(r.module_index);});}
   catch(err){console.warn('Fallback to localStorage',err);COURSE_DEFS.forEach(c=>progressMap.set(c.name,new Set(JSON.parse(localStorage.getItem('done_'+c.name)||'[]'))));}
   grid.innerHTML='';
-  COURSE_DEFS.forEach(course=>{const doneSet=progressMap.get(course.name)||new Set(),pct=course.modules>0?Math.min(100,Math.round(Math.min(doneSet.size,course.modules)/course.modules*100)):0;grid.insertAdjacentHTML('beforeend',`<div class="course-card" data-course-status="${pct===100?'completed':pct>0?'progress':'new'}" data-course-search="${String(course.name+' '+course.tag).replace(/[&<>"']/g,'')}" onclick="openSubtopics('${course.name}')"><div class="course-image" style="background-image:url('${course.image||(window.SoftmarcContent&&SoftmarcContent.defaultImage(course.name,course.tag))}')"></div><span class="tag">${course.tag} · ${pct}%</span><h3>${course.name}</h3><div class="meta">${course.modules} lessons · ${course.hours} hrs · ${pct===100?'Completed':'In progress'}</div><div class="progress-track"><div class="progress-fill ${pct===100?'done':''}" style="width:${pct}%"></div></div><div class="pct">${pct===100?'✅ Completed':pct===0?'Not started':`${pct}% complete · Real DB`} → Open main subtopics</div><button class="btn btn-primary" onclick="event.stopPropagation();openSubtopics('${course.name}')">Open Main Subtopics</button></div>`);});
+  COURSE_DEFS.forEach(course=>{const doneSet=progressMap.get(course.name)||new Set(),pct=course.modules>0?Math.min(100,Math.round(Math.min(doneSet.size,course.modules)/course.modules*100)):0;grid.insertAdjacentHTML('beforeend',`<div class="course-card" data-course-status="${pct===100?'completed':pct>0?'progress':'new'}" data-course-search="${String(course.name+' '+course.tag).replace(/[&<>"']/g,'')}" onclick="openSubtopics('${course.name}')"><div class="course-image" style="background-image:url('${course.image||(window.SoftmarcContent&&SoftmarcContent.defaultImage(course.name,course.tag))}')"></div><span class="tag">${course.tag} · ${pct}%</span><h3>${course.name}</h3><div class="meta">${course.modules} lessons · ${course.hours} hrs · ${pct===100?'Completed':'In progress'}</div><div class="progress-track"><div class="progress-fill ${pct===100?'done':''}" style="width:${pct}%"></div></div><div class="pct">${pct===100?'✅ Completed':pct===0?'Not started':`${pct}% complete · Real DB`} → Open subtopics</div><button class="btn btn-primary" onclick="event.stopPropagation();openSubtopics('${course.name}')">Open Subtopics</button></div>`);});
   applyCourseFilters();
 }
 
-// Step 1: course -> page of main subtopics.
-function openSubtopics(courseName){
-  activeCourseName=courseName;activeMainSubtopicIndex=null;const groups=courseGroups(courseName),doneSet=progressMap.get(courseName)||new Set();
-  document.getElementById('mainView').style.display='none';document.getElementById('innerSubtopicView').style.display='none';document.getElementById('subtopicView').style.display='block';
-  document.getElementById('breadcrumb').innerHTML=`<a href="soft_dashboard.html">Dashboard</a> / <a href="#" onclick="showMainView()">My Courses</a> / <strong>${courseName}</strong>`;
-  document.getElementById('subCourseTitle').textContent=courseName;document.getElementById('subCourseMeta').textContent=`${groups.length} main subtopic${groups.length===1?'':'s'} · Select one to see its child subtopics`;
-  const list=document.getElementById('subtopicList');list.innerHTML='';
-  if(!groups.length){list.innerHTML='<div class="course-no-results">No main subtopics are published yet.</div>';return;}
-  groups.forEach((group,index)=>{const complete=group.children.length&&group.children.every(child=>doneSet.has(child.moduleIndex));list.insertAdjacentHTML('beforeend',`<div class="subtopic-item" onclick="openInnerSubtopics('${courseName}',${index})" style="cursor:pointer;"><div class="sub-num ${complete?'done':''}">${complete?'✓':index+1}</div><div class="sub-info"><h4>${group.title}</h4><div class="sub-meta">${group.children.length} child subtopic${group.children.length===1?'':'s'} · ${group.description||'Open to view subtopics'}</div></div><div class="sub-actions"><button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="event.stopPropagation();openInnerSubtopics('${courseName}',${index})">View Subtopics →</button></div></div>`);});
+function escapeTopicText(value){return String(value==null?'':value).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));}
+function currentCourse(courseName){try{return window.SoftmarcContent&&SoftmarcContent.findCourse?SoftmarcContent.findCourse(courseName):null;}catch(e){return null;}}
+function topicTree(courseName){
+  const course=currentCourse(courseName);
+  if(course&&Array.isArray(course.topicTree)&&course.topicTree.length)return course.topicTree;
+  if(course&&Array.isArray(course.mainSubtopics)&&course.mainSubtopics.length)return course.mainSubtopics;
+  // Old flat course data remains usable: every item is a terminal subtopic.
+  return (COURSE_DATA[courseName]||[]).map((lesson,index)=>Object.assign({},lesson,{nodeKey:String(lesson._database_id||lesson.id||index),children:[],moduleIndex:index}));
 }
+function findTopicPath(nodes,key,path){
+  for(const node of nodes||[]){const next=(path||[]).concat(node);if(String(node.nodeKey||node._database_id||node.id)===String(key))return next;const found=findTopicPath(node.children||[],key,next);if(found)return found;}
+  return null;
+}
+function activeTopicNode(){return activeTopicTrail.length?activeTopicTrail[activeTopicTrail.length-1]:null;}
+function terminalCount(node){if(!node)return 0;return (node.children&&node.children.length)?node.children.reduce((total,child)=>total+terminalCount(child),0):1;}
+function terminalDone(node,doneSet){if(!node)return false;if(node.children&&node.children.length)return node.children.every(child=>terminalDone(child,doneSet));return doneSet.has(Number(node.moduleIndex));}
+function levelLabel(depth){return depth===0?'Subtopics':'Subtopic page '+(depth+1);}
+function pathKey(node){return String(node&&((node.nodeKey!==undefined)?node.nodeKey:(node._database_id||node.id)));}
 
-// Step 2: selected main subtopic -> separate child-subtopic page.
-function openInnerSubtopics(courseName,groupIndex){
-  activeCourseName=courseName;activeMainSubtopicIndex=Number(groupIndex);const group=courseGroups(courseName)[activeMainSubtopicIndex];if(!group)return showMainSubtopicView();const doneSet=progressMap.get(courseName)||new Set();
-  document.getElementById('subtopicView').style.display='none';document.getElementById('innerSubtopicView').style.display='block';
-  document.getElementById('breadcrumb').innerHTML=`<a href="soft_dashboard.html">Dashboard</a> / <a href="#" onclick="showMainView()">My Courses</a> / <a href="#" onclick="showMainSubtopicView()">${courseName}</a> / <strong>${group.title}</strong>`;
-  document.getElementById('innerSubtopicTitle').textContent=group.title;document.getElementById('innerSubtopicMeta').textContent=`${group.children.length} subtopic${group.children.length===1?'':'s'} · Choose one to open videos, PDF/PPT, MCQ and exercises.`;
-  const list=document.getElementById('innerSubtopicList');list.innerHTML='';
-  group.children.forEach((child,index)=>{const done=doneSet.has(child.moduleIndex);list.insertAdjacentHTML('beforeend',`<div class="subtopic-item" onclick="openSubtopicWindow('${courseName}',${child.moduleIndex})" style="cursor:pointer;"><div class="sub-num ${done?'done':''}">${done?'✓':index+1}</div><div class="sub-info"><h4>${child.title}</h4><div class="sub-meta">${child.dur||'15 min'} · ${done?'Completed':'Open learning materials'}</div></div><div class="sub-actions"><button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" onclick="event.stopPropagation();openSubtopicWindow('${courseName}',${child.moduleIndex})">Open →</button></div></div>`);});
+// Course → Subtopic page 1 → Subtopic page 2 → … → lesson. There is no depth limit.
+function openSubtopics(courseName){activeCourseName=courseName;activeTopicTrail=[];renderTopicLevel();}
+function openTopicNode(key){
+  const path=findTopicPath(topicTree(activeCourseName),key,[]);if(!path)return;
+  const node=path[path.length-1];
+  if(node.children&&node.children.length){activeTopicTrail=path;renderTopicLevel();}
+  else openSubtopicWindow(activeCourseName,node.moduleIndex);
 }
-function showMainSubtopicView(){if(activeCourseName)openSubtopics(activeCourseName);else showMainView();}
-function showMainView(){document.getElementById('subtopicView').style.display='none';document.getElementById('innerSubtopicView').style.display='none';document.getElementById('mainView').style.display='block';document.getElementById('breadcrumb').innerHTML='<a href="soft_dashboard.html">Dashboard</a> / <strong>My Courses</strong>';}
-// Step 3: only a child subtopic opens the resource page.
+function renderTopicLevel(){
+  const tree=topicTree(activeCourseName), parent=activeTopicNode(), topics=parent?(parent.children||[]):tree;
+  document.getElementById('mainView').style.display='none';document.getElementById('subtopicView').style.display='block';
+  const depth=activeTopicTrail.length;
+  document.getElementById('subCourseTitle').textContent=parent?parent.title:activeCourseName;
+  document.getElementById('subCourseMeta').textContent=topics.length ? `${levelLabel(depth)} · ${topics.length} subtopic${topics.length===1?'':'s'} · open a subtopic to continue, or open its videos, PDF/PPT, MCQ and exercises when it is the final page.` : 'No subtopics have been added yet.';
+  const crumb=['<a href="soft_dashboard.html">Dashboard</a>','<a href="#" data-topic-root="1">My Courses</a>','<a href="#" data-topic-depth="-1">'+escapeTopicText(activeCourseName)+'</a>'];
+  activeTopicTrail.forEach((node,index)=>crumb.push(index===activeTopicTrail.length-1?'<strong>'+escapeTopicText(node.title)+'</strong>':'<a href="#" data-topic-depth="'+index+'">'+escapeTopicText(node.title)+'</a>'));
+  document.getElementById('breadcrumb').innerHTML=crumb.join(' / ');
+  document.querySelectorAll('[data-topic-root]').forEach(link=>link.onclick=e=>{e.preventDefault();showMainView();});
+  document.querySelectorAll('[data-topic-depth]').forEach(link=>link.onclick=e=>{e.preventDefault();const depth=Number(link.dataset.topicDepth);if(depth<0){activeTopicTrail=[];}else{activeTopicTrail=activeTopicTrail.slice(0,depth+1);}renderTopicLevel();});
+  const back=document.getElementById('subtopicBack');
+  back.textContent=parent?'← Back to previous subtopic page':'← Back to courses';
+  back.onclick=()=>{if(activeTopicTrail.length){activeTopicTrail=activeTopicTrail.slice(0,-1);renderTopicLevel();}else showMainView();};
+  const doneSet=progressMap.get(activeCourseName)||new Set(),list=document.getElementById('subtopicList');list.innerHTML='';
+  if(!topics.length){list.innerHTML='<div style="padding:24px;border:1px dashed var(--border);border-radius:12px;color:var(--text-500);font-size:13px;">No subtopics are available in this page yet.</div>';return;}
+  topics.forEach((topic,index)=>{
+    const nested=topic.children&&topic.children.length,complete=terminalDone(topic,doneSet),meta=nested?`${terminalCount(topic)} final lesson${terminalCount(topic)===1?'':'s'} inside · ${topic.description||'Open to view the next subtopic page'}`:`${topic.dur||'15 min'} · ${complete?'Completed':'Open learning materials'}`;
+    const action=nested?'View subtopics →':'Open materials →';
+    list.insertAdjacentHTML('beforeend',`<div class="subtopic-item" data-topic-open="${escapeTopicText(pathKey(topic))}" style="cursor:pointer;"><div class="sub-num ${complete?'done':''}">${complete?'✓':index+1}</div><div class="sub-info"><h4>${escapeTopicText(topic.title)}</h4><div class="sub-meta">${escapeTopicText(meta)}</div></div><div class="sub-actions"><button class="btn btn-primary" style="padding:7px 14px;font-size:12.5px;" type="button">${action}</button></div></div>`);
+  });
+  list.querySelectorAll('[data-topic-open]').forEach(item=>item.onclick=()=>openTopicNode(item.dataset.topicOpen));
+}
+function showMainSubtopicView(){if(activeTopicTrail.length){activeTopicTrail=activeTopicTrail.slice(0,-1);renderTopicLevel();}else if(activeCourseName)openSubtopics(activeCourseName);else showMainView();}
+function showMainView(){document.getElementById('subtopicView').style.display='none';document.getElementById('mainView').style.display='block';activeTopicTrail=[];document.getElementById('breadcrumb').innerHTML='<a href="soft_dashboard.html">Dashboard</a> / <strong>My Courses</strong>';}
 function openSubtopicWindow(courseName,idx){window.location.href=`lesson.html?course=${encodeURIComponent(courseName)}&module=${idx}`;}
 function openSubtopicResource(courseName,idx,type){if(type==='mcq')window.location.href=`assessments.html?course=${encodeURIComponent(courseName)}&module=${idx}`;else window.location.href=`lesson.html?course=${encodeURIComponent(courseName)}&module=${idx}&type=${type}`;}
 

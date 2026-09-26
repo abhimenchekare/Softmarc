@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS courses (
 CREATE TABLE IF NOT EXISTS subtopics (
   id              INT AUTO_INCREMENT PRIMARY KEY,
   course_id       INT NOT NULL,
-  parent_subtopic_id INT DEFAULT NULL, -- NULL = main subtopic; otherwise a child subtopic
+  parent_subtopic_id INT DEFAULT NULL, -- NULL = first-level subtopic page; otherwise an inner page at any depth
   title           VARCHAR(500) NOT NULL,
   slug            VARCHAR(500) DEFAULT '',
   dur             VARCHAR(50) DEFAULT '15 min',
@@ -235,8 +235,8 @@ CREATE TABLE IF NOT EXISTS subtopic_resources (
 
 
 -- =============================================================
--- v39 addition: a main subtopic may organise multiple child subtopics.
--- Existing subtopics are kept as main subtopics (parent_subtopic_id = NULL).
+-- v43 addition: unlimited nested subtopic pages.
+-- A page may be inside any page in the same course. Existing root pages remain first-level pages (parent_subtopic_id = NULL).
 -- =============================================================
 ALTER TABLE subtopics ADD COLUMN IF NOT EXISTS parent_subtopic_id INT DEFAULT NULL AFTER course_id;
 SET @subtopic_parent_index_exists := (

@@ -197,8 +197,8 @@ function ensureStudentProfileColumns(){
 }
 
 
-// A course has main subtopics, and each main subtopic can organise child subtopics.
-// Existing rows remain main subtopics (parent_subtopic_id is NULL).
+// Subtopics are an unlimited-depth tree. A NULL parent is a first-level page;
+// any page in the same course may be the parent of another page.
 let subtopicHierarchyReady=null;
 function ensureSubtopicHierarchyColumn(){
   if(!subtopicHierarchyReady) subtopicHierarchyReady=(async()=>{
@@ -212,22 +212,39 @@ function ensureSubtopicHierarchyColumn(){
 }
 async function validateSubtopicParent(courseId,parentId){
   if(parentId===undefined||parentId===null||parentId==='') return null;
-  const id=Number(parentId);if(!Number.isInteger(id)||id<1) throw Object.assign(new Error('Choose a valid main subtopic.'),{status:400});
-  const [rows]=await pool.query('SELECT id,course_id,parent_subtopic_id FROM subtopics WHERE id=?',[id]);
-  if(!rows.length||Number(rows[0].course_id)!==Number(courseId)||rows[0].parent_subtopic_id!==null) throw Object.assign(new Error('Choose a main subtopic from this course.'),{status:400});
+  const id=Number(parentId);if(!Number.isInteger(id)||id<1) throw Object.assign(new Error('Choose a valid parent subtopic page.'),{status:400});
+  const [rows]=await pool.query('SELECT id,course_id FROM subtopics WHERE id=?',[id]);
+  if(!rows.length||Number(rows[0].course_id)!==Number(courseId)) throw Object.assign(new Error('Choose a parent subtopic page from this course.'),{status:400});
   return id;
 }
+async function assertNoSubtopicCycle(courseId,subtopicId,parentId){
+  if(parentId===undefined||parentId===null) return;
+  let cursor=Number(parentId),guard=0;
+  while(cursor&&guard++<10000){
+    if(cursor===Number(subtopicId)) throw Object.assign(new Error('A subtopic page cannot be placed inside itself or one of its descendants.'),{status:400});
+    const [rows]=await pool.query('SELECT parent_subtopic_id,course_id FROM subtopics WHERE id=?',[cursor]);
+    if(!rows.length||Number(rows[0].course_id)!==Number(courseId)) break;
+    const next=rows[0].parent_subtopic_id;cursor=(next===null||next===undefined||next==='')?0:Number(next);
+  }
+}
+async function subtopicSubtreeIds(rootId){
+  const ids=[],seen=new Set(),queue=[Number(rootId)];
+  while(queue.length){
+    const frontier=queue.splice(0,250).filter(id=>id&&!seen.has(id));if(!frontier.length)continue;
+    frontier.forEach(id=>{seen.add(id);ids.push(id);});
+    const [rows]=await pool.query('SELECT id FROM subtopics WHERE parent_subtopic_id IN (?)',[frontier]);
+    rows.forEach(row=>{const id=Number(row.id);if(id&&!seen.has(id))queue.push(id);});
+  }
+  return ids;
+}
 
-
-// Demo access is two main subtopics, including all child subtopics inside those two groups.
+// Demo access exposes its selected first-level pages together with every nested page below them.
 function demoVisibleSubtopics(topics,limit){
-  const rows=topics||[], roots=rows.filter(t=>t.parent_subtopic_id===null||t.parent_subtopic_id===undefined||t.parent_subtopic_id==='');
-  const chosen=new Set(roots.slice(0,Math.max(0,Number(limit)||2)).map(t=>Number(t.id)));
-  return rows.filter(t=>{
-    const parent=t.parent_subtopic_id;
-    if(parent!==null&&parent!==undefined&&parent!=='') return chosen.has(Number(parent));
-    return chosen.has(Number(t.id));
-  });
+  const rows=topics||[],children=new Map(),roots=[];
+  rows.forEach(row=>{const parent=row.parent_subtopic_id;if(parent===null||parent===undefined||parent==='')roots.push(row);else{const key=Number(parent);if(!children.has(key))children.set(key,[]);children.get(key).push(row);}});
+  const visible=[],seen=new Set(),queue=roots.slice(0,Math.max(0,Number(limit)||2));
+  while(queue.length){const row=queue.shift(),id=Number(row.id);if(!id||seen.has(id))continue;seen.add(id);visible.push(row);(children.get(id)||[]).forEach(child=>queue.push(child));}
+  return visible;
 }
 function playableSubtopics(topics){
   const containers=new Set((topics||[]).filter(t=>t.parent_subtopic_id!==null&&t.parent_subtopic_id!==undefined&&t.parent_subtopic_id!=='').map(t=>Number(t.parent_subtopic_id)));
@@ -903,10 +920,11 @@ app.put('/api/subtopics/:id', async (req, res) => {
     const [old]=await pool.query('SELECT * FROM subtopics WHERE id=?',[req.params.id]);
     if(!old.length) return res.status(404).json({ error: 'Subtopic not found' });
     const parentId=parent_subtopic_id===undefined?undefined:await validateSubtopicParent(old[0].course_id,parent_subtopic_id);
-    if(parentId&&Number(parentId)===Number(req.params.id)) return res.status(400).json({error:'A subtopic cannot be its own parent.'});
+    const nextParent=parentId===undefined?old[0].parent_subtopic_id:parentId;
+    await assertNoSubtopicCycle(old[0].course_id,req.params.id,nextParent);
     await pool.query(
-      'UPDATE subtopics SET title = COALESCE(?, title), slug = COALESCE(?, slug), dur = COALESCE(?, dur), description = COALESCE(?, description), video_url = COALESCE(?, video_url), pdf_url = COALESCE(?, pdf_url), exercise = COALESCE(?, exercise), display_order = COALESCE(?, display_order), parent_subtopic_id = COALESCE(?, parent_subtopic_id), updated_at = NOW() WHERE id = ?',
-      [title,slug,dur,description,video_url,pdf_url,exercise,display_order,parentId===undefined?null:parentId,req.params.id]
+      'UPDATE subtopics SET title = COALESCE(?, title), slug = COALESCE(?, slug), dur = COALESCE(?, dur), description = COALESCE(?, description), video_url = COALESCE(?, video_url), pdf_url = COALESCE(?, pdf_url), exercise = COALESCE(?, exercise), display_order = COALESCE(?, display_order), parent_subtopic_id = ?, updated_at = NOW() WHERE id = ?',
+      [title,slug,dur,description,video_url,pdf_url,exercise,display_order,nextParent,req.params.id]
     );
     const [sub] = await pool.query('SELECT * FROM subtopics WHERE id = ?', [req.params.id]);
     res.json(sub[0]);
@@ -920,10 +938,10 @@ app.delete('/api/subtopics/:id', async (req, res) => {
     await ensureSubtopicHierarchyColumn();
     const [sub] = await pool.query('SELECT id, title FROM subtopics WHERE id = ?', [req.params.id]);
     if (sub.length === 0) return res.status(404).json({ error: 'Subtopic not found' });
-    const [children]=await pool.query('SELECT id FROM subtopics WHERE parent_subtopic_id=?',[req.params.id]);
-    if(children.length) await pool.query('DELETE FROM subtopics WHERE parent_subtopic_id=?',[req.params.id]);
-    await pool.query('DELETE FROM subtopics WHERE id = ?', [req.params.id]);
-    res.json({ deleted: true, subtopic: sub[0], deleted_children:children.length });
+    const ids=await subtopicSubtreeIds(req.params.id);
+    await ensureSubtopicResourcesTable();
+    if(ids.length){await pool.query('DELETE FROM subtopic_resources WHERE subtopic_id IN (?)',[ids]);await pool.query('DELETE FROM subtopics WHERE id IN (?)',[ids]);}
+    res.json({ deleted: true, subtopic: sub[0], deleted_children:Math.max(0,ids.length-1) });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete subtopic' });
   }
