@@ -168,6 +168,10 @@ body.lv-video-mode .resource-header{display:none!important}
 .lv-cbtn{border:none;background:transparent;color:#fff;cursor:pointer;padding:4px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;opacity:.92;transition:.15s;flex-shrink:0}
 .lv-cbtn:hover{opacity:1;background:rgba(255,255,255,.14)}
 .lv-cbtn:disabled{opacity:.4;cursor:default}
+.lv-expand{gap:0}.lv-expand-label{display:none}
+/* A fullscreen stage uses the entire viewport and preserves the lesson video's aspect ratio. */
+.lv-stage:fullscreen,.lv-stage:-webkit-full-screen{width:100vw;height:100dvh;aspect-ratio:auto;border-radius:0;border:0}
+.lv-stage:fullscreen video,.lv-stage:-webkit-full-screen video{object-fit:contain}
 .lv-ctrl .lv-time{font-family:var(--font-mono);font-size:11px;color:rgba(255,255,255,.85);white-space:nowrap;font-variant-numeric:tabular-nums}
 #lvScrub{flex:1;height:4px;appearance:none;-webkit-appearance:none;background:rgba(255,255,255,.25);border-radius:99px;cursor:pointer;min-width:40px}
 #lvScrub::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:11px;height:11px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(29,111,232,.55)}
@@ -259,7 +263,14 @@ html[data-theme="dark"] #markDoneBtn.lv-mark.current .lv-lt{color:#fff}
   .lv-thumb{width:84px;height:58px}
   .lv-sub{font-size:16.5px}
   .lv-head-right{width:100%;flex-direction:row;justify-content:flex-end;align-items:center;margin-top:6px}
-  #lvVol{display:none}
+  /* Mobile player controls: keep the video expand action visible and touch-sized. */
+  .lv-ctrl{gap:6px;padding:8px 10px}
+  .lv-ctrl .lv-time{font-size:10px}
+  #lvScrub{min-width:0}
+  #lvVol,#lvVolBtn,#lvPipBtn{display:none!important}
+  #lvSpeed{font-size:10px;padding:4px 4px}
+  .lv-expand{min-height:32px;padding:5px 8px;background:rgba(29,111,232,.88);border:1px solid rgba(255,255,255,.35);gap:4px}
+  .lv-expand-label{display:inline;font:800 10px var(--font-body);letter-spacing:.1px}
   .lv-nav{grid-template-columns:1fr 1fr}
   #markDoneBtn.lv-mark{grid-column:1/-1;order:-1;width:100%;justify-content:center}
   .lv-btn{padding:12px 14px}
@@ -495,7 +506,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
                 <button class="lv-cbtn" id="lvCapBtn" style="display:none;font:800 11px var(--font-body)" aria-label="Toggle captions">CC</button>
                 <select id="lvSpeed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select>
                 <button class="lv-cbtn" id="lvPipBtn" aria-label="Picture in picture"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="14" rx="2"/><rect x="11" y="9" width="7" height="5" fill="#fff" stroke="none"/></svg></button>
-                <button class="lv-cbtn" id="lvFsBtn" aria-label="Fullscreen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></button>
+                <button class="lv-cbtn lv-expand" id="lvFsBtn" aria-label="Expand video to landscape"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg><span class="lv-expand-label">Expand</span></button>
               </div>
             </div>
 
@@ -654,7 +665,7 @@ html[data-theme="dark"] .pv-scroll{background:#1A2334}
   </div>
 </main>
 <div class="toast" id="toast"></div>
-<script src="softmarc-content.js?v=43"></script>
+<script src="softmarc-content.js?v=47"></script>
 <script>
 // Auth
 const _raw = localStorage.getItem('softmarc_user');
@@ -1094,10 +1105,30 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       else if(document.exitPictureInPicture&&document.pictureInPictureElement){document.exitPictureInPicture();}
       else if(vp.webkitSupportsPresentationMode){vp.webkitSetPresentationMode(vp.webkitPresentationMode==='picture-in-picture'?'inline':'picture-in-picture');}
     }catch(e){}});}
-    $('lvFsBtn').addEventListener('click',function(){try{
-      if(document.fullscreenElement||document.webkitFullscreenElement){(document.exitFullscreen||document.webkitExitFullscreen).call(document);}
-      else{(stage.requestFullscreen||stage.webkitRequestFullscreen).call(stage);}
-    }catch(e){}});
+    function unlockLandscape(){
+      try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}
+    }
+    function lockLandscape(){
+      try{var lock=screen.orientation&&screen.orientation.lock;if(lock){var p=lock.call(screen.orientation,'landscape');if(p&&p.catch)p.catch(function(){});}}catch(e){}
+    }
+    function expandVideoForMobile(){
+      var active=document.fullscreenElement||document.webkitFullscreenElement;
+      if(active){try{(document.exitFullscreen||document.webkitExitFullscreen).call(document);}catch(e){}return;}
+      // iPhone/iPad's native video fullscreen gives the most dependable immersive landscape
+      // player. Other mobile/desktop browsers use the stage fullscreen API then request a
+      // landscape lock where the browser permits it.
+      var ios=/iPad|iPhone|iPod/.test(navigator.userAgent||'');
+      if(ios&&typeof vp.webkitEnterFullscreen==='function'){try{vp.webkitEnterFullscreen();}catch(e){}return;}
+      try{
+        var request=stage.requestFullscreen||stage.webkitRequestFullscreen;
+        if(!request) throw new Error('Fullscreen unavailable');
+        var result=request.call(stage);
+        if(result&&result.then) result.then(lockLandscape).catch(function(){}); else setTimeout(lockLandscape,0);
+      }catch(e){if(typeof showToast==='function')showToast('Fullscreen is not available in this browser.');}
+    }
+    $('lvFsBtn').addEventListener('click',expandVideoForMobile);
+    ['fullscreenchange','webkitfullscreenchange'].forEach(function(ev){document.addEventListener(ev,function(){if(!(document.fullscreenElement||document.webkitFullscreenElement))unlockLandscape();});});
+    vp.addEventListener('webkitendfullscreen',unlockLandscape);
     document.addEventListener('keydown',function(ev){
       if(!V.classList.contains('active'))return;
       var tag=(ev.target&&ev.target.tagName)||'';
@@ -1746,7 +1777,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
     var stepsRequest=fetch('/api/steps.php?student_id='+((_user&&_user.id)||0)+'&course_name='+encodeURIComponent(courseName)).then(function(r){return r.ok?r.json():[];});
     var quizzesRequest=fetch('/api/quizzes.php?course_name='+encodeURIComponent(courseName)).then(function(r){return r.ok?r.json():[];});
     // the lesson list is content, not config: take the server's copy before anything is locked
-    try{ if(window.SoftmarcContent && SoftmarcContent.ready) await SoftmarcContent.ready(4000); }catch(e){}
+    try{ if(window.SoftmarcContent && SoftmarcContent.ready) await SoftmarcContent.ready(0); }catch(e){}
     try{ if(window.SoftmarcContent && SoftmarcContent.getCourseDataObject) COURSE_DATA = SoftmarcContent.getCourseDataObject(null); }catch(e){}
     if(adoptCourseContent()){ try{ refresh(); }catch(e){} }
     loadLocal();

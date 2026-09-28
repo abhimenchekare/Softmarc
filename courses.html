@@ -235,7 +235,7 @@ a{text-decoration:none;color:inherit;}
   </div>
 </div>
 
-<script src="softmarc-content.js?v=43"></script>
+<script src="softmarc-content.js?v=47"></script>
 <script>
 // Theme
 const htmlEl=document.documentElement;
@@ -332,7 +332,9 @@ const COURSE_DATA = {
 };
 
 if(window.SoftmarcContent){
-  const __dynamicCourseData = SoftmarcContent.getCourseDataObject(COURSE_DATA);
+  // Student catalogue pages are database-only. Do not let the historical sample literal above
+  // become a fallback while a mobile connection is checking the latest published course tree.
+  const __dynamicCourseData = SoftmarcContent.getCourseDataObject(null);
   Object.keys(COURSE_DATA).forEach(k=>delete COURSE_DATA[k]);
   Object.assign(COURSE_DATA, __dynamicCourseData);
 }
@@ -391,7 +393,7 @@ async function renderCoursesReal(){
   // Never flash an old course tree while the current database answer is still in flight.
   if(window.SoftmarcContent&&!SoftmarcContent.fromDatabase()){
     grid.innerHTML='<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading the latest courses…</div>';
-    try{await SoftmarcContent.ready(6000);}catch(e){}
+    try{await SoftmarcContent.ready(0);}catch(e){}
     syncCourseCatalogueFromServer();
   }
   grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';progressMap = new Map();

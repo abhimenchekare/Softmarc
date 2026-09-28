@@ -365,7 +365,7 @@ html:not([data-theme="dark"]) .main .explore-link,body:not([data-theme="dark"]) 
   </div>
 </main>
 
-<script src="softmarc-content.js?v=43"></script>
+<script src="softmarc-content.js?v=47"></script>
 <script>
 // Theme - professional, no gradient, solid
 const htmlEl = document.documentElement;
@@ -454,22 +454,29 @@ async function freshDefs(){
     const res = await fetch(`${API_HOST}/courses`);
     if(!res.ok) throw new Error('courses fetch failed');
     const rows = await res.json();
-    if(Array.isArray(rows) && rows.length){
-      return rows.map((c,i)=>({
-        name: c.title,
-        tag: c.tag || 'Course',
-        modules: Array.isArray(c.subtopics) ? c.subtopics.length : 0,
-        hours: Number(c.duration_hours) || 0,
-        image: c.image || null,
-        display_order: Number(c.display_order) || i,
-        level: c.level || 'Beginner',
-        id: c.slug || c.title
-      })).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
-    }
-    throw new Error('no courses');
+    if(!Array.isArray(rows)) throw new Error('invalid courses response');
+    return rows.map((c,i)=>({
+      name: c.title,
+      tag: c.tag || 'Course',
+      modules: Array.isArray(c.subtopics) ? c.subtopics.length : 0,
+      hours: Number(c.duration_hours) || 0,
+      image: c.image || null,
+      display_order: Number(c.display_order) || i,
+      level: c.level || 'Beginner',
+      id: c.slug || c.title
+    })).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
   }catch(e){
-    console.warn('[Dashboard] live course fetch failed, using bundled list:', e.message);
-    return window.SoftmarcContent ? SoftmarcContent.getCourseDefs(COURSE_DEFS) : COURSE_DEFS;
+    // Do not show a bundled/local course catalogue to a student after a failed mobile request.
+    // Wait once for the signed shared loader; if it also cannot reach the database, show the
+    // honest empty state rather than content that a trainer may have already replaced.
+    console.warn('[Dashboard] live course fetch failed:', e.message);
+    try{
+      if(window.SoftmarcContent&&SoftmarcContent.ready){
+        await SoftmarcContent.ready(0);
+        if(SoftmarcContent.fromDatabase()) return SoftmarcContent.getCourseDefs([],null);
+      }
+    }catch(ignore){}
+    return [];
   }
 }
 async function liveTime(){

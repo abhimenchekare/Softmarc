@@ -7,8 +7,9 @@
   // =============================================================
 
   // v2 key: an older, poisoned cache must never be able to hide a file the trainer just added
-  const KEY='softmarc_courses_v6';
-  const MAX_CACHE_AGE=10*60*1000;   // localStorage is a stop-gap, not the source of truth
+  const KEY='softmarc_courses_v7';
+  // Persisted copies are retained only as a diagnostic/recovery record. Learner pages never
+  // rehydrate them: trainer-published database content is the sole render source after reload.
   const API_HOST='/api'; // Same origin on Vercel
   const API={};
 
@@ -145,25 +146,12 @@
   API.getCourses = function(courseData, defs){
     // Once the database has answered, including with an empty catalogue, that answer wins.
     if(_fromDatabase && Array.isArray(_coursesCache)) return _coursesCache;
+    // Never revive a phone's localStorage course tree here. It can be older than a trainer's
+    // latest publish and was the cause of old topics appearing after a mobile login.
     if(_coursesCache && _coursesCache.length) return _coursesCache;
-
-    // Try localStorage as immediate fallback (so page renders fast)
-    try{
-      const saved=JSON.parse(localStorage.getItem(KEY)||'null');
-      const rows=Array.isArray(saved)?saved:(saved&&Array.isArray(saved.courses)?saved.courses:null);
-      const fresh=!saved||!saved.at||(Date.now()-saved.at)<MAX_CACHE_AGE;
-      if(Array.isArray(rows) && rows.length && fresh){
-        // paint from the device copy now, but it is provisional — ready() waits for the server
-        _coursesCache = rows.map(normaliseCourse).sort((a,b)=>(a.display_order||0)-(b.display_order||0));
-        API._fetchFromDatabase(courseData, defs);
-        return _coursesCache;
-      }
-      if(Array.isArray(rows) && rows.length && !fresh) console.warn('[SoftmarcContent] local copy is older than 10 min — waiting for the server');
-    }catch(e){}
-
-    // Use hardcoded fallback
+    // Legacy callers can provide their own fallback, but student pages now deliberately pass
+    // null and display a loading/empty state until the signed API returns.
     _coursesCache = fallbackToCourses(courseData, defs);
-    // Fetch from Database in background
     API._fetchFromDatabase(courseData, defs);
     return _coursesCache;
   };
@@ -220,6 +208,9 @@
   API.ready = function(timeoutMs){
     if(_fromDatabase) return Promise.resolve(_coursesCache||[]);
     API._fetchFromDatabase();
+    // Pass 0 for learner-facing routes: they must wait for the authoritative signed response,
+    // not exchange it for an older device copy after an arbitrary timeout.
+    if(timeoutMs===0) return settled.then(()=>_coursesCache||[]);
     const t=Math.max(500,timeoutMs||4000);
     return Promise.race([
       settled.then(()=>_coursesCache||[]),
