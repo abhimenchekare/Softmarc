@@ -1740,18 +1740,23 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
 
   /* ---------- boot ---------- */
   async function boot(){
+    // Start independent requests immediately. They run while the authoritative course tree is
+    // loading, so opening a lesson is limited by the slowest request rather than their sum.
+    var configRequest=fetch('/api/config.php').then(function(r){return r.ok?r.json():null;});
+    var stepsRequest=fetch('/api/steps.php?student_id='+((_user&&_user.id)||0)+'&course_name='+encodeURIComponent(courseName)).then(function(r){return r.ok?r.json():[];});
+    var quizzesRequest=fetch('/api/quizzes.php?course_name='+encodeURIComponent(courseName)).then(function(r){return r.ok?r.json():[];});
     // the lesson list is content, not config: take the server's copy before anything is locked
     try{ if(window.SoftmarcContent && SoftmarcContent.ready) await SoftmarcContent.ready(4000); }catch(e){}
     try{ if(window.SoftmarcContent && SoftmarcContent.getCourseDataObject) COURSE_DATA = SoftmarcContent.getCourseDataObject(null); }catch(e){}
     if(adoptCourseContent()){ try{ refresh(); }catch(e){} }
     loadLocal();
     try{
-      var c=await(await fetch('/api/config.php')).json();
+      var c=await configRequest;
       if(c&&+c.video_req_pct>=50)cfg.video_req_pct=+c.video_req_pct;
       if(c&&+c.pdf_req_pct>=50)cfg.pdf_req_pct=+c.pdf_req_pct;
     }catch(e){}
     try{
-      var rows=await(await fetch('/api/steps.php?student_id='+((_user&&_user.id)||0)+'&course_name='+encodeURIComponent(courseName))).json();
+      var rows=await stepsRequest;
       if(Array.isArray(rows)){
         rows.forEach(function(r){
           var s=st(r.module_index),v=Math.round(+r.pct||0);
@@ -1762,7 +1767,7 @@ document.getElementById('realVideoPlayer').addEventListener('ended', async ()=>{
       }
     }catch(e){}
     try{
-      var qs=await(await fetch('/api/quizzes.php')).json();
+      var qs=await quizzesRequest;
       if(Array.isArray(qs)){
         var mine=qs.filter(function(q){return __sameCourse(q.course_name||q.course,courseName);});
         hasMcq=mine.length>0;

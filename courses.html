@@ -385,6 +385,9 @@ function applyCourseFilters(){
 }
 async function renderCoursesReal(){
   const grid = document.getElementById('coursesGrid');
+  // Progress and catalogue are independent. Start the progress request now so it travels while
+  // the authoritative course catalogue is being fetched instead of creating a second wait.
+  const progressRequest=fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);
   // Never flash an old course tree while the current database answer is still in flight.
   if(window.SoftmarcContent&&!SoftmarcContent.fromDatabase()){
     grid.innerHTML='<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading the latest courses…</div>';
@@ -392,7 +395,7 @@ async function renderCoursesReal(){
     syncCourseCatalogueFromServer();
   }
   grid.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text-500);font-size:14px;">Loading progress...</div>';progressMap = new Map();
-  try{const res=await fetch(`${API_HOST}/progress.php?student_id=${_user.id}`);if(!res.ok)throw new Error('progress failed');const rows=await res.json();rows.forEach(r=>{if(!progressMap.has(r.course_name))progressMap.set(r.course_name,new Set());progressMap.get(r.course_name).add(r.module_index);});}
+  try{const res=await progressRequest;if(!res.ok)throw new Error('progress failed');const rows=await res.json();rows.forEach(r=>{if(!progressMap.has(r.course_name))progressMap.set(r.course_name,new Set());progressMap.get(r.course_name).add(r.module_index);});}
   catch(err){console.warn('Fallback to localStorage',err);COURSE_DEFS.forEach(c=>progressMap.set(c.name,new Set(JSON.parse(localStorage.getItem('done_'+c.name)||'[]'))));}
   grid.innerHTML='';
   COURSE_DEFS.forEach(course=>{const doneSet=progressMap.get(course.name)||new Set(),pct=course.modules>0?Math.min(100,Math.round(Math.min(doneSet.size,course.modules)/course.modules*100)):0;grid.insertAdjacentHTML('beforeend',`<div class="course-card" data-course-status="${pct===100?'completed':pct>0?'progress':'new'}" data-course-search="${String(course.name+' '+course.tag).replace(/[&<>"']/g,'')}" onclick="openSubtopics('${course.name}')"><div class="course-image" style="background-image:url('${course.image||(window.SoftmarcContent&&SoftmarcContent.defaultImage(course.name,course.tag))}')"></div><span class="tag">${course.tag} · ${pct}%</span><h3>${course.name}</h3><div class="meta">${course.modules} lessons · ${course.hours} hrs · ${pct===100?'Completed':'In progress'}</div><div class="progress-track"><div class="progress-fill ${pct===100?'done':''}" style="width:${pct}%"></div></div><div class="pct">${pct===100?'✅ Completed':pct===0?'Not started':`${pct}% complete · Real DB`} → Open subtopics</div><button class="btn btn-primary" onclick="event.stopPropagation();openSubtopics('${course.name}')">Open Subtopics</button></div>`);});

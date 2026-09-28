@@ -279,6 +279,57 @@ async function addResourcesToSubtopics(topics){
   return topics;
 }
 
+// The catalogue is the most frequently-read payload. Fetching subtopics and their playlist rows
+// in one indexed join removes one complete MySQL request from every course-list response.
+async function loadTopicsWithResources(courseIds){
+  await ensureSubtopicResourcesTable();
+  const ids=(Array.isArray(courseIds)?courseIds:[courseIds]).map(Number).filter(Boolean);
+  if(!ids.length) return [];
+  const [rows]=await pool.query(`SELECT s.*,
+      r.id AS resource_id, r.subtopic_id AS resource_subtopic_id,
+      r.resource_type AS resource_type, r.title AS resource_title,
+      r.file_url AS resource_file_url, r.display_order AS resource_display_order,
+      r.created_at AS resource_created_at, r.updated_at AS resource_updated_at
+    FROM subtopics s
+    LEFT JOIN subtopic_resources r ON r.subtopic_id=s.id
+    WHERE s.course_id IN (?)
+    ORDER BY s.display_order ASC,s.id ASC,r.display_order ASC,r.id ASC`,[ids]);
+  const topics=[],byId=new Map();
+  (rows||[]).forEach(row=>{
+    const id=Number(row.id);
+    let topic=byId.get(id);
+    if(!topic){
+      topic=Object.assign({},row);
+      ['resource_id','resource_subtopic_id','resource_type','resource_title','resource_file_url','resource_display_order','resource_created_at','resource_updated_at'].forEach(k=>delete topic[k]);
+      topic.resources=[]; byId.set(id,topic); topics.push(topic);
+    }
+    if(row.resource_id!=null) topic.resources.push({
+      id:row.resource_id, subtopic_id:row.resource_subtopic_id,
+      resource_type:row.resource_type, title:row.resource_title,
+      file_url:row.resource_file_url, display_order:row.resource_display_order,
+      created_at:row.resource_created_at, updated_at:row.resource_updated_at
+    });
+  });
+  return topics;
+}
+
+// Existing installs can predate the browse-order indexes. This runs once per server process and
+// only creates a missing index, keeping catalogue reads quick as courses and nested pages grow.
+let courseCatalogueIndexesReady=null;
+function ensureCourseCatalogueIndexes(){
+  if(!courseCatalogueIndexesReady) courseCatalogueIndexesReady=(async()=>{
+    const [rows]=await pool.query(`SELECT TABLE_NAME AS table_name, INDEX_NAME AS index_name
+      FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN ('courses','subtopics')`);
+    const have=new Set((rows||[]).map(r=>r.table_name+':'+r.index_name));
+    if(!have.has('courses:idx_courses_active_order'))
+      await pool.query('CREATE INDEX idx_courses_active_order ON courses (status,display_order,id)');
+    if(!have.has('subtopics:idx_subtopics_course_order'))
+      await pool.query('CREATE INDEX idx_subtopics_course_order ON subtopics (course_id,display_order,id)');
+  })().catch(err=>{courseCatalogueIndexesReady=null;throw err;});
+  return courseCatalogueIndexesReady;
+}
+
 function publicUser(user, access) {
   return { id:user.id, full_name:user.full_name, email:user.email, role:user.role, phone:user.phone,
     country_code:user.country_code, country:user.country, state_region:user.state_region, city:user.city,
@@ -715,8 +766,7 @@ app.get('/api/courses', async (req, res) => {
     const [courses]=await pool.query(sql,args);
     if(courses.length){
       const ids=courses.map(c=>c.id);
-      const [allTopics]=await pool.query('SELECT * FROM subtopics WHERE course_id IN (?) ORDER BY display_order ASC,id ASC',[ids]);
-      await addResourcesToSubtopics(allTopics);
+      const allTopics=await loadTopicsWithResources(ids);
       const byCourse=new Map(); allTopics.forEach(topic=>{ if(!byCourse.has(topic.course_id)) byCourse.set(topic.course_id,[]); byCourse.get(topic.course_id).push(topic); });
       courses.forEach(course=>{
         let topics=byCourse.get(course.id)||[];
@@ -738,8 +788,7 @@ app.get('/api/courses/:id', async (req,res)=>{
     if(permitted && permitted.ids!==null && !permitted.ids.includes(Number(req.params.id))) return res.status(403).json({error:'This course is not included in your current access.',code:'course_locked'});
     const [courses]=await pool.query('SELECT * FROM courses WHERE id=?',[req.params.id]);
     if(!courses.length) return res.status(404).json({error:'Course not found'});
-    const [topics]=await pool.query('SELECT * FROM subtopics WHERE course_id=? ORDER BY display_order ASC,id ASC',[req.params.id]);
-    await addResourcesToSubtopics(topics);
+    const topics=await loadTopicsWithResources([req.params.id]);
     courses[0].subtopics=(permitted && permitted.access.access_mode==='demo') ? demoVisibleSubtopics(topics,permitted.access.demo_topic_limit) : topics;
     res.json(courses[0]);
   }catch(err){res.status(500).json({error:'Failed to fetch course'});}
@@ -1012,7 +1061,8 @@ app.get('/api/quizzes', async (req, res) => {
   try {
     const { sql, args } = await quizWhere(req);
     const [rows] = await pool.query(`SELECT * FROM quizzes${sql} ORDER BY module_index ASC, id ASC`, args);
-    const [counts] = await pool.query('SELECT quiz_id, COUNT(*) AS n FROM questions GROUP BY quiz_id').catch(() => [[]]);
+    const quizIds=rows.map(q=>Number(q.id)).filter(Boolean);
+    const [counts] = quizIds.length ? await pool.query('SELECT quiz_id, COUNT(*) AS n FROM questions WHERE quiz_id IN (?) GROUP BY quiz_id',[quizIds]).catch(() => [[]]) : [[]];
     const n = {}; (counts || []).forEach(r => { n[r.quiz_id] = +r.n; });
     rows.forEach(q => {
       q.question_count = n[q.id] || 0;
@@ -1734,6 +1784,7 @@ const SERVER = app.listen(PORT, '0.0.0.0', async () => {
   try { await ensureStudentProfileColumns(); console.log('[DB] student profile columns ready'); } catch (e) { console.warn('[DB] student profile ensure failed (retries on signup):', e.message); }
   try { await ensureSubtopicResourcesTable(); console.log('[DB] subtopic resource playlists ready'); } catch (e) { console.warn('[DB] resource playlist ensure failed (retries on first course read):', e.message); }
   try { await ensureSubtopicHierarchyColumn(); console.log('[DB] nested subtopics ready'); } catch (e) { console.warn('[DB] nested subtopics ensure failed (retries on course read):', e.message); }
+  try { await ensureCourseCatalogueIndexes(); console.log('[DB] catalogue browse indexes ready'); } catch (e) { console.warn('[DB] catalogue index ensure failed (retries on course read):', e.message); }
 });
 SERVER.on('error', listenError);
 

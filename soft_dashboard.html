@@ -488,11 +488,14 @@ async function loadDashboard(){
   
   let progressMap = new Map(); // course_name -> Set(module_index)
   let useRealDB = true;
-  const defs = await freshDefs();
-  const timeInfo = await liveTime();
+  // These are independent dashboard cards; run their cloud requests concurrently.
+  const defsRequest=freshDefs();
+  const timeRequest=liveTime();
+  const progressRequest=fetch(`${API_HOST}/progress.php?student_id=${user.id}`);
+  const [defs,timeInfo] = await Promise.all([defsRequest,timeRequest]);
   
   try{
-    const res = await fetch(`${API_HOST}/progress.php?student_id=${user.id}`);
+    const res = await progressRequest;
     if(!res.ok) throw new Error('progress failed');
     const rows = await res.json();
     // Build map

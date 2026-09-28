@@ -40,6 +40,19 @@ CREATE TABLE IF NOT EXISTS courses (
   updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Fast catalogue browsing: matches WHERE status='active' plus the display ordering used by the API.
+SET @courses_browse_index_exists := (
+  SELECT COUNT(*) FROM information_schema.statistics
+  WHERE table_schema = DATABASE() AND table_name = 'courses' AND index_name = 'idx_courses_active_order'
+);
+SET @courses_browse_index_sql := IF(@courses_browse_index_exists = 0,
+  'CREATE INDEX idx_courses_active_order ON courses (status, display_order, id)',
+  'SELECT 1'
+);
+PREPARE softmarc_courses_browse_index_stmt FROM @courses_browse_index_sql;
+EXECUTE softmarc_courses_browse_index_stmt;
+DEALLOCATE PREPARE softmarc_courses_browse_index_stmt;
+
 -- 3. SUBTOPICS TABLE
 CREATE TABLE IF NOT EXISTS subtopics (
   id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -250,3 +263,29 @@ SET @subtopic_parent_index_sql := IF(@subtopic_parent_index_exists = 0,
 PREPARE softmarc_subtopic_parent_index_stmt FROM @subtopic_parent_index_sql;
 EXECUTE softmarc_subtopic_parent_index_stmt;
 DEALLOCATE PREPARE softmarc_subtopic_parent_index_stmt;
+
+-- Covers the full course topic list (which is ordered without filtering by parent).
+SET @subtopic_course_order_index_exists := (
+  SELECT COUNT(*) FROM information_schema.statistics
+  WHERE table_schema = DATABASE() AND table_name = 'subtopics' AND index_name = 'idx_subtopics_course_order'
+);
+SET @subtopic_course_order_index_sql := IF(@subtopic_course_order_index_exists = 0,
+  'CREATE INDEX idx_subtopics_course_order ON subtopics (course_id, display_order, id)',
+  'SELECT 1'
+);
+PREPARE softmarc_subtopic_course_order_index_stmt FROM @subtopic_course_order_index_sql;
+EXECUTE softmarc_subtopic_course_order_index_stmt;
+DEALLOCATE PREPARE softmarc_subtopic_course_order_index_stmt;
+
+-- Lesson pages look up assessments by course name; the prefix keeps this compatible with older MySQL index limits.
+SET @quiz_course_name_index_exists := (
+  SELECT COUNT(*) FROM information_schema.statistics
+  WHERE table_schema = DATABASE() AND table_name = 'quizzes' AND index_name = 'idx_quizzes_course_name'
+);
+SET @quiz_course_name_index_sql := IF(@quiz_course_name_index_exists = 0,
+  'CREATE INDEX idx_quizzes_course_name ON quizzes (course_name(191), module_index, id)',
+  'SELECT 1'
+);
+PREPARE softmarc_quiz_course_name_index_stmt FROM @quiz_course_name_index_sql;
+EXECUTE softmarc_quiz_course_name_index_stmt;
+DEALLOCATE PREPARE softmarc_quiz_course_name_index_stmt;

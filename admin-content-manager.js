@@ -121,15 +121,32 @@
     };
   }
 
+  // One course response serves all three Course Manager tabs. Reusing it briefly removes the
+  // visible cloud round-trip every time an admin switches a tab, while save/delete actions force
+  // an immediate database refresh below.
   let databaseCourses = [];
-  async function loadDatabaseCourses(){
-    try{
-      const res = await fetch(`${API_HOST}/courses`);
-      if(res.ok) databaseCourses = await res.json();
-    }catch(e){
-      console.warn('Could not load from Database');
-      databaseCourses = [];
-    }
+  let databaseCoursesAt = 0;
+  let databaseCoursesRequest = null;
+  const ADMIN_COURSE_CACHE_MS = 30000;
+  async function loadDatabaseCourses(force){
+    const fresh=databaseCoursesAt && (Date.now()-databaseCoursesAt)<ADMIN_COURSE_CACHE_MS;
+    if(!force && fresh) return databaseCourses;
+    if(databaseCoursesRequest) return databaseCoursesRequest;
+    databaseCoursesRequest=(async()=>{
+      try{
+        const res = await fetch(`${API_HOST}/courses`);
+        if(!res.ok) throw new Error('Course request failed ('+res.status+')');
+        databaseCourses = await res.json();
+        databaseCoursesAt = Date.now();
+      }catch(e){
+        console.warn('Could not load from Database:',e.message);
+        // Keep the last successful tab data on a temporary connection failure rather than making
+        // the panel look empty between tab clicks.
+        if(!databaseCoursesAt) databaseCourses = [];
+      }finally{databaseCoursesRequest=null;}
+      return databaseCourses;
+    })();
+    return databaseCoursesRequest;
   }
 
   function getCoursesForAdmin(){
@@ -397,8 +414,8 @@
     renderAll();
   }
 
-  async function renderAll(){
-    await loadDatabaseCourses();
+  async function renderAll(force){
+    await loadDatabaseCourses(!!force);
     renderTopics(); renderSubtopics(); renderResources();
     const badge = $('cmDatabaseBadge');
     if(badge){
@@ -476,7 +493,7 @@
     const newCourse=()=>{creatingNewCourse=true; selectedCourseId=null; selectedCourseDatabaseId=null; selectedSubtopicId=null; selectedResourceSubtopicId=null; subtopicEditorMode='add'; renderAll(); setTimeout(()=>$('cmTitle')&&$('cmTitle').focus(),0);};
     $('cmNewCourseTop').onclick=newCourse;
     $('cmSaveCourseTop').onclick=guard(saveCourse,'cmSaveCourseTop','cmSaveCourse');
-    $('cmRefreshFromDb').onclick=guard(async()=>{showStatus('Refreshing from the database\u2026'); await loadDatabaseCourses(); await renderAll(); setStatus('Database refreshed \u2014 '+databaseCourses.length+' course'+(databaseCourses.length===1?'':'s')+' loaded.','ok');},'cmRefreshFromDb');
+    $('cmRefreshFromDb').onclick=guard(async()=>{showStatus('Refreshing from the database\u2026'); await loadDatabaseCourses(true); await renderAll(); setStatus('Database refreshed \u2014 '+databaseCourses.length+' course'+(databaseCourses.length===1?'':'s')+' loaded.','ok');},'cmRefreshFromDb');
     $('cmImageFile').onchange=startUpload('image','cmImage');
     $('cmImage').oninput=e=>$('cmPreview').style.backgroundImage='url("'+e.target.value+'")';
     $('cmSaveCourse').onclick=guard(saveCourse,'cmSaveCourse','cmSaveCourseTop');
@@ -509,7 +526,7 @@
         selectedCourseId = result.slug || SoftmarcContent.slug(fields.title);
         showStatus('New course created in the database.');
       }
-      await renderAll();
+      await renderAll(true);
       // a course row has no video of its own, so nothing to reach-check here \u2014 but the answer
       // must come back from the server before we call it saved
       await verifyCourseOnServer(fields);
@@ -546,7 +563,7 @@
       showStatus('Deleting...');
       if(selectedCourseDatabaseId) await dbDeleteCourse(selectedCourseDatabaseId);
       selectedCourseId=null; selectedCourseDatabaseId=null; selectedSubtopicId=null; selectedSubtopicDatabaseId=null;
-      await renderAll();
+      await renderAll(true);
       showStatus('Course deleted.');
     } catch(err) {
       showError('Delete failed: '+err.message);
@@ -594,19 +611,19 @@
   async function addSubtopic(){
     const c=selectedCourse(),fields=c?readSubtopicForm(c):null;if(!fields||!fields.title){note('A subtopic page needs a title before it can be added.','err');$('cmSubTitle')&&$('cmSubTitle').focus();return;}
     if(!c){note('Choose a main topic at the top of this panel first.','err');return;}
-    try{showStatus('Adding subtopic page...');if(!c._database_id)throw new Error('Save the course first.');const made=await dbCreateSubtopic(c._database_id,fields);selectedSubtopicId=made.slug||SoftmarcContent.slug(fields.title);subtopicEditorMode='edit';subtopicParentDraftDatabaseId=null;await renderAll();showStatus('✅ Subtopic page added. You can now edit it, add an inner page, or attach final-page materials when it has no children.','ok');}catch(err){showError('Failed: '+err.message);}
+    try{showStatus('Adding subtopic page...');if(!c._database_id)throw new Error('Save the course first.');const made=await dbCreateSubtopic(c._database_id,fields);selectedSubtopicId=made.slug||SoftmarcContent.slug(fields.title);subtopicEditorMode='edit';subtopicParentDraftDatabaseId=null;await renderAll(true);showStatus('✅ Subtopic page added. You can now edit it, add an inner page, or attach final-page materials when it has no children.','ok');}catch(err){showError('Failed: '+err.message);}
   }
   async function saveSubtopic(){
     const c=selectedCourse(),st=selectedSubtopic(),fields=c?readSubtopicForm(c):null;
     if(!st||!st._database_id){note('Select a saved subtopic page to edit.','err');return;}
     if(!fields||!fields.title){note('A subtopic page needs a title before it can be saved.','err');$('cmSubTitle')&&$('cmSubTitle').focus();return;}
-    try{showStatus('Saving subtopic page changes...');const updated=await dbUpdateSubtopic(st._database_id,fields);selectedSubtopicId=updated.slug||SoftmarcContent.slug(fields.title);subtopicEditorMode='edit';subtopicParentDraftDatabaseId=null;await renderAll();showStatus('✅ Subtopic page changes saved to the database.','ok');}catch(err){showError('Failed: '+err.message);}
+    try{showStatus('Saving subtopic page changes...');const updated=await dbUpdateSubtopic(st._database_id,fields);selectedSubtopicId=updated.slug||SoftmarcContent.slug(fields.title);subtopicEditorMode='edit';subtopicParentDraftDatabaseId=null;await renderAll(true);showStatus('✅ Subtopic page changes saved to the database.','ok');}catch(err){showError('Failed: '+err.message);}
   }
   async function deleteSubtopic(){
     const c=selectedCourse(); const st=selectedSubtopic();
     if(!c||!st){ note('Select the subtopic page you want to remove from the outline first.','err'); return; }
     if(!confirm('Delete this subtopic page and every inner subtopic below it? Its attached videos, PDFs/PPTX, MCQ and exercises will also be removed.')) return;
-    try {showStatus('Deleting page and its inner subtopics...');if(st._database_id) await dbDeleteSubtopic(st._database_id);selectedSubtopicId=null; selectedSubtopicDatabaseId=null;selectedResourceSubtopicId=null;subtopicParentDraftDatabaseId=null;subtopicEditorMode='add';await renderAll();showStatus('Subtopic page deleted.');}catch(err){showError('Delete failed: '+err.message);}
+    try {showStatus('Deleting page and its inner subtopics...');if(st._database_id) await dbDeleteSubtopic(st._database_id);selectedSubtopicId=null; selectedSubtopicDatabaseId=null;selectedResourceSubtopicId=null;subtopicParentDraftDatabaseId=null;subtopicEditorMode='add';await renderAll(true);showStatus('Subtopic page deleted.');}catch(err){showError('Delete failed: '+err.message);}
   }
 
   function resourceLabel(kind){return kind==='video'?'Video':'PDF / PPTX';}
@@ -623,7 +640,7 @@
     if(!file){note('Paste a file path or upload a file before adding the '+resourceLabel(kind).toLowerCase()+'.','err');return;}
     if(kind==='document'&&!/\.(pdf|pptx)(?:[?#].*)?$/i.test(file)){note('Use a PDF or PPTX for document material. Old .ppt files are not supported.','err');return;}
     await dbAddPlaylistResource(st._database_id,{resource_type:kind,file_url:file,title:title||fileOf(file),display_order:order});
-    await renderAll();setStatus('✅ '+resourceLabel(kind)+' added to “'+st.title+'”.','ok');
+    await renderAll(true);setStatus('✅ '+resourceLabel(kind)+' added to “'+st.title+'”.','ok');
   }
   function startPlaylistUpload(kind){
     return async event=>{
@@ -636,13 +653,13 @@
   }
   async function removePlaylistMaterial(id){
     if(!confirm('Remove this material from the selected subtopic? The uploaded file is kept on the server, but students will no longer see it.'))return;
-    await dbDeletePlaylistResource(id);await renderAll();setStatus('✅ Material removed from this subtopic.','ok');
+    await dbDeletePlaylistResource(id);await renderAll(true);setStatus('✅ Material removed from this subtopic.','ok');
   }
   async function clearLegacyMaterial(kind){
     const st=selectedResourceSubtopic(selectedCourse());if(!st||!st._database_id)return;
     if(!confirm('Remove this legacy '+resourceLabel(kind).toLowerCase()+' from the selected subtopic?'))return;
     await dbUpdateSubtopic(st._database_id,kind==='video'?{video_url:''}:{pdf_url:''});
-    await renderAll();setStatus('✅ Legacy '+resourceLabel(kind).toLowerCase()+' removed from this subtopic.','ok');
+    await renderAll(true);setStatus('✅ Legacy '+resourceLabel(kind).toLowerCase()+' removed from this subtopic.','ok');
   }
   function renderResources(){ 
     const el=$('cmPanelResources');if(!el)return;const c=selectedCourse();const st=selectedResourceSubtopic(c);const items=st?playlistItems(st):[];
@@ -680,7 +697,7 @@
       showStatus('Saving\u2026');
       if(!st._database_id) throw new Error('Save the subtopic first (Subtopics tab \u2192 Add to Database).');
       await dbUpdateSubtopic(st._database_id, fields);
-      await renderAll();
+      await renderAll(true);
       await verifyResourceOnServer(type, fields, st);
     } catch(err) {
       showError('Failed: '+err.message);
